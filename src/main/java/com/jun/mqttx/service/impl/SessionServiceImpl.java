@@ -49,4 +49,9 @@ public class SessionServiceImpl implements ISessionService {
     public void clear(String clientId) {
         stringRedisTemplate.opsForHash().delete(clusterSessionHashKey, clientId);
     }
+
+    @Override
+    public boolean hasKey(String clientId) {
+        return stringRedisTemplate.opsForHash().hasKey(clusterSessionHashKey, clientId);
+    }
 }

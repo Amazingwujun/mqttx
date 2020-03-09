@@ -1,6 +1,8 @@
 package com.jun.mqttx.server;
 
 import com.jun.mqttx.entity.Session;
+import com.jun.mqttx.exception.AuthenticationException;
+import com.jun.mqttx.exception.AuthorizationException;
 import com.jun.mqttx.server.handler.MessageDelegatingHandler;
 import com.jun.mqttx.service.ISessionService;
 import io.netty.channel.ChannelHandler;
@@ -63,7 +65,7 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> {
     protected void channelRead0(ChannelHandlerContext ctx, MqttMessage mqttMessage) {
         //异常处理
         if (mqttMessage.decoderResult().isFailure()) {
-            onDecodeFailure(ctx, mqttMessage.decoderResult().cause());
+            exceptionCaught(ctx, mqttMessage.decoderResult().cause());
             return;
         }
 
@@ -71,9 +73,44 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> {
         messageDelegatingHandler.handle(ctx, mqttMessage);
     }
 
+    /**
+     * 异常处理
+     *
+     * @param ctx   {@link ChannelHandlerContext}
+     * @param cause 异常
+     */
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        log.error("未知异常", cause);
+        //主要处理 connect 消息相关异常
+        MqttConnAckMessage mqttConnAckMessage = null;
+        if (cause instanceof MqttIdentifierRejectedException) {
+            mqttConnAckMessage = MqttMessageBuilders.connAck()
+                    .sessionPresent(false)
+                    .returnCode(MqttConnectReturnCode.CONNECTION_REFUSED_IDENTIFIER_REJECTED)
+                    .build();
+        } else if (cause instanceof MqttUnacceptableProtocolVersionException) {
+            mqttConnAckMessage = MqttMessageBuilders.connAck()
+                    .sessionPresent(false)
+                    .returnCode(MqttConnectReturnCode.CONNECTION_REFUSED_UNACCEPTABLE_PROTOCOL_VERSION)
+                    .build();
+        } else if (cause instanceof AuthenticationException) {
+            mqttConnAckMessage = MqttMessageBuilders.connAck()
+                    .sessionPresent(false)
+                    .returnCode(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD)
+                    .build();
+        } else if (cause instanceof AuthorizationException) {
+            mqttConnAckMessage = MqttMessageBuilders.connAck()
+                    .sessionPresent(false)
+                    .returnCode(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED)
+                    .build();
+        } else {
+            log.error("未知异常", cause);
+        }
+
+        if (mqttConnAckMessage != null) {
+            ctx.writeAndFlush(mqttConnAckMessage);
+        }
+        ctx.close();
     }
 
     /**
@@ -105,32 +142,5 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> {
                 ctx.close();
             }
         }
-    }
-
-    /**
-     * 消息解码异常处理
-     *
-     * @param ctx   {@link ChannelHandlerContext}
-     * @param cause mqtt消息解码异常
-     */
-    private void onDecodeFailure(ChannelHandlerContext ctx, Throwable cause) {
-        if (cause instanceof MqttUnacceptableProtocolVersionException) {
-            //mqtt版本异常
-            MqttMessage mqttMessage = MqttMessageBuilders.connAck()
-                    .returnCode(MqttConnectReturnCode.CONNECTION_REFUSED_UNACCEPTABLE_PROTOCOL_VERSION)
-                    .sessionPresent(false)
-                    .build();
-
-            ctx.writeAndFlush(mqttMessage);
-        }
-        if (cause instanceof MqttIdentifierRejectedException) {
-            MqttMessage mqttMessage = MqttMessageBuilders.connAck()
-                    .returnCode(MqttConnectReturnCode.CONNECTION_REFUSED_IDENTIFIER_REJECTED)
-                    .sessionPresent(false)
-                    .build();
-            ctx.writeAndFlush(mqttMessage);
-        }
-
-        ctx.close();
     }
 }

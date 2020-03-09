@@ -24,12 +24,16 @@ import java.security.cert.CertificateException;
 @Component
 public class SslUtils {
 
-    private final KeyStore keyStore;
+    private KeyStore keyStore;
 
-    private final String storePassword;
+    private String storePassword;
 
     public SslUtils(BizConfig bizConfig, ResourceLoader resourceLoader) throws IOException, KeyStoreException,
             CertificateException, NoSuchAlgorithmException {
+        if (!Boolean.TRUE.equals(bizConfig.getSslEnable())) {
+            return;
+        }
+
         storePassword = bizConfig.getKeyStorePassword();
 
         Resource pk = resourceLoader.getResource(bizConfig.getKeyStoreLocation());

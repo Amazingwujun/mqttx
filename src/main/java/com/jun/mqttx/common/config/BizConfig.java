@@ -41,4 +41,10 @@ public class BizConfig {
 
     /** redis map key,应用于集群的会话存储 */
     private String clusterSessionHashKey;
+
+    /** redis increase 生成messageId的前缀 */
+    private String messageIdPrefix;
+
+    /** 主题前缀 */
+    private String topicPrefix;
 }

@@ -31,4 +31,12 @@ public interface ISessionService {
      * @param clientId 客户端ID
      */
     void clear(String clientId);
+
+    /**
+     * 检查 clientId 关联的 session 是否存在
+     *
+     * @param clientId 客户端ID
+     * @return true if session exist
+     */
+    boolean hasKey(String clientId);
 }

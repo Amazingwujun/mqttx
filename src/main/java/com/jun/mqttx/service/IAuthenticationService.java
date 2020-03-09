@@ -1,6 +1,7 @@
 package com.jun.mqttx.service;
 
 import com.jun.mqttx.exception.AuthenticationException;
+import com.jun.mqttx.exception.AuthorizationException;
 
 /**
  * 客户端认证服务
@@ -16,6 +17,7 @@ public interface IAuthenticationService {
      * @param username 用户名
      * @param password 密码
      * @throws AuthenticationException if authenticate failed
+     * @throws AuthorizationException if client
      */
-    void authenticate(String username, byte[] password) throws AuthenticationException;
+    void authenticate(String username, byte[] password) throws AuthenticationException, AuthorizationException;
 }

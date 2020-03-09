@@ -1,5 +1,6 @@
 package com.jun.mqttx.entity;
 
+import com.alibaba.fastjson.annotation.JSONField;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import lombok.Data;
 
@@ -25,5 +26,6 @@ public class Session {
     /**
      * 遗嘱消息
      */
+    @JSONField(serialize = false, deserialize = false)
     private MqttPublishMessage willMessage;
 }

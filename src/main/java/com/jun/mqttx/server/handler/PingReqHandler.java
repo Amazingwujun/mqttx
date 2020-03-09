@@ -1,8 +1,7 @@
 package com.jun.mqttx.server.handler;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.mqtt.MqttMessage;
-import io.netty.handler.codec.mqtt.MqttMessageType;
+import io.netty.handler.codec.mqtt.*;
 import org.springframework.stereotype.Component;
 
 /**
@@ -16,7 +15,10 @@ public class PingReqHandler implements MqttMessageHandler {
 
     @Override
     public void process(ChannelHandlerContext ctx, MqttMessage msg) {
-
+        MqttMessage mqttMessage = MqttMessageFactory.newMessage(
+                new MqttFixedHeader(MqttMessageType.PINGRESP, false, MqttQoS.AT_MOST_ONCE, false, 0),
+                null, null);
+        ctx.writeAndFlush(mqttMessage);
     }
 
     @Override
