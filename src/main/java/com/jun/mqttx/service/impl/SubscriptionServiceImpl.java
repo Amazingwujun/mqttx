@@ -1,6 +1,8 @@
 package com.jun.mqttx.service.impl;
 
+import com.alibaba.fastjson.JSON;
 import com.jun.mqttx.common.config.BizConfig;
+import com.jun.mqttx.entity.ClientSub;
 import com.jun.mqttx.service.ISubscriptionService;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -40,12 +42,15 @@ public class SubscriptionServiceImpl implements ISubscriptionService {
     /**
      * 目前topic仅支持全字符匹配
      *
-     * @param clientId 客户id
-     * @param topics   订阅主题列表
+     * @param clientId      客户id
+     * @param clientSubList 订阅主题列表
      */
     @Override
-    public void subscribe(String clientId, List<String> topics) {
-        topics.forEach(topic -> stringRedisTemplate.opsForSet().add(topicPrefix + topic, clientId));
+    public void subscribe(String clientId, List<ClientSub> clientSubList) {
+        clientSubList.forEach(clientSub ->
+                stringRedisTemplate.opsForSet()
+                        .add(topicPrefix + clientSub.getTopic(), JSON.toJSONString(clientSub))
+        );
     }
 
     /**
@@ -67,12 +72,15 @@ public class SubscriptionServiceImpl implements ISubscriptionService {
      * @return 客户ID列表
      */
     @Override
-    public List<String> searchSubscribeClientList(String topic) {
+    public List<ClientSub> searchSubscribeClientList(String topic) {
         Set<String> members = stringRedisTemplate.opsForSet().members(topicPrefix + topic);
         if (CollectionUtils.isEmpty(members)) {
             return Collections.EMPTY_LIST;
         }
-        return new ArrayList<>(members);
+
+        List<ClientSub> clientSubList = new ArrayList<>(members.size());
+        members.forEach(member -> clientSubList.add(JSON.parseObject(member, ClientSub.class)));
+        return clientSubList;
     }
 
     @Override

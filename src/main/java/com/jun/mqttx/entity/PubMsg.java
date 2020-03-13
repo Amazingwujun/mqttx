@@ -26,5 +26,7 @@ public class PubMsg {
 
     private String topic;
 
+    private boolean retain;
+
     private byte[] payload;
 }

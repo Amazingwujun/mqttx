@@ -1,5 +1,7 @@
 package com.jun.mqttx.service;
 
+import com.jun.mqttx.entity.ClientSub;
+
 import java.util.List;
 
 /**
@@ -13,10 +15,10 @@ public interface ISubscriptionService {
     /**
      * 保存客户订阅的主题
      *
-     * @param clientId 客户id
-     * @param topics   订阅主题列表
+     * @param clientId      客户id
+     * @param clientSubList 订阅主题列表
      */
-    void subscribe(String clientId, List<String> topics);
+    void subscribe(String clientId, List<ClientSub> clientSubList);
 
     /**
      * 解除订阅
@@ -32,7 +34,7 @@ public interface ISubscriptionService {
      * @param topic 主题
      * @return 订阅了主题的客户id列表
      */
-    List<String> searchSubscribeClientList(String topic);
+    List<ClientSub> searchSubscribeClientList(String topic);
 
     /**
      * 移除客户订阅

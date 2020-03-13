@@ -4,6 +4,7 @@ import com.jun.mqttx.common.config.BizConfig;
 import com.jun.mqttx.entity.Session;
 import com.jun.mqttx.server.BrokerHandler;
 import com.jun.mqttx.service.IAuthenticationService;
+import com.jun.mqttx.service.IPublishMessageService;
 import com.jun.mqttx.service.ISessionService;
 import com.jun.mqttx.service.ISubscriptionService;
 import io.netty.buffer.Unpooled;
@@ -37,7 +38,7 @@ public final class ConnectHandler extends AbstractMqttMessageHandler {
     /**
      * 初始化10000长连接客户端
      */
-    private final ConcurrentHashMap<String, ChannelId> clientMap = new ConcurrentHashMap<>(10000);
+    public final static ConcurrentHashMap<String, ChannelId> clientMap = new ConcurrentHashMap<>(10000);
 
     /**
      * 认证服务
@@ -54,16 +55,23 @@ public final class ConnectHandler extends AbstractMqttMessageHandler {
      */
     private ISubscriptionService subscriptionService;
 
+    /**
+     * publish 消息服务
+     */
+    private IPublishMessageService publishMessageService;
+
     public ConnectHandler(IAuthenticationService authenticationService, ISessionService sessionService, StringRedisTemplate
-            stringRedisTemplate, BizConfig bizConfig, ISubscriptionService subscriptionService) {
+            stringRedisTemplate, BizConfig bizConfig, ISubscriptionService subscriptionService,IPublishMessageService publishMessageService) {
         super(stringRedisTemplate, bizConfig);
         Assert.notNull(authenticationService, "authentication can't be null");
         Assert.notNull(sessionService, "sessionService can't be null");
         Assert.notNull(subscriptionService, "subscriptionService can't be null");
+        Assert.notNull(publishMessageService,"publishMessageService can't be null");
 
         this.authenticationService = authenticationService;
         this.sessionService = sessionService;
         this.subscriptionService = subscriptionService;
+        this.publishMessageService = publishMessageService;
     }
 
     /**
@@ -209,5 +217,6 @@ public final class ConnectHandler extends AbstractMqttMessageHandler {
     private void actionOnCleanSession(String clientId) {
         sessionService.clear(clientId);
         subscriptionService.clearClientSubscriptions(clientId);
+        publishMessageService.clear(clientId);
     }
 }

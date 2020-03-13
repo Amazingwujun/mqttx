@@ -16,4 +16,6 @@ public class ClientSub {
     private String clientId;
 
     private int qos;
+
+    private String topic;
 }
