@@ -1,7 +1,7 @@
 package com.jun.mqttx.service.impl;
 
 import com.jun.mqttx.service.IAuthenticationService;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 /**
  * 认证服务
@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
  * @author Jun
  * @date 2020-03-04 12:44
  */
-@Component
+@Service
 public class AuthenticationServiceImpl implements IAuthenticationService {
 
     @Override

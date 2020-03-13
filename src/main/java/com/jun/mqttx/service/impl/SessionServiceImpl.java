@@ -5,7 +5,7 @@ import com.jun.mqttx.common.config.BizConfig;
 import com.jun.mqttx.entity.Session;
 import com.jun.mqttx.service.ISessionService;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
 import java.util.Optional;
@@ -16,7 +16,7 @@ import java.util.Optional;
  * @author Jun
  * @date 2020-03-04 14:01
  */
-@Component
+@Service
 public class SessionServiceImpl implements ISessionService {
 
     private StringRedisTemplate stringRedisTemplate;

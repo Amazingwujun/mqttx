@@ -47,4 +47,7 @@ public class BizConfig {
 
     /** 主题前缀 */
     private String topicPrefix;
+
+    /** 保留消息前缀 */
+    private String retainMessagePrefix;
 }

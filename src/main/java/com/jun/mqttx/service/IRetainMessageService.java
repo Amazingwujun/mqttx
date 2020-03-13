@@ -1,5 +1,7 @@
 package com.jun.mqttx.service;
 
+import com.jun.mqttx.entity.PubMsg;
+
 /**
  * retain 消息服务
  *
@@ -8,7 +10,18 @@ package com.jun.mqttx.service;
  */
 public interface IRetainMessageService {
 
-    void save();
+    /**
+     * 存储当前 topic 的 retain 消息
+     *
+     * @param topic  主题
+     * @param pubMsg 发布消息
+     */
+    void save(String topic, PubMsg pubMsg);
 
-
+    /**
+     * 移除 topic 的 retain 消息
+     *
+     * @param topic 主题
+     */
+    void remove(String topic);
 }

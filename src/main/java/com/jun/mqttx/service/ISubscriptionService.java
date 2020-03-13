@@ -40,4 +40,11 @@ public interface ISubscriptionService {
      * @param clientId 客户ID
      */
     void clearClientSubscriptions(String clientId);
+
+    /**
+     * 移除指定 topic
+     *
+     * @param topic 主题
+     */
+    void removeTopic(String topic);
 }

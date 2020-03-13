@@ -3,7 +3,7 @@ package com.jun.mqttx.service.impl;
 import com.jun.mqttx.common.config.BizConfig;
 import com.jun.mqttx.service.ISubscriptionService;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 
@@ -18,7 +18,7 @@ import java.util.Set;
  * @author Jun
  * @date 2020-03-09 21:06
  */
-@Component
+@Service
 public class SubscriptionServiceImpl implements ISubscriptionService {
 
     private StringRedisTemplate stringRedisTemplate;
@@ -77,11 +77,16 @@ public class SubscriptionServiceImpl implements ISubscriptionService {
 
     @Override
     public void clearClientSubscriptions(String clientId) {
-        //warn keys 这个操作在redis里面存在性能问题
+        //Warning keys 这个操作在redis里面存在性能问题
         Set<String> keys = stringRedisTemplate.keys(topicPrefix + "*");
         if (keys == null) {
             return;
         }
         unsubscribe(clientId, new ArrayList<>(keys));
+    }
+
+    @Override
+    public void removeTopic(String topic) {
+        stringRedisTemplate.delete(topicPrefix + topic);
     }
 }
