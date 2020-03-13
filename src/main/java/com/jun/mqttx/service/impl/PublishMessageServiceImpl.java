@@ -5,6 +5,8 @@ import com.jun.mqttx.service.IPublishMessageService;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 /**
  * publish message store by redis
  *
@@ -24,5 +26,10 @@ public class PublishMessageServiceImpl implements IPublishMessageService {
     @Override
     public void clear(String clientId) {
 
+    }
+
+    @Override
+    public List<PubMsg> search(String clientId) {
+        return null;
     }
 }

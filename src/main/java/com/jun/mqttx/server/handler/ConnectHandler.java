@@ -1,6 +1,7 @@
 package com.jun.mqttx.server.handler;
 
 import com.jun.mqttx.common.config.BizConfig;
+import com.jun.mqttx.entity.PubMsg;
 import com.jun.mqttx.entity.Session;
 import com.jun.mqttx.server.BrokerHandler;
 import com.jun.mqttx.service.IAuthenticationService;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -181,9 +183,22 @@ public final class ConnectHandler extends AbstractMqttMessageHandler {
                     0, 0, (int) heartbeat));
         }
 
-        //todo 当cleanSession=0时，我们应该补发该客户未能送达的消息
+        //根据协议补发 qos1,与qos2的消息
         if (!clearSession) {
+            List<PubMsg> pubMsgList = publishMessageService.search(clientId);
+            pubMsgList.forEach(pubMsg -> {
+                MqttPublishMessage mpm = MqttMessageBuilders.publish()
+                        .messageId(pubMsg.getMessageId())
+                        .qos(MqttQoS.valueOf(pubMsg.getQoS()))
+                        .topicName(pubMsg.getTopic())
+                        .retained(pubMsg.isRetain())
+                        .payload(Unpooled.buffer().writeBytes(pubMsg.getPayload()))
+                        .build();
 
+                ctx.writeAndFlush(mpm);
+            });
+
+            //todo PubRel 消息也是需要发送的,待完成
         }
     }
 
