@@ -62,7 +62,7 @@ public class PublishHandler extends AbstractMqttMessageHandler {
         //获取qos、topic、packetId、retain、payload
         int mqttQoS = mqttFixedHeader.qosLevel().value();
         String topic = mqttPublishVariableHeader.topicName();
-        int packetId = Math.abs(mqttPublishVariableHeader.packetId());
+        int packetId = mqttPublishVariableHeader.packetId();
         boolean retain = mqttFixedHeader.isRetain();
         byte[] data = new byte[payload.readableBytes()];
         payload.readBytes(data);

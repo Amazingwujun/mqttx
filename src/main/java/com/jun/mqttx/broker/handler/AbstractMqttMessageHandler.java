@@ -68,7 +68,7 @@ public abstract class AbstractMqttMessageHandler implements MqttMessageHandler {
      * @param ctx     {@link ChannelHandlerContext}
      * @param session mqtt会话
      */
-    void saveSessionWithChannle(ChannelHandlerContext ctx, Session session) {
+    void saveSessionWithChannel(ChannelHandlerContext ctx, Session session) {
         Channel channel = ctx.channel();
         AttributeKey<Object> attr = AttributeKey.valueOf("session");
         channel.attr(attr).set(session);

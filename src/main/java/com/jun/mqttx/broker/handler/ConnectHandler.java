@@ -11,7 +11,6 @@ import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelOutboundInvoker;
 import io.netty.handler.codec.mqtt.*;
 import io.netty.handler.timeout.IdleStateHandler;
-import io.netty.util.AttributeKey;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
@@ -140,22 +139,27 @@ public final class ConnectHandler extends AbstractMqttMessageHandler {
             actionOnCleanSession(clientId);
         }
 
-        //针对会话状态标记的计算
+        //新建会话并保存会话，同时判断sessionPresent
+        Session session;
         boolean sessionPresent;
         if (clearSession) {
             sessionPresent = false;
+            session = new Session();
+            session.setClearSession(true);
+            session.setClientId(clientId);
         } else {
             sessionPresent = sessionService.hasKey(clientId);
+            if (sessionPresent) {
+                session = sessionService.find(clientId);
+            } else {
+                session = new Session();
+                session.setClientId(clientId);
+                session.setClearSession(false);
+                sessionService.save(session);
+            }
         }
-
-        //新建会话并保存会话状态
-        Session session = new Session();
-        session.setClientId(clientId);
-        session.setClearSession(clearSession);
-        ctx.channel().attr(AttributeKey.valueOf("clientId")).set(clientId);
         clientMap.put(clientId, ctx.channel().id());
-        sessionService.save(session);
-        saveSessionWithChannle(ctx, session);
+        saveSessionWithChannel(ctx, session);
 
         //处理遗嘱消息
         //[MQTT-3.1.2-8] If the Will Flag is set to 1 this indicates that, if the Connect request is accepted, a Will

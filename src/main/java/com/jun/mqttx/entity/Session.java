@@ -4,6 +4,8 @@ import com.alibaba.fastjson.annotation.JSONField;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import lombok.Data;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * MQTT 会话
  *
@@ -28,4 +30,9 @@ public class Session {
      */
     @JSONField(serialize = false, deserialize = false)
     private MqttPublishMessage willMessage;
+
+    /**
+     * 用于生成 msgId
+     */
+    private int messageId;
 }

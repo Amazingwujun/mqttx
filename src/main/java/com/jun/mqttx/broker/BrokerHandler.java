@@ -143,8 +143,7 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> {
         if (evt instanceof IdleStateEvent) {
             if (IdleState.ALL_IDLE.equals(((IdleStateEvent) evt).state())) {
                 //获取当前会话
-                String clientId = (String) ctx.channel().attr(AttributeKey.valueOf("clientId")).get();
-                Session session = sessionService.find(clientId);
+                Session session = (Session) ctx.channel().attr(AttributeKey.valueOf("session")).get();
 
                 //发布遗嘱消息
                 Optional.ofNullable(session)
