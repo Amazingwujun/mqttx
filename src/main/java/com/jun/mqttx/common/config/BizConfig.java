@@ -50,4 +50,7 @@ public class BizConfig {
 
     /** 保留消息前缀 */
     private String retainMessagePrefix;
+
+    /** client 消息 redis set 前缀 */
+    private String pubMsgSetPrefix;
 }

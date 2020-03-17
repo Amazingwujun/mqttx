@@ -1,9 +1,9 @@
-package com.jun.mqttx.server.handler;
+package com.jun.mqttx.broker.handler;
 
 import com.jun.mqttx.common.config.BizConfig;
 import com.jun.mqttx.entity.ClientSub;
 import com.jun.mqttx.entity.PubMsg;
-import com.jun.mqttx.server.BrokerHandler;
+import com.jun.mqttx.broker.BrokerHandler;
 import com.jun.mqttx.service.IPublishMessageService;
 import com.jun.mqttx.service.IRetainMessageService;
 import com.jun.mqttx.service.ISubscriptionService;
@@ -54,7 +54,7 @@ public class PublishHandler extends AbstractMqttMessageHandler {
         int packetId = mqttPublishVariableHeader.packetId();
         boolean retain = mqttFixedHeader.isRetain();
         byte[] data = new byte[payload.readableBytes()];
-        payload.writeBytes(data);
+        payload.readBytes(data);
 
         //发布消息
         PubMsg pubMsg = new PubMsg(mqttQoS.value(), packetId, topic, retain, data);
@@ -112,7 +112,7 @@ public class PublishHandler extends AbstractMqttMessageHandler {
                     .payload(Unpooled.copiedBuffer(pubMsg.getPayload()))
                     .build();
             if (qos == MqttQoS.EXACTLY_ONCE || qos == MqttQoS.AT_LEAST_ONCE) {
-                publishMessageService.save(pubMsg);
+                publishMessageService.save(clientId, pubMsg);
             }
 
             //发送

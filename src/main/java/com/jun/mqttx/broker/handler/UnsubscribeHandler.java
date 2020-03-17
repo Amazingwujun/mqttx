@@ -1,4 +1,4 @@
-package com.jun.mqttx.server.handler;
+package com.jun.mqttx.broker.handler;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttMessage;

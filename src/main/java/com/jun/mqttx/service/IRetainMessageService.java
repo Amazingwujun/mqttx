@@ -24,4 +24,12 @@ public interface IRetainMessageService {
      * @param topic 主题
      */
     void remove(String topic);
+
+    /**
+     * 获取订阅主题的保留信息
+     *
+     * @param topic 主题
+     * @return {@link PubMsg}
+     */
+    PubMsg get(String topic);
 }

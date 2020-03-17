@@ -1,4 +1,4 @@
-package com.jun.mqttx.server;
+package com.jun.mqttx.broker;
 
 import com.jun.mqttx.common.config.BizConfig;
 import com.jun.mqttx.utils.SslUtils;

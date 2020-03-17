@@ -22,6 +22,9 @@ public class PubMsg {
      */
     private int qoS;
 
+    /**
+     * sometimes we also named it <b>packetId</b>
+     */
     private int messageId;
 
     private String topic;

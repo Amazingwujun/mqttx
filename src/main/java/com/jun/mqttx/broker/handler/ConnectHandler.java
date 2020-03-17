@@ -1,9 +1,9 @@
-package com.jun.mqttx.server.handler;
+package com.jun.mqttx.broker.handler;
 
 import com.jun.mqttx.common.config.BizConfig;
 import com.jun.mqttx.entity.PubMsg;
 import com.jun.mqttx.entity.Session;
-import com.jun.mqttx.server.BrokerHandler;
+import com.jun.mqttx.broker.BrokerHandler;
 import com.jun.mqttx.service.IAuthenticationService;
 import com.jun.mqttx.service.IPublishMessageService;
 import com.jun.mqttx.service.ISessionService;
@@ -138,8 +138,11 @@ public final class ConnectHandler extends AbstractMqttMessageHandler {
         //新建会话并保存会话状态
         Session session = new Session();
         session.setClientId(clientId);
+        session.setClearSession(clearSession);
         ctx.channel().attr(AttributeKey.valueOf("clientId")).set(clientId);
+        clientMap.put(clientId, ctx.channel().id());
         sessionService.save(session);
+        saveSession(ctx,session);
 
         //处理遗嘱消息
         //[MQTT-3.1.2-8] If the Will Flag is set to 1 this indicates that, if the Connect request is accepted, a Will

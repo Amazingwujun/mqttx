@@ -1,9 +1,10 @@
-package com.jun.mqttx.server;
+package com.jun.mqttx.broker;
 
 import com.jun.mqttx.entity.Session;
 import com.jun.mqttx.exception.AuthenticationException;
 import com.jun.mqttx.exception.AuthorizationException;
-import com.jun.mqttx.server.handler.MessageDelegatingHandler;
+import com.jun.mqttx.broker.handler.ConnectHandler;
+import com.jun.mqttx.broker.handler.MessageDelegatingHandler;
 import com.jun.mqttx.service.ISessionService;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -19,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
+import java.io.IOException;
 import java.util.Optional;
 
 /**
@@ -62,6 +64,13 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> {
 
 
     @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        super.channelInactive(ctx);
+        String clientId = (String) ctx.channel().attr(AttributeKey.valueOf("clientId")).get();
+        ConnectHandler.clientMap.remove(clientId);
+    }
+
+    @Override
     protected void channelRead0(ChannelHandlerContext ctx, MqttMessage mqttMessage) {
         //异常处理
         if (mqttMessage.decoderResult().isFailure()) {
@@ -103,6 +112,10 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> {
                     .sessionPresent(false)
                     .returnCode(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED)
                     .build();
+        } else if (cause instanceof IOException) {
+            //连接被强制断开
+            Object clientId = ctx.channel().attr(AttributeKey.valueOf("clientId")).get();
+            log.error("client:{} 连接出现异常", clientId);
         } else {
             log.error("未知异常", cause);
         }

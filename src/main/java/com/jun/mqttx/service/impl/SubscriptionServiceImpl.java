@@ -42,15 +42,12 @@ public class SubscriptionServiceImpl implements ISubscriptionService {
     /**
      * 目前topic仅支持全字符匹配
      *
-     * @param clientId      客户id
-     * @param clientSubList 订阅主题列表
+     * @param clientSub 客户订阅信息
      */
     @Override
-    public void subscribe(String clientId, List<ClientSub> clientSubList) {
-        clientSubList.forEach(clientSub ->
-                stringRedisTemplate.opsForSet()
-                        .add(topicPrefix + clientSub.getTopic(), JSON.toJSONString(clientSub))
-        );
+    public void subscribe(ClientSub clientSub) {
+        stringRedisTemplate.opsForSet()
+                .add(topicPrefix + clientSub.getTopic(), JSON.toJSONString(clientSub));
     }
 
     /**

@@ -42,4 +42,10 @@ public class RetainMessageServiceImpl implements IRetainMessageService {
     public void remove(String topic) {
         stringRedisTemplate.opsForHash().delete(retainMessageHashKey, topic);
     }
+
+    @Override
+    public PubMsg get(String topic) {
+        String pubMsg = (String) stringRedisTemplate.opsForHash().get(retainMessageHashKey, topic);
+        return JSON.parseObject(pubMsg, PubMsg.class);
+    }
 }

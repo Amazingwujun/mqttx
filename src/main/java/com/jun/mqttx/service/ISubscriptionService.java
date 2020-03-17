@@ -15,10 +15,9 @@ public interface ISubscriptionService {
     /**
      * 保存客户订阅的主题
      *
-     * @param clientId      客户id
-     * @param clientSubList 订阅主题列表
+     * @param clientSub 客户订阅
      */
-    void subscribe(String clientId, List<ClientSub> clientSubList);
+    void subscribe(ClientSub clientSub);
 
     /**
      * 解除订阅
