@@ -10,7 +10,7 @@ biz:
   ssl-enable: false
   key-store-password:
   so-backlog: 512
-  message-id-prefix: "mid"
+  message-id-prefix: "MQTT:MESSAGEID:"
   retain-message-prefix: "MQTT:RETAIN:"
   topic-prefix: "MQTT:TOPIC:"
   pub-msg-set-prefix: "MQTT:CLIENT:PUBMSG:"

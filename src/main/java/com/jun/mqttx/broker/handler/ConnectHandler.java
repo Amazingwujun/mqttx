@@ -140,6 +140,14 @@ public final class ConnectHandler extends AbstractMqttMessageHandler {
             actionOnCleanSession(clientId);
         }
 
+        //针对会话状态标记的计算
+        boolean sessionPresent;
+        if (clearSession) {
+            sessionPresent = false;
+        } else {
+            sessionPresent = sessionService.hasKey(clientId);
+        }
+
         //新建会话并保存会话状态
         Session session = new Session();
         session.setClientId(clientId);
@@ -160,20 +168,13 @@ public final class ConnectHandler extends AbstractMqttMessageHandler {
                     .messageId(nextMessageId(clientId))
                     .retained(variableHeader.isWillRetain())
                     .topicName(payload.willTopic())
-                    .payload(Unpooled.buffer().writeBytes(payload.willMessageInBytes()))
+                    .payload(Unpooled.wrappedBuffer(payload.willMessageInBytes()))
                     .qos(MqttQoS.valueOf(variableHeader.willQos()))
                     .build();
             session.setWillMessage(mqttPublishMessage);
         }
 
         //返回连接响应
-        //[MQTT-3.2.0-1] The first packet sent from the Server to the Client MUST be a CONNACK Packet.
-        boolean sessionPresent;
-        if (clearSession) {
-            sessionPresent = false;
-        } else {
-            sessionPresent = sessionService.hasKey(clientId);
-        }
         MqttConnAckMessage acceptAck = MqttMessageBuilders.connAck()
                 .sessionPresent(sessionPresent)
                 .returnCode(MqttConnectReturnCode.CONNECTION_ACCEPTED)
@@ -246,7 +247,7 @@ public final class ConnectHandler extends AbstractMqttMessageHandler {
      *
      * @param clientId 客户ID
      */
-    private void actionOnCleanSession(String clientId) {
+    void actionOnCleanSession(String clientId) {
         sessionService.clear(clientId);
         subscriptionService.clearClientSubscriptions(clientId);
         publishMessageService.clear(clientId);

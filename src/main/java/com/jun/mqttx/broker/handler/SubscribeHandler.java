@@ -8,7 +8,6 @@ import com.jun.mqttx.service.ISubscriptionService;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
-import io.netty.util.AttributeKey;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -54,7 +53,7 @@ public class SubscribeHandler extends AbstractMqttMessageHandler {
             if (!isValidTopic(topic)) {
                 //Failure
                 qos = 0x80;
-            }else {
+            } else {
                 ClientSub clientSub = new ClientSub(clientId, qos, topic);
                 subscriptionService.subscribe(clientSub);
             }
@@ -95,7 +94,6 @@ public class SubscribeHandler extends AbstractMqttMessageHandler {
     /**
      * 用于判定 topic 是否合法，目前 mqttx 尚不支持通配符 <b>+,*</b>
      *
-     *
      * @param topic 主题
      * @return true if topic valid
      */
@@ -104,7 +102,8 @@ public class SubscribeHandler extends AbstractMqttMessageHandler {
             return false;
         }
 
-        if (topic.contains("*") || topic.contains("+") || topic.endsWith("/")) {
+        if (topic.contains("*") || topic.contains("+") ||
+                topic.endsWith("/") || topic.contains("#")) {
             return false;
         }
 

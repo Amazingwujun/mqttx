@@ -1,11 +1,9 @@
 package com.jun.mqttx.broker.handler;
 
 import com.jun.mqttx.common.config.BizConfig;
-import com.jun.mqttx.service.ISessionService;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttMessageType;
-import io.netty.util.AttributeKey;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
@@ -20,19 +18,19 @@ import org.springframework.stereotype.Component;
 @Component
 public final class DisconnectHandler extends AbstractMqttMessageHandler {
 
-    private ISessionService sessionService;
+    private ConnectHandler connectHandler;
 
     public DisconnectHandler(StringRedisTemplate stringRedisTemplate, BizConfig bizConfig,
-                             ISessionService sessionService) {
+                             ConnectHandler connectHandler) {
         super(stringRedisTemplate, bizConfig);
-        this.sessionService = sessionService;
+        this.connectHandler = connectHandler;
     }
 
     @Override
     public void process(ChannelHandlerContext ctx, MqttMessage msg) {
-        //todo clear will Message
-        String clientId = (String) ctx.channel().attr(AttributeKey.valueOf("clientId")).get();
-        sessionService.clear(clientId);
+        if (clearSession(ctx)) {
+            connectHandler.actionOnCleanSession(clientId(ctx));
+        }
 
         ctx.close();
     }

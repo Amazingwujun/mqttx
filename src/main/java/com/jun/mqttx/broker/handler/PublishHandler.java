@@ -62,7 +62,7 @@ public class PublishHandler extends AbstractMqttMessageHandler {
         //获取qos、topic、packetId、retain、payload
         int mqttQoS = mqttFixedHeader.qosLevel().value();
         String topic = mqttPublishVariableHeader.topicName();
-        int packetId = mqttPublishVariableHeader.packetId();
+        int packetId = Math.abs(mqttPublishVariableHeader.packetId());
         boolean retain = mqttFixedHeader.isRetain();
         byte[] data = new byte[payload.readableBytes()];
         payload.readBytes(data);
@@ -73,6 +73,9 @@ public class PublishHandler extends AbstractMqttMessageHandler {
 
         //响应
         switch (mqttQoS) {
+            case 0: //at most once
+                publish(pubMsg);
+                break;
             case 1: //at least once
                 publish(pubMsg);
                 MqttMessage pubAck = MqttMessageFactory.newMessage(
@@ -135,7 +138,7 @@ public class PublishHandler extends AbstractMqttMessageHandler {
                     .qos(qos)
                     .topicName(topic)
                     .retained(pubMsg.isRetain())
-                    .payload(Unpooled.copiedBuffer(pubMsg.getPayload()))
+                    .payload(Unpooled.wrappedBuffer(pubMsg.getPayload()))
                     .build();
             if (qos == MqttQoS.EXACTLY_ONCE || qos == MqttQoS.AT_LEAST_ONCE) {
                 publishMessageService.save(clientId, pubMsg);
