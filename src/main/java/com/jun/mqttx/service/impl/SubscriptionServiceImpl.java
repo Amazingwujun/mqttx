@@ -1,6 +1,5 @@
 package com.jun.mqttx.service.impl;
 
-import com.alibaba.fastjson.JSON;
 import com.jun.mqttx.common.config.BizConfig;
 import com.jun.mqttx.entity.ClientSub;
 import com.jun.mqttx.service.ISubscriptionService;
@@ -9,10 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * 主题订阅服务
@@ -46,8 +42,12 @@ public class SubscriptionServiceImpl implements ISubscriptionService {
      */
     @Override
     public void subscribe(ClientSub clientSub) {
-        stringRedisTemplate.opsForSet()
-                .add(topicPrefix + clientSub.getTopic(), JSON.toJSONString(clientSub));
+        String topic = clientSub.getTopic();
+        String clientId = clientSub.getClientId();
+        int qos = clientSub.getQos();
+
+        stringRedisTemplate.opsForHash()
+                .put(topicPrefix + topic, clientId, String.valueOf(qos));
     }
 
     /**
@@ -58,7 +58,7 @@ public class SubscriptionServiceImpl implements ISubscriptionService {
      */
     @Override
     public void unsubscribe(String clientId, List<String> topics) {
-        topics.forEach(topic -> stringRedisTemplate.opsForSet().remove(topicPrefix + topic, clientId));
+        topics.forEach(topic -> stringRedisTemplate.opsForHash().delete(topicPrefix + topic, clientId));
     }
 
 
@@ -70,13 +70,17 @@ public class SubscriptionServiceImpl implements ISubscriptionService {
      */
     @Override
     public List<ClientSub> searchSubscribeClientList(String topic) {
-        Set<String> members = stringRedisTemplate.opsForSet().members(topicPrefix + topic);
-        if (CollectionUtils.isEmpty(members)) {
+        Map<Object, Object> entries = stringRedisTemplate.opsForHash().entries(topicPrefix + topic);
+        if (CollectionUtils.isEmpty(entries)) {
             return Collections.EMPTY_LIST;
         }
 
-        List<ClientSub> clientSubList = new ArrayList<>(members.size());
-        members.forEach(member -> clientSubList.add(JSON.parseObject(member, ClientSub.class)));
+        List<ClientSub> clientSubList = new ArrayList<>(entries.size());
+        entries.forEach((k, v) -> {
+            String key = (String) k;
+            String val = (String) v;
+            clientSubList.add(new ClientSub(key, Integer.parseInt(val), topic));
+        });
         return clientSubList;
     }
 

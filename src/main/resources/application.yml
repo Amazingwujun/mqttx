@@ -14,3 +14,4 @@ biz:
   retain-message-prefix: "MQTT:RETAIN:"
   topic-prefix: "MQTT:TOPIC:"
   pub-msg-set-prefix: "MQTT:CLIENT:PUBMSG:"
+  pub-rel-msg-set-prefix: "MQTT:CLIENT:PUBRELMSG:"

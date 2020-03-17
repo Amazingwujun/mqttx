@@ -1,8 +1,11 @@
 package com.jun.mqttx.broker.handler;
 
+import com.jun.mqttx.common.config.BizConfig;
+import com.jun.mqttx.service.IPubRelMessageService;
+import com.jun.mqttx.service.IPublishMessageService;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.mqtt.MqttMessage;
-import io.netty.handler.codec.mqtt.MqttMessageType;
+import io.netty.handler.codec.mqtt.*;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 /**
@@ -12,11 +15,36 @@ import org.springframework.stereotype.Component;
  * @date 2020-03-04 16:01
  */
 @Component
-public class PubRecHandler implements MqttMessageHandler {
+public class PubRecHandler extends AbstractMqttMessageHandler {
+
+    private IPubRelMessageService pubRelMessageService;
+
+    private IPublishMessageService publishMessageService;
+
+    public PubRecHandler(StringRedisTemplate stringRedisTemplate, BizConfig bizConfig,
+                         IPubRelMessageService pubRelMessageService, IPublishMessageService publishMessageService) {
+        super(stringRedisTemplate, bizConfig);
+        this.pubRelMessageService = pubRelMessageService;
+        this.publishMessageService = publishMessageService;
+    }
 
     @Override
     public void process(ChannelHandlerContext ctx, MqttMessage msg) {
+        //移除消息
+        MqttMessageIdVariableHeader mqttMessageIdVariableHeader = (MqttMessageIdVariableHeader) msg.variableHeader();
+        int messageId = mqttMessageIdVariableHeader.messageId();
+        String clientId = clientId(ctx);
+        publishMessageService.remove(clientId, messageId);
 
+        //保存 pubRec
+        pubRelMessageService.save(clientId, messageId);
+
+        MqttMessage mqttMessage = MqttMessageFactory.newMessage(
+                new MqttFixedHeader(MqttMessageType.PUBREL, false, MqttQoS.AT_LEAST_ONCE, false, 0),
+                MqttMessageIdVariableHeader.from(messageId),
+                null
+        );
+        ctx.writeAndFlush(mqttMessage);
     }
 
     @Override

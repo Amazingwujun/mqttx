@@ -6,29 +6,31 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.util.Assert;
 
 /**
- * {@link MqttMessageType#PUBCOMP} 消息处理器
+ * {@link MqttMessageType#PUBREL} 消息处理器
  *
  * @author Jun
- * @date 2020-03-04 16:03
+ * @date 2020-03-17 09:31
  */
 @Component
-public class PubComHandler extends AbstractMqttMessageHandler {
+public class PubRelHandler extends AbstractMqttMessageHandler {
 
     private IPubRelMessageService pubRelMessageService;
 
-    public PubComHandler(StringRedisTemplate stringRedisTemplate, BizConfig bizConfig, IPubRelMessageService pubRelMessageService) {
+    public PubRelHandler(StringRedisTemplate stringRedisTemplate, BizConfig bizConfig, IPubRelMessageService pubRelMessageService) {
         super(stringRedisTemplate, bizConfig);
         this.pubRelMessageService = pubRelMessageService;
+
+        Assert.notNull(pubRelMessageService, "pubRelMessageService can't be null");
     }
 
     @Override
     public void process(ChannelHandlerContext ctx, MqttMessage msg) {
         MqttMessageIdVariableHeader mqttMessageIdVariableHeader = (MqttMessageIdVariableHeader) msg.variableHeader();
         int messageId = mqttMessageIdVariableHeader.messageId();
-        String clientId = clientId(ctx);
-        pubRelMessageService.remove(clientId, messageId);
+        pubRelMessageService.remove(clientId(ctx), messageId);
 
         MqttMessage mqttMessage = MqttMessageFactory.newMessage(
                 new MqttFixedHeader(MqttMessageType.PUBCOMP, false, MqttQoS.AT_MOST_ONCE, false, 0),
@@ -40,6 +42,6 @@ public class PubComHandler extends AbstractMqttMessageHandler {
 
     @Override
     public MqttMessageType handleType() {
-        return MqttMessageType.PUBCOMP;
+        return MqttMessageType.PUBREL;
     }
 }

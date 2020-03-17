@@ -1,13 +1,10 @@
 package com.jun.mqttx.broker.handler;
 
+import com.jun.mqttx.broker.BrokerHandler;
 import com.jun.mqttx.common.config.BizConfig;
 import com.jun.mqttx.entity.PubMsg;
 import com.jun.mqttx.entity.Session;
-import com.jun.mqttx.broker.BrokerHandler;
-import com.jun.mqttx.service.IAuthenticationService;
-import com.jun.mqttx.service.IPublishMessageService;
-import com.jun.mqttx.service.ISessionService;
-import com.jun.mqttx.service.ISubscriptionService;
+import com.jun.mqttx.service.*;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelId;
@@ -62,18 +59,26 @@ public final class ConnectHandler extends AbstractMqttMessageHandler {
      */
     private IPublishMessageService publishMessageService;
 
+    /**
+     * pubRel 消息服务
+     */
+    private IPubRelMessageService pubRelMessageService;
+
     public ConnectHandler(IAuthenticationService authenticationService, ISessionService sessionService, StringRedisTemplate
-            stringRedisTemplate, BizConfig bizConfig, ISubscriptionService subscriptionService,IPublishMessageService publishMessageService) {
+            stringRedisTemplate, BizConfig bizConfig, ISubscriptionService subscriptionService, IPublishMessageService publishMessageService,
+                          IPubRelMessageService pubRelMessageService) {
         super(stringRedisTemplate, bizConfig);
         Assert.notNull(authenticationService, "authentication can't be null");
         Assert.notNull(sessionService, "sessionService can't be null");
         Assert.notNull(subscriptionService, "subscriptionService can't be null");
-        Assert.notNull(publishMessageService,"publishMessageService can't be null");
+        Assert.notNull(publishMessageService, "publishMessageService can't be null");
+        Assert.notNull(pubRelMessageService, "pubRelMessageService can't be null");
 
         this.authenticationService = authenticationService;
         this.sessionService = sessionService;
         this.subscriptionService = subscriptionService;
         this.publishMessageService = publishMessageService;
+        this.pubRelMessageService = pubRelMessageService;
     }
 
     /**
@@ -142,7 +147,7 @@ public final class ConnectHandler extends AbstractMqttMessageHandler {
         ctx.channel().attr(AttributeKey.valueOf("clientId")).set(clientId);
         clientMap.put(clientId, ctx.channel().id());
         sessionService.save(session);
-        saveSession(ctx,session);
+        saveSessionWithChannle(ctx, session);
 
         //处理遗嘱消息
         //[MQTT-3.1.2-8] If the Will Flag is set to 1 this indicates that, if the Connect request is accepted, a Will
@@ -190,18 +195,27 @@ public final class ConnectHandler extends AbstractMqttMessageHandler {
         if (!clearSession) {
             List<PubMsg> pubMsgList = publishMessageService.search(clientId);
             pubMsgList.forEach(pubMsg -> {
-                MqttPublishMessage mpm = MqttMessageBuilders.publish()
-                        .messageId(pubMsg.getMessageId())
-                        .qos(MqttQoS.valueOf(pubMsg.getQoS()))
-                        .topicName(pubMsg.getTopic())
-                        .retained(pubMsg.isRetain())
-                        .payload(Unpooled.buffer().writeBytes(pubMsg.getPayload()))
-                        .build();
+                MqttMessage mqttMessage = MqttMessageFactory.newMessage(
+                        new MqttFixedHeader(MqttMessageType.PUBLISH, true, MqttQoS.valueOf(pubMsg.getQoS()), pubMsg.isRetain(), 0),
+                        new MqttPublishVariableHeader(pubMsg.getTopic(), pubMsg.getMessageId()),
+                        //这是一个浅拷贝，任何对pubMsg中payload的修改都会反馈到wrappedBuffer
+                        Unpooled.wrappedBuffer(pubMsg.getPayload())
+                );
 
-                ctx.writeAndFlush(mpm);
+                ctx.writeAndFlush(mqttMessage);
             });
 
-            //todo PubRel 消息也是需要发送的,待完成
+            List<Integer> pubRelList = pubRelMessageService.search(clientId);
+            pubRelList.forEach(messageId -> {
+                MqttMessage mqttMessage = MqttMessageFactory.newMessage(
+                        //pubRel 的fixHeader 是固定死了的 [0,1,1,0,0,0,1,0]
+                        new MqttFixedHeader(MqttMessageType.PUBREL, false, MqttQoS.AT_MOST_ONCE, false, 0),
+                        MqttMessageIdVariableHeader.from(messageId),
+                        null
+                );
+
+                ctx.writeAndFlush(mqttMessage);
+            });
         }
     }
 
@@ -236,5 +250,6 @@ public final class ConnectHandler extends AbstractMqttMessageHandler {
         sessionService.clear(clientId);
         subscriptionService.clearClientSubscriptions(clientId);
         publishMessageService.clear(clientId);
+        pubRelMessageService.clear(clientId);
     }
 }
