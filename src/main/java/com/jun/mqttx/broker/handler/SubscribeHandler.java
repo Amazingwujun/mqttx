@@ -22,15 +22,13 @@ import java.util.List;
  * @date 2020-03-04 16:05
  */
 @Component
-public class SubscribeHandler extends AbstractMqttMessageHandler {
+public class SubscribeHandler extends AbstractMqttSessionHandler {
 
     private IRetainMessageService retainMessageService;
 
     private ISubscriptionService subscriptionService;
 
-    public SubscribeHandler(StringRedisTemplate stringRedisTemplate, BizConfig bizConfig,
-                            IRetainMessageService retainMessageService, ISubscriptionService subscriptionService) {
-        super(stringRedisTemplate, bizConfig);
+    public SubscribeHandler(IRetainMessageService retainMessageService, ISubscriptionService subscriptionService) {
         this.retainMessageService = retainMessageService;
         this.subscriptionService = subscriptionService;
     }
@@ -77,7 +75,7 @@ public class SubscribeHandler extends AbstractMqttMessageHandler {
                         .qos(MqttQoS.valueOf(pubMsg.getQoS()))
                         .retained(true)
                         .topicName(topic)
-                        .messageId(nextMessageId(clientId))
+                        .messageId(nextMessageId(ctx))
                         .payload(Unpooled.wrappedBuffer(pubMsg.getPayload()))
                         .build();
 

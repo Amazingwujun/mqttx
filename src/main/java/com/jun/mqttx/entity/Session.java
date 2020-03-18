@@ -4,8 +4,6 @@ import com.alibaba.fastjson.annotation.JSONField;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import lombok.Data;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 /**
  * MQTT 会话
  *
@@ -35,4 +33,13 @@ public class Session {
      * 用于生成 msgId
      */
     private int messageId;
+
+    /**
+     * session 绑定 channel, 而channel 是绑定了 EventLoop 线程的，这个方法是线程安全的（如果没有额外的配置）。
+     *
+     * @return {@link #messageId}
+     */
+    public int increaseAndGetMessageId() {
+        return ++messageId;
+    }
 }

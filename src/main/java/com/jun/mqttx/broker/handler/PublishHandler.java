@@ -1,7 +1,6 @@
 package com.jun.mqttx.broker.handler;
 
 import com.jun.mqttx.broker.BrokerHandler;
-import com.jun.mqttx.common.config.BizConfig;
 import com.jun.mqttx.entity.ClientSub;
 import com.jun.mqttx.entity.PubMsg;
 import com.jun.mqttx.service.IPubRelMessageService;
@@ -12,8 +11,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.util.Assert;
 
 import java.util.List;
 import java.util.Optional;
@@ -25,7 +24,7 @@ import java.util.Optional;
  * @date 2020-03-04 14:30
  */
 @Component
-public class PublishHandler extends AbstractMqttMessageHandler {
+public class PublishHandler extends AbstractMqttSessionHandler {
 
     private IRetainMessageService retainMessageService;
 
@@ -35,9 +34,12 @@ public class PublishHandler extends AbstractMqttMessageHandler {
 
     private IPubRelMessageService pubRelMessageService;
 
-    public PublishHandler(StringRedisTemplate stringRedisTemplate, BizConfig bizConfig, IPublishMessageService publishMessageService,
-                          IRetainMessageService retainMessageService, ISubscriptionService subscriptionService, IPubRelMessageService pubRelMessageService) {
-        super(stringRedisTemplate, bizConfig);
+    public PublishHandler(IPublishMessageService publishMessageService, IRetainMessageService retainMessageService,
+                          ISubscriptionService subscriptionService, IPubRelMessageService pubRelMessageService) {
+        Assert.notNull(publishMessageService,"publishMessageService can't be null");
+        Assert.notNull(retainMessageService,"retainMessageService can't be null");
+        Assert.notNull(subscriptionService,"publishMessageService can't be null");
+        Assert.notNull(pubRelMessageService,"publishMessageService can't be null");
 
         this.publishMessageService = publishMessageService;
         this.retainMessageService = retainMessageService;
@@ -74,10 +76,10 @@ public class PublishHandler extends AbstractMqttMessageHandler {
         //响应
         switch (mqttQoS) {
             case 0: //at most once
-                publish(pubMsg);
+                publish(pubMsg, ctx);
                 break;
             case 1: //at least once
-                publish(pubMsg);
+                publish(pubMsg, ctx);
                 MqttMessage pubAck = MqttMessageFactory.newMessage(
                         new MqttFixedHeader(MqttMessageType.PUBACK, false, MqttQoS.valueOf(mqttQoS), retain, 0),
                         MqttMessageIdVariableHeader.from(packetId),
@@ -96,7 +98,7 @@ public class PublishHandler extends AbstractMqttMessageHandler {
                 //判断消息是否重复
                 if (!pubRelMessageService.isDupMsg(clientId(ctx), packetId)) {
                     //发布新的消息并保存 pubRel 标记，用于实现Qos2
-                    publish(pubMsg);
+                    publish(pubMsg, ctx);
                     pubRelMessageService.save(clientId(ctx), packetId);
                 }
                 break;
@@ -118,7 +120,7 @@ public class PublishHandler extends AbstractMqttMessageHandler {
      *
      * @param pubMsg publish message
      */
-    private void publish(PubMsg pubMsg) {
+    private void publish(PubMsg pubMsg, ChannelHandlerContext ctx) {
         //获取topic订阅者id列表
         String topic = pubMsg.getTopic();
         List<ClientSub> clientList = subscriptionService.searchSubscribeClientList(topic);
@@ -134,7 +136,7 @@ public class PublishHandler extends AbstractMqttMessageHandler {
 
             //组装PubMsg
             MqttPublishMessage mpm = MqttMessageBuilders.publish()
-                    .messageId(nextMessageId(clientId))
+                    .messageId(nextMessageId(ctx))
                     .qos(qos)
                     .topicName(topic)
                     .retained(pubMsg.isRetain())

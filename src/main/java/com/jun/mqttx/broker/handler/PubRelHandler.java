@@ -1,10 +1,8 @@
 package com.jun.mqttx.broker.handler;
 
-import com.jun.mqttx.common.config.BizConfig;
 import com.jun.mqttx.service.IPubRelMessageService;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
@@ -15,12 +13,11 @@ import org.springframework.util.Assert;
  * @date 2020-03-17 09:31
  */
 @Component
-public class PubRelHandler extends AbstractMqttMessageHandler {
+public class PubRelHandler extends AbstractMqttSessionHandler {
 
     private IPubRelMessageService pubRelMessageService;
 
-    public PubRelHandler(StringRedisTemplate stringRedisTemplate, BizConfig bizConfig, IPubRelMessageService pubRelMessageService) {
-        super(stringRedisTemplate, bizConfig);
+    public PubRelHandler(IPubRelMessageService pubRelMessageService) {
         this.pubRelMessageService = pubRelMessageService;
 
         Assert.notNull(pubRelMessageService, "pubRelMessageService can't be null");

@@ -15,15 +15,13 @@ import org.springframework.stereotype.Component;
  * @date 2020-03-04 16:01
  */
 @Component
-public class PubRecHandler extends AbstractMqttMessageHandler {
+public class PubRecHandler extends AbstractMqttSessionHandler {
 
     private IPubRelMessageService pubRelMessageService;
 
     private IPublishMessageService publishMessageService;
 
-    public PubRecHandler(StringRedisTemplate stringRedisTemplate, BizConfig bizConfig,
-                         IPubRelMessageService pubRelMessageService, IPublishMessageService publishMessageService) {
-        super(stringRedisTemplate, bizConfig);
+    public PubRecHandler(IPubRelMessageService pubRelMessageService, IPublishMessageService publishMessageService) {
         this.pubRelMessageService = pubRelMessageService;
         this.publishMessageService = publishMessageService;
     }

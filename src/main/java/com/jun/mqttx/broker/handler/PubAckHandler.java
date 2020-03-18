@@ -1,12 +1,10 @@
 package com.jun.mqttx.broker.handler;
 
-import com.jun.mqttx.common.config.BizConfig;
 import com.jun.mqttx.service.IPublishMessageService;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttMessageType;
 import io.netty.handler.codec.mqtt.MqttPubAckMessage;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 /**
@@ -16,13 +14,11 @@ import org.springframework.stereotype.Component;
  * @date 2020-03-04 15:59
  */
 @Component
-public class PubAckHandler extends AbstractMqttMessageHandler {
+public class PubAckHandler extends AbstractMqttSessionHandler {
 
     private IPublishMessageService publishMessageService;
 
-    public PubAckHandler(StringRedisTemplate stringRedisTemplate, BizConfig bizConfig,
-                         IPublishMessageService publishMessageService) {
-        super(stringRedisTemplate, bizConfig);
+    public PubAckHandler(IPublishMessageService publishMessageService) {
         this.publishMessageService = publishMessageService;
     }
 

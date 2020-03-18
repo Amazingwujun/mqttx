@@ -1,7 +1,6 @@
 package com.jun.mqttx.broker.handler;
 
 import com.jun.mqttx.broker.BrokerHandler;
-import com.jun.mqttx.common.config.BizConfig;
 import com.jun.mqttx.entity.PubMsg;
 import com.jun.mqttx.entity.Session;
 import com.jun.mqttx.service.*;
@@ -11,7 +10,6 @@ import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelOutboundInvoker;
 import io.netty.handler.codec.mqtt.*;
 import io.netty.handler.timeout.IdleStateHandler;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
@@ -29,9 +27,9 @@ import static io.netty.handler.codec.mqtt.MqttMessageType.CONNECT;
  * @date 2020-03-03 22:17
  */
 @Component
-public final class ConnectHandler extends AbstractMqttMessageHandler {
+public final class ConnectHandler extends AbstractMqttSessionHandler {
 
-    private static final String NONE_ID_PREFIX = "NONE_";
+    private static final String NONE_ID_PREFIX = "NONE_ID_";
 
     /**
      * 初始化10000长连接客户端
@@ -63,10 +61,9 @@ public final class ConnectHandler extends AbstractMqttMessageHandler {
      */
     private IPubRelMessageService pubRelMessageService;
 
-    public ConnectHandler(IAuthenticationService authenticationService, ISessionService sessionService, StringRedisTemplate
-            stringRedisTemplate, BizConfig bizConfig, ISubscriptionService subscriptionService, IPublishMessageService publishMessageService,
+    public ConnectHandler(IAuthenticationService authenticationService, ISessionService sessionService,
+                          ISubscriptionService subscriptionService, IPublishMessageService publishMessageService,
                           IPubRelMessageService pubRelMessageService) {
-        super(stringRedisTemplate, bizConfig);
         Assert.notNull(authenticationService, "authentication can't be null");
         Assert.notNull(sessionService, "sessionService can't be null");
         Assert.notNull(subscriptionService, "subscriptionService can't be null");
@@ -169,7 +166,7 @@ public final class ConnectHandler extends AbstractMqttMessageHandler {
         boolean willFlag = variableHeader.isWillFlag();
         if (willFlag) {
             MqttPublishMessage mqttPublishMessage = MqttMessageBuilders.publish()
-                    .messageId(nextMessageId(clientId))
+                    .messageId(nextMessageId(ctx))
                     .retained(variableHeader.isWillRetain())
                     .topicName(payload.willTopic())
                     .payload(Unpooled.wrappedBuffer(payload.willMessageInBytes()))

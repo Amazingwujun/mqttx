@@ -1,11 +1,9 @@
 package com.jun.mqttx.broker.handler;
 
-import com.jun.mqttx.common.config.BizConfig;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttMessageType;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 /**
@@ -16,13 +14,11 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
-public final class DisconnectHandler extends AbstractMqttMessageHandler {
+public final class DisconnectHandler extends AbstractMqttSessionHandler {
 
     private ConnectHandler connectHandler;
 
-    public DisconnectHandler(StringRedisTemplate stringRedisTemplate, BizConfig bizConfig,
-                             ConnectHandler connectHandler) {
-        super(stringRedisTemplate, bizConfig);
+    public DisconnectHandler(ConnectHandler connectHandler) {
         this.connectHandler = connectHandler;
     }
 

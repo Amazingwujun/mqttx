@@ -1,10 +1,8 @@
 package com.jun.mqttx.broker.handler;
 
-import com.jun.mqttx.common.config.BizConfig;
 import com.jun.mqttx.service.ISubscriptionService;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 /**
@@ -14,13 +12,11 @@ import org.springframework.stereotype.Component;
  * @date 2020-03-04 16:07
  */
 @Component
-public class UnsubscribeHandler extends AbstractMqttMessageHandler {
+public class UnsubscribeHandler extends AbstractMqttSessionHandler {
 
     private ISubscriptionService subscriptionService;
 
-    public UnsubscribeHandler(StringRedisTemplate stringRedisTemplate, BizConfig bizConfig,
-                              ISubscriptionService subscriptionService) {
-        super(stringRedisTemplate, bizConfig);
+    public UnsubscribeHandler(ISubscriptionService subscriptionService) {
         this.subscriptionService = subscriptionService;
     }
 

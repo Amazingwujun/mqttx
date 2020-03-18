@@ -1,43 +1,27 @@
 package com.jun.mqttx.broker.handler;
 
-import com.jun.mqttx.common.config.BizConfig;
 import com.jun.mqttx.entity.Session;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.AttributeKey;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.util.Assert;
 
 /**
- * 部分通用方法
+ * 改抽象类提供 {@link Session} 相关方法
  *
  * @author Jun
  * @date 2020-03-07 22:20
  */
-public abstract class AbstractMqttMessageHandler implements MqttMessageHandler {
-
-    private StringRedisTemplate stringRedisTemplate;
-
-    private String messageIdPrefix;
-
-    public AbstractMqttMessageHandler(StringRedisTemplate stringRedisTemplate, BizConfig bizConfig) {
-        Assert.notNull(stringRedisTemplate, "stringRedisTemplate can't be null");
-
-        this.stringRedisTemplate = stringRedisTemplate;
-        this.messageIdPrefix = bizConfig.getMessageIdPrefix();
-
-        Assert.hasText(messageIdPrefix, "messageIdPrefix can't be null");
-    }
+public abstract class AbstractMqttSessionHandler implements MqttMessageHandler {
 
     /**
      * 生成消息ID
      *
-     * @param clientId 客户端identifier
+     * @param ctx {@link ChannelHandlerContext}
      * @return 消息ID
      */
-    int nextMessageId(String clientId) {
-        return stringRedisTemplate.opsForValue()
-                .increment(messageIdPrefix + clientId).intValue();
+    int nextMessageId(ChannelHandlerContext ctx) {
+        Session session = getSession(ctx);
+        return session.increaseAndGetMessageId();
     }
 
     /**
@@ -47,7 +31,7 @@ public abstract class AbstractMqttMessageHandler implements MqttMessageHandler {
      * @return clientId
      */
     String clientId(ChannelHandlerContext ctx) {
-        Session session = (Session) ctx.channel().attr(AttributeKey.valueOf("session")).get();
+        Session session = getSession(ctx);
         return session.getClientId();
     }
 
@@ -58,7 +42,7 @@ public abstract class AbstractMqttMessageHandler implements MqttMessageHandler {
      * @return true if clearSession = 1
      */
     boolean clearSession(ChannelHandlerContext ctx) {
-        Session session = (Session) ctx.channel().attr(AttributeKey.valueOf("session")).get();
+        Session session = getSession(ctx);
         return session.getClearSession();
     }
 
@@ -72,5 +56,15 @@ public abstract class AbstractMqttMessageHandler implements MqttMessageHandler {
         Channel channel = ctx.channel();
         AttributeKey<Object> attr = AttributeKey.valueOf("session");
         channel.attr(attr).set(session);
+    }
+
+    /**
+     * 获取客户会话
+     *
+     * @param ctx {@link ChannelHandlerContext}
+     * @return {@link Session}
+     */
+    private Session getSession(ChannelHandlerContext ctx) {
+        return (Session) ctx.channel().attr(AttributeKey.valueOf("session")).get();
     }
 }
