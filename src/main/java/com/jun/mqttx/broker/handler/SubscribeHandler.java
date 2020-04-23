@@ -1,16 +1,14 @@
 package com.jun.mqttx.broker.handler;
 
-import com.jun.mqttx.common.config.BizConfig;
 import com.jun.mqttx.entity.ClientSub;
 import com.jun.mqttx.entity.PubMsg;
 import com.jun.mqttx.service.IRetainMessageService;
 import com.jun.mqttx.service.ISubscriptionService;
+import com.jun.mqttx.utils.TopicUtils;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,7 +46,7 @@ public class SubscribeHandler extends AbstractMqttSessionHandler {
             String topic = mqttTopicSubscription.topicName();
             int qos = mqttTopicSubscription.qualityOfService().value();
 
-            if (!isValidTopic(topic)) {
+            if (!TopicUtils.isValid(topic)) {
                 //Failure
                 qos = 0x80;
             } else {
@@ -87,24 +85,5 @@ public class SubscribeHandler extends AbstractMqttSessionHandler {
     @Override
     public MqttMessageType handleType() {
         return MqttMessageType.SUBSCRIBE;
-    }
-
-    /**
-     * 用于判定 topic 是否合法，目前 mqttx 尚不支持通配符 <b>+,*</b>
-     *
-     * @param topic 主题
-     * @return true if topic valid
-     */
-    private boolean isValidTopic(String topic) {
-        if (StringUtils.isEmpty(topic)) {
-            return false;
-        }
-
-        if (topic.contains("*") || topic.contains("+") ||
-                topic.endsWith("/") || topic.contains("#")) {
-            return false;
-        }
-
-        return true;
     }
 }

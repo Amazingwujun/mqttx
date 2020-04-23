@@ -39,21 +39,38 @@ public class BizConfig {
     /** keyStore 密码 */
     private String keyStorePassword;
 
-    /** redis map key,应用于集群的会话存储 */
+    /**
+     * redis map key,应用于集群的会话存储
+     */
     private String clusterSessionHashKey;
 
-    /** redis increase 生成messageId的前缀 */
+    /**
+     * redis increase 生成messageId的前缀
+     */
     private String messageIdPrefix;
 
-    /** 主题前缀 */
+    /**
+     * 主题前缀
+     */
     private String topicPrefix;
 
-    /** 保留消息前缀 */
+    /**
+     * 保留消息前缀
+     */
     private String retainMessagePrefix;
 
-    /** client pub消息 redis set 前缀 */
+    /**
+     * client pub消息 redis set 前缀
+     */
     private String pubMsgSetPrefix;
 
-    /** client pubRel消息 redis set 前缀 */
+    /**
+     * client pubRel消息 redis set 前缀
+     */
     private String pubRelMsgSetPrefix;
+
+    /**
+     * topic集合，redis set key值
+     */
+    private String topicSetKey;
 }

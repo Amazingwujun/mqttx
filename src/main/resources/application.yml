@@ -5,7 +5,7 @@ biz:
   cluster-session-hash-key: "Session:key"
   heartbeat: 50s
   port: 1883
-  host: "127.0.0.1"
+  host: "0.0.0.0"
   key-store-location:
   ssl-enable: false
   key-store-password:
@@ -15,3 +15,4 @@ biz:
   topic-prefix: "MQTT:TOPIC:"
   pub-msg-set-prefix: "MQTT:CLIENT:PUBMSG:"
   pub-rel-msg-set-prefix: "MQTT:CLIENT:PUBRELMSG:"
+  topic-set-key: "MQTT:ALLTOPIC"
