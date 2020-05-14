@@ -1,6 +1,7 @@
 package com.jun.mqttx.broker.handler;
 
 import com.jun.mqttx.broker.BrokerHandler;
+import com.jun.mqttx.common.config.BizConfig;
 import com.jun.mqttx.common.constant.InternalMessageEnum;
 import com.jun.mqttx.consumer.Watcher;
 import com.jun.mqttx.entity.ClientSub;
@@ -36,20 +37,24 @@ public class PublishHandler extends AbstractMqttSessionHandler implements Watche
 
     private IInternalMessagePublishService internalMessagePublishService;
 
+    private int brokerId;
+
     public PublishHandler(IPublishMessageService publishMessageService, IRetainMessageService retainMessageService,
                           ISubscriptionService subscriptionService, IPubRelMessageService pubRelMessageService,
-                          IInternalMessagePublishService internalMessagePublishService) {
+                          IInternalMessagePublishService internalMessagePublishService, BizConfig bizConfig) {
         Assert.notNull(publishMessageService, "publishMessageService can't be null");
         Assert.notNull(retainMessageService, "retainMessageService can't be null");
         Assert.notNull(subscriptionService, "publishMessageService can't be null");
         Assert.notNull(pubRelMessageService, "publishMessageService can't be null");
         Assert.notNull(internalMessagePublishService, "internalMessagePublishService can't be null");
+        Assert.notNull(bizConfig, "bizConfig can't be null");
 
         this.publishMessageService = publishMessageService;
         this.retainMessageService = retainMessageService;
         this.subscriptionService = subscriptionService;
         this.pubRelMessageService = pubRelMessageService;
         this.internalMessagePublishService = internalMessagePublishService;
+        this.brokerId = bizConfig.getBrokerId();
     }
 
     /**
@@ -166,7 +171,7 @@ public class PublishHandler extends AbstractMqttSessionHandler implements Watche
                     .payload(Unpooled.wrappedBuffer(pubMsg.getPayload()))
                     .build();
 
-            //集群消息不做保存，因为传播消息的broker已经保存过了
+            //集群消息不做保存，因为传播消息的 broker 已经保存过了
             if ((qos == MqttQoS.EXACTLY_ONCE || qos == MqttQoS.AT_LEAST_ONCE) && !isInternalMessage) {
                 publishMessageService.save(clientId, pubMsg);
             }
@@ -214,7 +219,7 @@ public class PublishHandler extends AbstractMqttSessionHandler implements Watche
      * @param pubMsg {@link PubMsg}
      */
     private void internalMessagePublish(PubMsg pubMsg) {
-        InternalMessage<PubMsg> im = new InternalMessage<>(pubMsg, System.currentTimeMillis());
+        InternalMessage<PubMsg> im = new InternalMessage<>(pubMsg, System.currentTimeMillis(), brokerId);
         internalMessagePublishService.publish(im, channel());
     }
 }

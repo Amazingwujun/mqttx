@@ -59,4 +59,7 @@ public class BizConfig {
 
     /** topic集合，redis set key值 */
     private String topicSetKey;
+
+    /** broker id ,用于区分集群内不同的 broker*/
+    private Integer brokerId;
 }

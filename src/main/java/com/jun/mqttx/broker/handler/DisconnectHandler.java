@@ -1,6 +1,11 @@
 package com.jun.mqttx.broker.handler;
 
+import com.jun.mqttx.broker.BrokerHandler;
+import com.jun.mqttx.common.constant.InternalMessageEnum;
+import com.jun.mqttx.consumer.Watcher;
+import com.jun.mqttx.entity.InternalMessage;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelId;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttMessageType;
 import lombok.extern.slf4j.Slf4j;
@@ -14,7 +19,7 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
-public final class DisconnectHandler extends AbstractMqttSessionHandler {
+public final class DisconnectHandler extends AbstractMqttSessionHandler implements Watcher<String> {
 
     private ConnectHandler connectHandler;
 
@@ -34,5 +39,18 @@ public final class DisconnectHandler extends AbstractMqttSessionHandler {
     @Override
     public MqttMessageType handleType() {
         return MqttMessageType.DISCONNECT;
+    }
+
+    @Override
+    public void action(InternalMessage<String> im) {
+        ChannelId channelId = ConnectHandler.clientMap.get(im.getData());
+        if (channelId != null) {
+            BrokerHandler.channels.find(channelId).close();
+        }
+    }
+
+    @Override
+    public String channel() {
+        return InternalMessageEnum.DISCONNECT.getChannel();
     }
 }

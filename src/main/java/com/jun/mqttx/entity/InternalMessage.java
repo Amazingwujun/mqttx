@@ -19,4 +19,11 @@ public class InternalMessage<T> {
 
     /** 时间戳 */
     private long timestamp;
+
+    /**
+     * broker id
+     */
+    private int brokerId;
+
+    //@formatter:on
 }

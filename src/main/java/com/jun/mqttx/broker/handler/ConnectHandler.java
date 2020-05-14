@@ -1,6 +1,9 @@
 package com.jun.mqttx.broker.handler;
 
 import com.jun.mqttx.broker.BrokerHandler;
+import com.jun.mqttx.common.config.BizConfig;
+import com.jun.mqttx.common.constant.InternalMessageEnum;
+import com.jun.mqttx.entity.InternalMessage;
 import com.jun.mqttx.entity.PubMsg;
 import com.jun.mqttx.entity.Session;
 import com.jun.mqttx.service.*;
@@ -30,6 +33,8 @@ import static io.netty.handler.codec.mqtt.MqttMessageType.CONNECT;
 public final class ConnectHandler extends AbstractMqttSessionHandler {
 
     private static final String NONE_ID_PREFIX = "NONE_ID_";
+
+    final private int brokerId;
 
     /**
      * 初始化10000长连接客户端
@@ -61,20 +66,26 @@ public final class ConnectHandler extends AbstractMqttSessionHandler {
      */
     private IPubRelMessageService pubRelMessageService;
 
+    private IInternalMessagePublishService internalMessagePublishService;
+
     public ConnectHandler(IAuthenticationService authenticationService, ISessionService sessionService,
                           ISubscriptionService subscriptionService, IPublishMessageService publishMessageService,
-                          IPubRelMessageService pubRelMessageService) {
+                          IPubRelMessageService pubRelMessageService, BizConfig bizConfig, IInternalMessagePublishService internalMessagePublishService) {
         Assert.notNull(authenticationService, "authentication can't be null");
         Assert.notNull(sessionService, "sessionService can't be null");
         Assert.notNull(subscriptionService, "subscriptionService can't be null");
         Assert.notNull(publishMessageService, "publishMessageService can't be null");
         Assert.notNull(pubRelMessageService, "pubRelMessageService can't be null");
+        Assert.notNull(bizConfig, "bizConfig can't be null");
+        Assert.notNull(internalMessagePublishService, "internalMessagePublishService can't be null");
 
         this.authenticationService = authenticationService;
         this.sessionService = sessionService;
         this.subscriptionService = subscriptionService;
         this.publishMessageService = publishMessageService;
         this.pubRelMessageService = pubRelMessageService;
+        this.internalMessagePublishService = internalMessagePublishService;
+        this.brokerId = bizConfig.getBrokerId();
     }
 
     /**
@@ -122,6 +133,10 @@ public final class ConnectHandler extends AbstractMqttSessionHandler {
         //关闭之前可能存在的tcp链接
         //[MQTT-3.1.4-2] If the ClientId represents a Client already connected to the Server then the Server MUST
         //disconnect the existing Client
+        internalMessagePublishService.publish(
+                new InternalMessage<>(clientId, System.currentTimeMillis(), brokerId),
+                InternalMessageEnum.DISCONNECT.getChannel()
+        );
         Optional.ofNullable(clientMap.get(clientId))
                 .map(BrokerHandler.channels::find)
                 .ifPresent(ChannelOutboundInvoker::close);
@@ -193,7 +208,7 @@ public final class ConnectHandler extends AbstractMqttSessionHandler {
                     0, 0, (int) heartbeat));
         }
 
-        //根据协议补发 qos1,与qos2的消息
+        //根据协议补发 qos1,与 qos2 的消息
         if (!clearSession) {
             List<PubMsg> pubMsgList = publishMessageService.search(clientId);
             pubMsgList.forEach(pubMsg -> {
@@ -202,6 +217,12 @@ public final class ConnectHandler extends AbstractMqttSessionHandler {
                         new MqttPublishVariableHeader(pubMsg.getTopic(), pubMsg.getMessageId()),
                         //这是一个浅拷贝，任何对pubMsg中payload的修改都会反馈到wrappedBuffer
                         Unpooled.wrappedBuffer(pubMsg.getPayload())
+                );
+
+                //集群消息发布
+                internalMessagePublishService.publish(
+                        new InternalMessage<>(pubMsg, System.currentTimeMillis(), brokerId),
+                        InternalMessageEnum.PUB.getChannel()
                 );
 
                 ctx.writeAndFlush(mqttMessage);

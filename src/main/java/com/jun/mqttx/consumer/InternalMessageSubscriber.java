@@ -1,8 +1,10 @@
 package com.jun.mqttx.consumer;
 
 import com.alibaba.fastjson.JSON;
+import com.jun.mqttx.common.config.BizConfig;
 import com.jun.mqttx.entity.InternalMessage;
 import org.springframework.stereotype.Component;
+import org.springframework.util.Assert;
 
 import java.util.List;
 
@@ -16,10 +18,16 @@ import java.util.List;
 @Component
 public class InternalMessageSubscriber {
 
+    private int brokerId;
+
     private List<Watcher> watchers;
 
-    public InternalMessageSubscriber(List<Watcher> watchers) {
+    public InternalMessageSubscriber(List<Watcher> watchers, BizConfig bizConfig) {
+        Assert.notNull(watchers, "watchers can't be null");
+        Assert.notNull(bizConfig, "bizConfig can't be null");
+
         this.watchers = watchers;
+        this.brokerId = bizConfig.getBrokerId();
     }
 
     /**
@@ -38,6 +46,12 @@ public class InternalMessageSubscriber {
      */
     @SuppressWarnings("unchecked")
     public void handleMessage(String message, String channel) {
+        //同 broker 消息屏蔽
+        InternalMessage internalMessage = JSON.parseObject(message, InternalMessage.class);
+        if (brokerId == internalMessage.getBrokerId()) {
+            return;
+        }
+
         for (Watcher watcher : watchers) {
             if (watcher.channel().equals(channel)) {
                 watcher.action(JSON.parseObject(message, InternalMessage.class));
