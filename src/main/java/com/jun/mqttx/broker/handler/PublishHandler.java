@@ -1,12 +1,12 @@
 package com.jun.mqttx.broker.handler;
 
 import com.jun.mqttx.broker.BrokerHandler;
+import com.jun.mqttx.common.constant.InternalMessageEnum;
+import com.jun.mqttx.consumer.Watcher;
 import com.jun.mqttx.entity.ClientSub;
+import com.jun.mqttx.entity.InternalMessage;
 import com.jun.mqttx.entity.PubMsg;
-import com.jun.mqttx.service.IPubRelMessageService;
-import com.jun.mqttx.service.IPublishMessageService;
-import com.jun.mqttx.service.IRetainMessageService;
-import com.jun.mqttx.service.ISubscriptionService;
+import com.jun.mqttx.service.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -24,7 +24,7 @@ import java.util.Optional;
  * @date 2020-03-04 14:30
  */
 @Component
-public class PublishHandler extends AbstractMqttSessionHandler {
+public class PublishHandler extends AbstractMqttSessionHandler implements Watcher<PubMsg> {
 
     private IRetainMessageService retainMessageService;
 
@@ -34,17 +34,22 @@ public class PublishHandler extends AbstractMqttSessionHandler {
 
     private IPubRelMessageService pubRelMessageService;
 
+    private IInternalMessagePublishService internalMessagePublishService;
+
     public PublishHandler(IPublishMessageService publishMessageService, IRetainMessageService retainMessageService,
-                          ISubscriptionService subscriptionService, IPubRelMessageService pubRelMessageService) {
-        Assert.notNull(publishMessageService,"publishMessageService can't be null");
-        Assert.notNull(retainMessageService,"retainMessageService can't be null");
-        Assert.notNull(subscriptionService,"publishMessageService can't be null");
-        Assert.notNull(pubRelMessageService,"publishMessageService can't be null");
+                          ISubscriptionService subscriptionService, IPubRelMessageService pubRelMessageService,
+                          IInternalMessagePublishService internalMessagePublishService) {
+        Assert.notNull(publishMessageService, "publishMessageService can't be null");
+        Assert.notNull(retainMessageService, "retainMessageService can't be null");
+        Assert.notNull(subscriptionService, "publishMessageService can't be null");
+        Assert.notNull(pubRelMessageService, "publishMessageService can't be null");
+        Assert.notNull(internalMessagePublishService, "internalMessagePublishService can't be null");
 
         this.publishMessageService = publishMessageService;
         this.retainMessageService = retainMessageService;
         this.subscriptionService = subscriptionService;
         this.pubRelMessageService = pubRelMessageService;
+        this.internalMessagePublishService = internalMessagePublishService;
     }
 
     /**
@@ -70,16 +75,15 @@ public class PublishHandler extends AbstractMqttSessionHandler {
         payload.readBytes(data);
 
         //组装消息
-        //todo 后期实现集群时，这里需要加入内部消息通知机制
         PubMsg pubMsg = new PubMsg(mqttQoS, packetId, topic, retain, data);
 
         //响应
         switch (mqttQoS) {
             case 0: //at most once
-                publish(pubMsg, ctx);
+                publish(pubMsg, ctx, false);
                 break;
             case 1: //at least once
-                publish(pubMsg, ctx);
+                publish(pubMsg, ctx, false);
                 MqttMessage pubAck = MqttMessageFactory.newMessage(
                         new MqttFixedHeader(MqttMessageType.PUBACK, false, MqttQoS.valueOf(mqttQoS), retain, 0),
                         MqttMessageIdVariableHeader.from(packetId),
@@ -98,7 +102,7 @@ public class PublishHandler extends AbstractMqttSessionHandler {
                 //判断消息是否重复
                 if (!pubRelMessageService.isDupMsg(clientId(ctx), packetId)) {
                     //发布新的消息并保存 pubRel 标记，用于实现Qos2
-                    publish(pubMsg, ctx);
+                    publish(pubMsg, ctx, false);
                     pubRelMessageService.save(clientId(ctx), packetId);
                 }
                 break;
@@ -111,16 +115,28 @@ public class PublishHandler extends AbstractMqttSessionHandler {
     }
 
     @Override
+    public void action(InternalMessage<PubMsg> im) {
+        PubMsg data = im.getData();
+        publish(data, null, true);
+    }
+
+    @Override
     public MqttMessageType handleType() {
         return MqttMessageType.PUBLISH;
     }
 
+    @Override
+    public String channel() {
+        return InternalMessageEnum.PUB.getChannel();
+    }
+
     /**
-     * publish message to client
+     * 消息发布
      *
-     * @param pubMsg publish message
+     * @param pubMsg            publish message
+     * @param isInternalMessage 标志消息源是集群还是客户端
      */
-    private void publish(PubMsg pubMsg, ChannelHandlerContext ctx) {
+    private void publish(final PubMsg pubMsg, ChannelHandlerContext ctx, boolean isInternalMessage) {
         //获取topic订阅者id列表
         String topic = pubMsg.getTopic();
         List<ClientSub> clientList = subscriptionService.searchSubscribeClientList(topic);
@@ -135,16 +151,28 @@ public class PublishHandler extends AbstractMqttSessionHandler {
             MqttQoS qos = subQos >= pubQos ? MqttQoS.valueOf(pubQos) : MqttQoS.valueOf(subQos);
 
             //组装PubMsg
+            int messageId;
+            if (isInternalMessage) {
+                messageId = pubMsg.getMessageId();
+            } else {
+                messageId = nextMessageId(ctx);
+                pubMsg.setMessageId(messageId);
+            }
             MqttPublishMessage mpm = MqttMessageBuilders.publish()
-                    .messageId(nextMessageId(ctx))
+                    .messageId(messageId)
                     .qos(qos)
                     .topicName(topic)
                     .retained(pubMsg.isRetain())
                     .payload(Unpooled.wrappedBuffer(pubMsg.getPayload()))
                     .build();
-            if (qos == MqttQoS.EXACTLY_ONCE || qos == MqttQoS.AT_LEAST_ONCE) {
+
+            //集群消息不做保存，因为传播消息的broker已经保存过了
+            if ((qos == MqttQoS.EXACTLY_ONCE || qos == MqttQoS.AT_LEAST_ONCE) && !isInternalMessage) {
                 publishMessageService.save(clientId, pubMsg);
             }
+
+            //将消息推送给集群中的broker
+            internalMessagePublish(pubMsg);
 
             //发送
             Optional.of(clientId)
@@ -153,6 +181,7 @@ public class PublishHandler extends AbstractMqttSessionHandler {
                     .ifPresent(channel -> channel.writeAndFlush(mpm));
         });
     }
+
 
     /**
      * 处理 retain 消息
@@ -177,5 +206,15 @@ public class PublishHandler extends AbstractMqttSessionHandler {
         }
 
         retainMessageService.save(topic, pubMsg);
+    }
+
+    /**
+     * 集群内部消息发布
+     *
+     * @param pubMsg {@link PubMsg}
+     */
+    private void internalMessagePublish(PubMsg pubMsg) {
+        InternalMessage<PubMsg> im = new InternalMessage<>(pubMsg, System.currentTimeMillis());
+        internalMessagePublishService.publish(im, channel());
     }
 }
