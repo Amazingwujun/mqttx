@@ -1,10 +1,15 @@
 package com.jun.mqttx.common.config;
 
 import com.jun.mqttx.consumer.InternalMessageSubscriber;
+import com.jun.mqttx.consumer.Watcher;
+import com.jun.mqttx.service.IInternalMessagePublishService;
+import com.jun.mqttx.service.impl.InternalMessagePublishServiceImpl;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.listener.Topic;
@@ -16,13 +21,26 @@ import java.util.*;
 import static com.jun.mqttx.common.constant.InternalMessageEnum.*;
 
 /**
- * Redis 配置
+ * 集群配置
  *
  * @author Jun
- * @date 2020-05-14 09:33
+ * @date 2020-05-14 14:43
  */
 @Configuration
-public class RedisConfig {
+public class ClusterConfig {
+
+    @SuppressWarnings("rawtypes")
+    @Bean
+    @ConditionalOnProperty(name = "biz.enable-cluster", havingValue = "true")
+    public InternalMessageSubscriber internalMessageSubscriber(List<Watcher> watchers, BizConfig bizConfig) {
+        return new InternalMessageSubscriber(watchers, bizConfig);
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "biz.enable-cluster", havingValue = "true")
+    public IInternalMessagePublishService internalMessagePublishService(StringRedisTemplate stringRedisTemplate) {
+        return new InternalMessagePublishServiceImpl(stringRedisTemplate);
+    }
 
     /**
      * 消息适配器
@@ -30,6 +48,7 @@ public class RedisConfig {
      * @param subscriber 消息订阅者
      */
     @Bean
+    @ConditionalOnProperty(name = "biz.enable-cluster", havingValue = "true")
     public MessageListener messageListenerAdapter(InternalMessageSubscriber subscriber) {
         MessageListenerAdapter mla = new MessageListenerAdapter();
         mla.setDelegate(subscriber);
@@ -44,6 +63,7 @@ public class RedisConfig {
      * @param messageListener        {@link MessageListener}
      */
     @Bean
+    @ConditionalOnProperty(name = "biz.enable-cluster", havingValue = "true")
     public RedisMessageListenerContainer redisMessageListenerContainer(RedisConnectionFactory redisConnectionFactory,
                                                                        MessageListener messageListener) {
         RedisMessageListenerContainer redisMessageListenerContainer = new RedisMessageListenerContainer();

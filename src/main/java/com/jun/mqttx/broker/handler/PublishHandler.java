@@ -12,6 +12,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
@@ -39,22 +40,28 @@ public class PublishHandler extends AbstractMqttSessionHandler implements Watche
 
     private int brokerId;
 
+    private Boolean enableCluster;
+
     public PublishHandler(IPublishMessageService publishMessageService, IRetainMessageService retainMessageService,
                           ISubscriptionService subscriptionService, IPubRelMessageService pubRelMessageService,
-                          IInternalMessagePublishService internalMessagePublishService, BizConfig bizConfig) {
+                          @Nullable IInternalMessagePublishService internalMessagePublishService, BizConfig bizConfig) {
         Assert.notNull(publishMessageService, "publishMessageService can't be null");
         Assert.notNull(retainMessageService, "retainMessageService can't be null");
         Assert.notNull(subscriptionService, "publishMessageService can't be null");
         Assert.notNull(pubRelMessageService, "publishMessageService can't be null");
-        Assert.notNull(internalMessagePublishService, "internalMessagePublishService can't be null");
         Assert.notNull(bizConfig, "bizConfig can't be null");
 
         this.publishMessageService = publishMessageService;
         this.retainMessageService = retainMessageService;
         this.subscriptionService = subscriptionService;
         this.pubRelMessageService = pubRelMessageService;
-        this.internalMessagePublishService = internalMessagePublishService;
-        this.brokerId = bizConfig.getBrokerId();
+        this.enableCluster = bizConfig.getEnableCluster();
+
+        if (enableCluster) {
+            this.brokerId = bizConfig.getBrokerId();
+            this.internalMessagePublishService = internalMessagePublishService;
+            Assert.notNull(internalMessagePublishService, "internalMessagePublishService can't be null");
+        }
     }
 
     /**
@@ -177,7 +184,9 @@ public class PublishHandler extends AbstractMqttSessionHandler implements Watche
             }
 
             //将消息推送给集群中的broker
-            internalMessagePublish(pubMsg);
+            if (enableCluster) {
+                internalMessagePublish(pubMsg);
+            }
 
             //发送
             Optional.of(clientId)

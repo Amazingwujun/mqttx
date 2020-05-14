@@ -57,9 +57,20 @@ public class BizConfig {
     /** client pubRel消息 redis set 前缀 */
     private String pubRelMsgSetPrefix;
 
-    /** topic集合，redis set key值 */
+    /**
+     * topic集合，redis set key值
+     */
     private String topicSetKey;
 
-    /** broker id ,用于区分集群内不同的 broker*/
+    /**
+     * broker id ,用于区分集群内不同的 broker
+     */
     private Integer brokerId;
+
+    /**
+     * 集群功能开关 ,默认 false
+     */
+    private Boolean enableCluster = false;
+
+    //@formatter:on
 }

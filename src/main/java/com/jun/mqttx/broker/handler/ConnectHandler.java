@@ -13,6 +13,7 @@ import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelOutboundInvoker;
 import io.netty.handler.codec.mqtt.*;
 import io.netty.handler.timeout.IdleStateHandler;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
@@ -34,7 +35,9 @@ public final class ConnectHandler extends AbstractMqttSessionHandler {
 
     private static final String NONE_ID_PREFIX = "NONE_ID_";
 
-    final private int brokerId;
+    private int brokerId;
+
+    final private Boolean enableCluster;
 
     /**
      * 初始化10000长连接客户端
@@ -70,22 +73,26 @@ public final class ConnectHandler extends AbstractMqttSessionHandler {
 
     public ConnectHandler(IAuthenticationService authenticationService, ISessionService sessionService,
                           ISubscriptionService subscriptionService, IPublishMessageService publishMessageService,
-                          IPubRelMessageService pubRelMessageService, BizConfig bizConfig, IInternalMessagePublishService internalMessagePublishService) {
+                          IPubRelMessageService pubRelMessageService, BizConfig bizConfig, @Nullable IInternalMessagePublishService internalMessagePublishService) {
         Assert.notNull(authenticationService, "authentication can't be null");
         Assert.notNull(sessionService, "sessionService can't be null");
         Assert.notNull(subscriptionService, "subscriptionService can't be null");
         Assert.notNull(publishMessageService, "publishMessageService can't be null");
         Assert.notNull(pubRelMessageService, "pubRelMessageService can't be null");
         Assert.notNull(bizConfig, "bizConfig can't be null");
-        Assert.notNull(internalMessagePublishService, "internalMessagePublishService can't be null");
 
         this.authenticationService = authenticationService;
         this.sessionService = sessionService;
         this.subscriptionService = subscriptionService;
         this.publishMessageService = publishMessageService;
         this.pubRelMessageService = pubRelMessageService;
-        this.internalMessagePublishService = internalMessagePublishService;
-        this.brokerId = bizConfig.getBrokerId();
+        this.enableCluster = bizConfig.getEnableCluster();
+
+        if (enableCluster) {
+            this.brokerId = bizConfig.getBrokerId();
+            this.internalMessagePublishService = internalMessagePublishService;
+            Assert.notNull(internalMessagePublishService, "internalMessagePublishService can't be null");
+        }
     }
 
     /**
@@ -133,10 +140,12 @@ public final class ConnectHandler extends AbstractMqttSessionHandler {
         //关闭之前可能存在的tcp链接
         //[MQTT-3.1.4-2] If the ClientId represents a Client already connected to the Server then the Server MUST
         //disconnect the existing Client
-        internalMessagePublishService.publish(
-                new InternalMessage<>(clientId, System.currentTimeMillis(), brokerId),
-                InternalMessageEnum.DISCONNECT.getChannel()
-        );
+        if (enableCluster) {
+            internalMessagePublishService.publish(
+                    new InternalMessage<>(clientId, System.currentTimeMillis(), brokerId),
+                    InternalMessageEnum.DISCONNECT.getChannel()
+            );
+        }
         Optional.ofNullable(clientMap.get(clientId))
                 .map(BrokerHandler.channels::find)
                 .ifPresent(ChannelOutboundInvoker::close);
@@ -219,11 +228,13 @@ public final class ConnectHandler extends AbstractMqttSessionHandler {
                         Unpooled.wrappedBuffer(pubMsg.getPayload())
                 );
 
-                //集群消息发布
-                internalMessagePublishService.publish(
-                        new InternalMessage<>(pubMsg, System.currentTimeMillis(), brokerId),
-                        InternalMessageEnum.PUB.getChannel()
-                );
+                if (enableCluster) {
+                    //集群消息发布
+                    internalMessagePublishService.publish(
+                            new InternalMessage<>(pubMsg, System.currentTimeMillis(), brokerId),
+                            InternalMessageEnum.PUB.getChannel()
+                    );
+                }
 
                 ctx.writeAndFlush(mqttMessage);
             });

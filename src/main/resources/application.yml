@@ -17,3 +17,4 @@ biz:
   pub-rel-msg-set-prefix: "MQTT:CLIENT:PUBRELMSG:"
   topic-set-key: "MQTT:ALLTOPIC"
   broker-id: 1
+  enable-cluster: false

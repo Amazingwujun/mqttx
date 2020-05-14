@@ -5,7 +5,6 @@ import com.jun.mqttx.entity.InternalMessage;
 import com.jun.mqttx.service.IInternalMessagePublishService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.stereotype.Service;
 
 /**
  * 基于 Redis 的实现
@@ -14,7 +13,6 @@ import org.springframework.stereotype.Service;
  * @date 2020-05-14 10:30
  */
 @Slf4j
-@Service
 public class InternalMessagePublishServiceImpl implements IInternalMessagePublishService {
 
     private StringRedisTemplate stringRedisTemplate;
