@@ -1,8 +1,7 @@
 `mqttx` 基于 [mqtt v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) 官方协议文档开发。
 项目运行的方式：
-
-    1. 使用`springboot`推荐的启动方式 `java -jar app.jar`，使用 `mvn clean package` 打包，这种方式需要修改配置文件中 redis 地址和端口。
-    2. 基于 `docker` 容器化部署，这个就比较简单，具体的步骤见 [容器化部署](#容器化部署)
+  1. 使用`springboot`推荐的启动方式 `java -jar app.jar`，使用 `mvn clean package` 打包，这种方式需要修改配置文件中 redis 地址和端口。
+  2. 基于 `docker` 容器化部署，这个就比较简单，具体的步骤见 **容器化部署**
 
 ## 容器化部署
 
@@ -52,11 +51,11 @@
 
 #### 4、ssl支持
 
-开启 ssl 你首先应该有了ca，然后修改`application.yml`文件中几个配置：
+开启 ssl 你首先应该有了ca，然后修改 `application.yml` 文件中几个配置：
 
-1. biz.key-store-location: 证书地址，基于 classpath
-2. biz.ssl-enable: 功能开关，默认 false
-3. biz.key-store-password: 证书密码
+1. `biz.key-store-location`: 证书地址，基于 `classpath`
+2. `biz.ssl-enable`: 功能开关，默认 `false`
+3. `biz.key-store-password`: 证书密码
 
 
 

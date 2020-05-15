@@ -15,8 +15,8 @@ public class TopicUtils {
     /**
      * 用于判定客户端订阅的 topic 是否合法，参考 mqtt-v3.1.1 4.7章进行逻辑实现，以下为定制化通配符处理策略：
      * <ul>
-     *     <li>不支持'#'与'+'混合使用</li>
      *     <li>第一个字符及最后一个字符不可为'/'</li>
+     *     <li># 通配符如果存在，必须是最后一个字符</li>
      * </ul>
      * 这里的判断做的还不是很严谨，所以客户端对 topic 的使用还是得遵循规范，不要乱来
      *
@@ -39,6 +39,22 @@ public class TopicUtils {
             return false;
         }
 
+
+        String[] split = subTopic.split("/");
+        for (String fragment : split) {
+            //不允许 a//b
+            if (StringUtils.isEmpty(fragment)) {
+                return false;
+            }
+
+            //不允许 a/b+/c，a/b# 等非法 topicFilter
+            if (fragment.contains("+") || fragment.contains("#")) {
+                if (fragment.length() > 1) {
+                    return false;
+                }
+            }
+        }
+
         return true;
     }
 
@@ -46,7 +62,7 @@ public class TopicUtils {
      * 用于判定客户订阅的主题是否匹配发布主题
      *
      * @param pub 发布主题
-     * @param sub 订阅主题
+     * @param sub 订阅主题 - topicFilter
      * @return true if pub match sub
      */
     public static boolean match(String pub, String sub) {
