@@ -73,7 +73,6 @@ public class TopicUtils {
             return Objects.equals(pub, sub);
         }
 
-
         boolean result = true;
         String[] pubs = pub.split("/");
         String[] subs = sub.split("/");

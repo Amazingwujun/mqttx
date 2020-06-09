@@ -72,5 +72,10 @@ public class BizConfig {
      */
     private Boolean enableCluster = false;
 
+    /**
+     * 主题安全订阅开关，默认关
+     */
+    private Boolean enableTopicSubscribeSecure = false;
+
     //@formatter:on
 }

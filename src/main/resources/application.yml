@@ -18,3 +18,4 @@ biz:
   topic-set-key: "MQTT:ALLTOPIC"
   broker-id: 1
   enable-cluster: false
+  enable-topic-subscribe-secure: false

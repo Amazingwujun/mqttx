@@ -1,5 +1,6 @@
 package com.jun.mqttx.broker.handler;
 
+import com.jun.mqttx.common.config.BizConfig;
 import com.jun.mqttx.entity.ClientSub;
 import com.jun.mqttx.entity.PubMsg;
 import com.jun.mqttx.service.IRetainMessageService;
@@ -20,17 +21,20 @@ import java.util.List;
  * @date 2020-03-04 16:05
  */
 @Component
-public class SubscribeHandler extends AbstractMqttSessionHandler {
+public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
 
     private IRetainMessageService retainMessageService;
 
     private ISubscriptionService subscriptionService;
 
-    public SubscribeHandler(IRetainMessageService retainMessageService, ISubscriptionService subscriptionService) {
+    private boolean enableTopicSubscribeSecure;
+
+    public SubscribeHandler(IRetainMessageService retainMessageService, ISubscriptionService subscriptionService,
+                            BizConfig bizConfig) {
         this.retainMessageService = retainMessageService;
         this.subscriptionService = subscriptionService;
+        this.enableTopicSubscribeSecure = bizConfig.getEnableTopicSubscribeSecure();
     }
-
 
     @Override
     public void process(ChannelHandlerContext ctx, MqttMessage msg) {
@@ -41,6 +45,9 @@ public class SubscribeHandler extends AbstractMqttSessionHandler {
         String clientId = clientId(ctx);
 
         //保存用户订阅
+        //考虑到某些 topic 的订阅可能不开放给某些 client，针对这些 topic，我们有必要增加权限校验。实现办法有很多，目前的校验机制：
+        //当 client 连接并调用认证服务时，认证服务返回 client 具备的哪些 topic 订阅权限，当 enableTopicSubscribeSecure=true 时，
+        //程序将校验 client 当前想要订阅的 topic 是否被授权
         List<Integer> grantedQosLevels = new ArrayList<>(mqttTopicSubscriptions.size());
         mqttTopicSubscriptions.forEach(mqttTopicSubscription -> {
             String topic = mqttTopicSubscription.topicName();
@@ -50,8 +57,13 @@ public class SubscribeHandler extends AbstractMqttSessionHandler {
                 //Failure
                 qos = 0x80;
             } else {
-                ClientSub clientSub = new ClientSub(clientId, qos, topic);
-                subscriptionService.subscribe(clientSub);
+                if (enableTopicSubscribeSecure && !hasAuthToSubTopic(ctx, topic)) {
+                    //client 不允许订阅此 topic
+                    qos = 0x80;
+                } else {
+                    ClientSub clientSub = new ClientSub(clientId, qos, topic);
+                    subscriptionService.subscribe(clientSub);
+                }
             }
             grantedQosLevels.add(qos);
         });

@@ -3,6 +3,7 @@ package com.jun.mqttx.broker.handler;
 import com.jun.mqttx.broker.BrokerHandler;
 import com.jun.mqttx.common.config.BizConfig;
 import com.jun.mqttx.common.constant.InternalMessageEnum;
+import com.jun.mqttx.entity.Authentication;
 import com.jun.mqttx.entity.InternalMessage;
 import com.jun.mqttx.entity.PubMsg;
 import com.jun.mqttx.entity.Session;
@@ -116,8 +117,9 @@ public final class ConnectHandler extends AbstractMqttSessionHandler {
         MqttConnectPayload payload = mcm.payload();
 
         //用户名及密码校验
+        Authentication auth = null;
         if (variableHeader.hasPassword() && variableHeader.hasUserName()) {
-            authenticationService.authenticate(payload.userName(), payload.passwordInBytes());
+            auth = authenticationService.authenticate(payload.userName(), payload.passwordInBytes());
         }
 
         //获取clientId
@@ -181,6 +183,7 @@ public final class ConnectHandler extends AbstractMqttSessionHandler {
         }
         clientMap.put(clientId, ctx.channel().id());
         saveSessionWithChannel(ctx, session);
+        saveAuthorizedTopics(ctx, auth);
 
         //处理遗嘱消息
         //[MQTT-3.1.2-8] If the Will Flag is set to 1 this indicates that, if the Connect request is accepted, a Will

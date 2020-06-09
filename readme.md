@@ -57,7 +57,14 @@
 2. `biz.ssl-enable`: 功能开关，默认 `false`
 3. `biz.key-store-password`: 证书密码
 
+#### 5、topic 安全机制
 
+为了对 client 订阅 topic 进行限制，项目引入了简单的 topic 订阅鉴权机制:
+
+1. `biz.enable-topic-subscribe-secure`: 功能开关，默认`false`
+2. 使用时需要同步实现接口 `AuhenticationService` ，该接口返回对象中含有 `List<String> authorizedTopics` 存储 client 可以订阅的 `topic` 列表。
+
+> 仅在订阅时校验，未考虑动态限制订阅的功能，使用时请当心
 
 ### 路线图
 
@@ -65,8 +72,5 @@
 
 1. 考虑整合 `SpringCloud` 
 2. bug fix and optimization
-3. mqtt v5 支持？？？
-
-
 
 如果你对 **mqttx** 项目有更好的意见或建议，可以通过邮箱联系我：85998282@qq.com

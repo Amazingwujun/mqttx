@@ -1,9 +1,13 @@
 package com.jun.mqttx.broker.handler;
 
+import com.jun.mqttx.entity.Authentication;
 import com.jun.mqttx.entity.Session;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.AttributeKey;
+
+import java.util.Collections;
+import java.util.List;
 
 /**
  * 改抽象类提供 {@link Session} 相关方法
@@ -56,6 +60,38 @@ public abstract class AbstractMqttSessionHandler implements MqttMessageHandler {
         Channel channel = ctx.channel();
         AttributeKey<Object> attr = AttributeKey.valueOf("session");
         channel.attr(attr).set(session);
+    }
+
+    /**
+     * 保存 client 被授权订阅的 topic 列表
+     *
+     * @param ctx            {@link ChannelHandlerContext}
+     * @param authentication {@link Authentication}
+     */
+    void saveAuthorizedTopics(ChannelHandlerContext ctx, Authentication authentication) {
+        if (authentication == null) {
+            return;
+        }
+        Channel channel = ctx.channel();
+        AttributeKey<Object> attr = AttributeKey.valueOf("topics");
+        channel.attr(attr).set(authentication.getAuthorizedTopics());
+    }
+
+    /**
+     * 获取用户被授权的 topic 集合
+     *
+     * @param ctx {@link ChannelHandlerContext}
+     * @return topic 集合
+     */
+    @SuppressWarnings("unchecked")
+    List<String> authorizedTopics(ChannelHandlerContext ctx) {
+        Channel channel = ctx.channel();
+        Object topics = channel.attr(AttributeKey.valueOf("topics")).get();
+        if (topics == null) {
+            return Collections.EMPTY_LIST;
+        }
+
+        return (List<String>) topics;
     }
 
     /**
