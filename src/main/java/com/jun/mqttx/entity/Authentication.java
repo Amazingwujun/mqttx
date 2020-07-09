@@ -13,7 +13,15 @@ import java.util.List;
 @Data
 public class Authentication {
 
-    private List<String> authorizedTopics;
+    /**
+     * 允许订阅的 topic filter
+     */
+    private List<String> authorizedSub;
+
+    /**
+     * 允许发布的 topic filter
+     */
+    private List<String> authorizedPub;
 
     private String username;
 

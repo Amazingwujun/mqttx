@@ -7,6 +7,7 @@ import com.jun.mqttx.consumer.Watcher;
 import com.jun.mqttx.entity.ClientSub;
 import com.jun.mqttx.entity.InternalMessage;
 import com.jun.mqttx.entity.PubMsg;
+import com.jun.mqttx.exception.AuthorizationException;
 import com.jun.mqttx.service.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -26,7 +27,7 @@ import java.util.Optional;
  * @date 2020-03-04 14:30
  */
 @Component
-public class PublishHandler extends AbstractMqttSessionHandler implements Watcher<PubMsg> {
+public class PublishHandler extends AbstractMqttTopicSecureHandler implements Watcher<PubMsg> {
 
     private IRetainMessageService retainMessageService;
 
@@ -40,7 +41,7 @@ public class PublishHandler extends AbstractMqttSessionHandler implements Watche
 
     private int brokerId;
 
-    private Boolean enableCluster;
+    private Boolean enableCluster, enableTopicSubPubSecure;
 
     public PublishHandler(IPublishMessageService publishMessageService, IRetainMessageService retainMessageService,
                           ISubscriptionService subscriptionService, IPubRelMessageService pubRelMessageService,
@@ -56,6 +57,7 @@ public class PublishHandler extends AbstractMqttSessionHandler implements Watche
         this.subscriptionService = subscriptionService;
         this.pubRelMessageService = pubRelMessageService;
         this.enableCluster = bizConfig.getEnableCluster();
+        this.enableTopicSubPubSecure = bizConfig.getEnableTopicSubPubSecure();
 
         if (enableCluster) {
             this.brokerId = bizConfig.getBrokerId();
@@ -85,6 +87,11 @@ public class PublishHandler extends AbstractMqttSessionHandler implements Watche
         boolean retain = mqttFixedHeader.isRetain();
         byte[] data = new byte[payload.readableBytes()];
         payload.readBytes(data);
+
+        //发布权限判定
+        if (enableTopicSubPubSecure && !hasAuthToPubTopic(ctx, topic)) {
+            throw new AuthorizationException("无对应 topic 发布权限");
+        }
 
         //组装消息
         PubMsg pubMsg = new PubMsg(mqttQoS, packetId, topic, retain, data);

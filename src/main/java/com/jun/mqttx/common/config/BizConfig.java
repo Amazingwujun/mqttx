@@ -75,7 +75,7 @@ public class BizConfig {
     /**
      * 主题安全订阅开关，默认关
      */
-    private Boolean enableTopicSubscribeSecure = false;
+    private Boolean enableTopicSubPubSecure = false;
 
     //@formatter:on
 }

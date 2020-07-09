@@ -6,9 +6,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.AttributeKey;
 
-import java.util.Collections;
-import java.util.List;
-
 /**
  * 改抽象类提供 {@link Session} 相关方法
  *
@@ -16,6 +13,9 @@ import java.util.List;
  * @date 2020-03-07 22:20
  */
 public abstract class AbstractMqttSessionHandler implements MqttMessageHandler {
+
+    public static final String AUTHORIZED_PUB_TOPICS = "authorizedPubTopics";
+    public static final String AUTHORIZED_SUB_TOPICS = "authorizedSubTopics";
 
     /**
      * 生成消息ID
@@ -73,25 +73,8 @@ public abstract class AbstractMqttSessionHandler implements MqttMessageHandler {
             return;
         }
         Channel channel = ctx.channel();
-        AttributeKey<Object> attr = AttributeKey.valueOf("topics");
-        channel.attr(attr).set(authentication.getAuthorizedTopics());
-    }
-
-    /**
-     * 获取用户被授权的 topic 集合
-     *
-     * @param ctx {@link ChannelHandlerContext}
-     * @return topic 集合
-     */
-    @SuppressWarnings("unchecked")
-    List<String> authorizedTopics(ChannelHandlerContext ctx) {
-        Channel channel = ctx.channel();
-        Object topics = channel.attr(AttributeKey.valueOf("topics")).get();
-        if (topics == null) {
-            return Collections.EMPTY_LIST;
-        }
-
-        return (List<String>) topics;
+        channel.attr(AttributeKey.valueOf(AUTHORIZED_SUB_TOPICS)).set(authentication.getAuthorizedSub());
+        channel.attr(AttributeKey.valueOf(AUTHORIZED_PUB_TOPICS)).set(authentication.getAuthorizedPub());
     }
 
     /**

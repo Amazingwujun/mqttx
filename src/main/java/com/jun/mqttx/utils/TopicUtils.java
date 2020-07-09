@@ -1,7 +1,12 @@
 package com.jun.mqttx.utils;
 
+import com.jun.mqttx.broker.handler.AbstractMqttSessionHandler;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.util.AttributeKey;
 import org.springframework.util.StringUtils;
 
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -11,6 +16,54 @@ import java.util.Objects;
  * @date 2020-04-23 09:55
  */
 public class TopicUtils {
+
+
+    /**
+     * client 是否被允许订阅 topic
+     *
+     * @param ctx   {@link ChannelHandlerContext}
+     * @param topic 订阅 topic
+     * @return true 如果被授权
+     */
+    public static boolean hasAuthToSubTopic(ChannelHandlerContext ctx, String topic) {
+        return hasAuth(ctx, topic, AbstractMqttSessionHandler.AUTHORIZED_SUB_TOPICS);
+    }
+
+    /**
+     * client 是否被允许订阅 topic
+     *
+     * @param ctx   {@link ChannelHandlerContext}
+     * @param topic 订阅 topic
+     * @return true 如果被授权
+     */
+    public static boolean hasAuthToPubTopic(ChannelHandlerContext ctx, String topic) {
+        return hasAuth(ctx, topic, AbstractMqttSessionHandler.AUTHORIZED_PUB_TOPICS);
+    }
+
+    /**
+     * client 是否被允许订阅 topic
+     *
+     * @param ctx   {@link ChannelHandlerContext}
+     * @param topic 订阅 topic
+     * @param type  授权类别
+     * @return true 如果被授权
+     */
+    @SuppressWarnings("unchecked")
+    private static boolean hasAuth(ChannelHandlerContext ctx, String topic, String type) {
+        Channel channel = ctx.channel();
+        Object topics = channel.attr(AttributeKey.valueOf(type)).get();
+        if (topics == null) {
+            return false;
+        }
+        List<String> authorizedTopics = (List<String>) topics;
+        for (String authorizedTopic : authorizedTopics) {
+            if (TopicUtils.match(topic, authorizedTopic)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     /**
      * 用于判定客户端订阅的 topic 是否合法，参考 mqtt-v3.1.1 4.7章进行逻辑实现，以下为定制化通配符处理策略：

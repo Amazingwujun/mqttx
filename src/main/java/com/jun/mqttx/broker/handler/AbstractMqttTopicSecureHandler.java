@@ -3,8 +3,6 @@ package com.jun.mqttx.broker.handler;
 import com.jun.mqttx.utils.TopicUtils;
 import io.netty.channel.ChannelHandlerContext;
 
-import java.util.List;
-
 /**
  * 负责 topic 权限认证，运行规则：
  * <ol>
@@ -28,13 +26,10 @@ public abstract class AbstractMqttTopicSecureHandler extends AbstractMqttSession
      * @return true 如果被授权
      */
     protected boolean hasAuthToSubTopic(ChannelHandlerContext ctx, String topic) {
-        List<String> authorizedTopics = authorizedTopics(ctx);
-        for (String authorizedTopic : authorizedTopics) {
-            if (TopicUtils.match(topic, authorizedTopic)) {
-                return true;
-            }
-        }
+        return TopicUtils.hasAuthToSubTopic(ctx, topic);
+    }
 
-        return false;
+    protected boolean hasAuthToPubTopic(ChannelHandlerContext ctx, String topic) {
+        return TopicUtils.hasAuthToPubTopic(ctx, topic);
     }
 }

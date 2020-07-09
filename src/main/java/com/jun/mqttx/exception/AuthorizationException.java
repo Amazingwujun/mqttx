@@ -8,4 +8,10 @@ package com.jun.mqttx.exception;
  */
 public class AuthorizationException extends GlobalException {
 
+    public AuthorizationException() {
+    }
+
+    public AuthorizationException(String message) {
+        super(message);
+    }
 }

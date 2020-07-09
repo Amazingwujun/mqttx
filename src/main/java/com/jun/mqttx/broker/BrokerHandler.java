@@ -78,9 +78,11 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> {
         Session session = (Session) ctx.channel().attr(AttributeKey.valueOf("session")).get();
 
         //会话状态处理
-        ConnectHandler.clientMap.remove(session.getClientId());
-        if (Boolean.FALSE.equals(session.getClearSession())) {
-            sessionService.save(session);
+        if (session != null) {
+            ConnectHandler.clientMap.remove(session.getClientId());
+            if (Boolean.FALSE.equals(session.getClearSession())) {
+                sessionService.save(session);
+            }
         }
     }
 
@@ -132,10 +134,14 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> {
                     .sessionPresent(false)
                     .returnCode(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED)
                     .build();
+
+            log.info("client 权限异常:{}", cause.getMessage());
         } else if (cause instanceof IOException) {
             //连接被强制断开
-            Object clientId = ctx.channel().attr(AttributeKey.valueOf("clientId")).get();
-            log.error("client:{} 连接出现异常", clientId);
+            Session session = (Session) ctx.channel().attr(AttributeKey.valueOf("session")).get();
+            if (session != null) {
+                log.error("client:{} 连接出现异常", session.getClientId());
+            }
         } else {
             log.error("未知异常", cause);
         }

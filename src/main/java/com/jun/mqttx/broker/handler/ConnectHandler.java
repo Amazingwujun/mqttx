@@ -20,6 +20,7 @@ import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -32,13 +33,15 @@ import static io.netty.handler.codec.mqtt.MqttMessageType.CONNECT;
  * @date 2020-03-03 22:17
  */
 @Component
-public final class ConnectHandler extends AbstractMqttSessionHandler {
+public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
 
     private static final String NONE_ID_PREFIX = "NONE_ID_";
 
     private int brokerId;
 
     final private Boolean enableCluster;
+
+    final private Boolean enableTopicSubPubSecure;
 
     /**
      * 初始化10000长连接客户端
@@ -88,6 +91,7 @@ public final class ConnectHandler extends AbstractMqttSessionHandler {
         this.publishMessageService = publishMessageService;
         this.pubRelMessageService = pubRelMessageService;
         this.enableCluster = bizConfig.getEnableCluster();
+        this.enableTopicSubPubSecure = bizConfig.getEnableTopicSubPubSecure();
 
         if (enableCluster) {
             this.brokerId = bizConfig.getBrokerId();
@@ -150,6 +154,7 @@ public final class ConnectHandler extends AbstractMqttSessionHandler {
         }
         Optional.ofNullable(clientMap.get(clientId))
                 .map(BrokerHandler.channels::find)
+                .filter(channel -> !Objects.equals(channel, ctx.channel()))
                 .ifPresent(ChannelOutboundInvoker::close);
 
         //会话状态的处理
@@ -224,9 +229,15 @@ public final class ConnectHandler extends AbstractMqttSessionHandler {
         if (!clearSession) {
             List<PubMsg> pubMsgList = publishMessageService.search(clientId);
             pubMsgList.forEach(pubMsg -> {
+                String topic = pubMsg.getTopic();
+                //发布权限判定
+                if (enableTopicSubPubSecure && !hasAuthToPubTopic(ctx, topic)) {
+                    return;
+                }
+
                 MqttMessage mqttMessage = MqttMessageFactory.newMessage(
                         new MqttFixedHeader(MqttMessageType.PUBLISH, true, MqttQoS.valueOf(pubMsg.getQoS()), pubMsg.isRetain(), 0),
-                        new MqttPublishVariableHeader(pubMsg.getTopic(), pubMsg.getMessageId()),
+                        new MqttPublishVariableHeader(topic, pubMsg.getMessageId()),
                         //这是一个浅拷贝，任何对pubMsg中payload的修改都会反馈到wrappedBuffer
                         Unpooled.wrappedBuffer(pubMsg.getPayload())
                 );
@@ -267,7 +278,7 @@ public final class ConnectHandler extends AbstractMqttSessionHandler {
      * @return Unique Id
      */
     private String genClientId() {
-        return NONE_ID_PREFIX + System.currentTimeMillis();
+        return NONE_ID_PREFIX + brokerId + "_" + System.currentTimeMillis();
     }
 
     /**

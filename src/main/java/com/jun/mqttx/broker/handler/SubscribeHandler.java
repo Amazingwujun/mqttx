@@ -27,13 +27,13 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
 
     private ISubscriptionService subscriptionService;
 
-    private boolean enableTopicSubscribeSecure;
+    private final boolean enableTopicPubSubSecure;
 
     public SubscribeHandler(IRetainMessageService retainMessageService, ISubscriptionService subscriptionService,
                             BizConfig bizConfig) {
         this.retainMessageService = retainMessageService;
         this.subscriptionService = subscriptionService;
-        this.enableTopicSubscribeSecure = bizConfig.getEnableTopicSubscribeSecure();
+        this.enableTopicPubSubSecure = bizConfig.getEnableTopicSubPubSecure();
     }
 
     @Override
@@ -57,7 +57,7 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
                 //Failure
                 qos = 0x80;
             } else {
-                if (enableTopicSubscribeSecure && !hasAuthToSubTopic(ctx, topic)) {
+                if (enableTopicPubSubSecure && !hasAuthToSubTopic(ctx, topic)) {
                     //client 不允许订阅此 topic
                     qos = 0x80;
                 } else {
