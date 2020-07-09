@@ -63,14 +63,13 @@
 
 1. `biz.enable-topic-sub-pub-secure`: 功能开关，默认`false`
 2. 使用时需要同步实现接口 `AuhenticationService` ，该接口返回对象中含有 `authorizedSub,authorizedPub` 存储 client 被授权订阅及发布的 `topic` 列表。
-
-> 仅在订阅时校验，未考虑动态限制订阅的功能，使用时请当心
+3. broker 在消息订阅及发布都会校验客户端权限
 
 ### 路线图
 
 基于我个人的认知，`mqttx` 接下来可能的开发计划：
 
-1. 考虑整合 `SpringCloud` 
+~~1. 考虑整合 `SpringCloud`~~ 
 2. bug fix and optimization
 
 如果你对 **mqttx** 项目有更好的意见或建议，可以通过邮箱联系我：85998282@qq.com
