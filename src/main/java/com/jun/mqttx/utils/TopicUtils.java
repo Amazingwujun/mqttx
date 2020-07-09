@@ -30,7 +30,7 @@ public class TopicUtils {
     }
 
     /**
-     * client 是否被允许订阅 topic
+     * client 是否允许发布消息到 topic
      *
      * @param ctx   {@link ChannelHandlerContext}
      * @param topic 订阅 topic
@@ -41,11 +41,11 @@ public class TopicUtils {
     }
 
     /**
-     * client 是否被允许订阅 topic
+     * client 是否被允许订阅&发布 topic
      *
      * @param ctx   {@link ChannelHandlerContext}
      * @param topic 订阅 topic
-     * @param type  授权类别
+     * @param type  授权类别 {@link AbstractMqttSessionHandler#AUTHORIZED_PUB_TOPICS},{@link AbstractMqttSessionHandler#AUTHORIZED_SUB_TOPICS}
      * @return true 如果被授权
      */
     @SuppressWarnings("unchecked")
@@ -81,26 +81,34 @@ public class TopicUtils {
             return false;
         }
 
-        //"/" 通配符判断
-        if (subTopic.startsWith("/") || subTopic.endsWith("/")) {
-            return false;
-        }
-
-        //"#" 通配符判断
-        int idx = subTopic.indexOf("#");
-        if (idx > -1 && idx != subTopic.length() - 1) {
-            return false;
-        }
-
-
-        String[] split = subTopic.split("/");
-        for (String fragment : split) {
-            //不允许 a//b
-            if (StringUtils.isEmpty(fragment)) {
+        //1 不允许 "/" 连续出现, 如 "//"
+        //2 不允许 " " 空字符串出现
+        //3 "#" 只能出现在末位
+        //4 '/' 不允许出现在末位及首位
+        char[] allChar = subTopic.toCharArray();
+        int len = allChar.length;
+        for (int i = 0, j = -1; i < len; i++) {
+            char c = allChar[i];
+            if (c == '/') {
+                if (i == j + 1) {
+                    return false;
+                }
+                j = i;
+            }
+            if (' ' == c) {
                 return false;
             }
+            if (c == '#' && i != len - 1) {
+                return false;
+            }
+            if ('/' == c && (i == len - 1 || i == 0)) {
+                return false;
+            }
+        }
 
-            //不允许 a/b+/c，a/b# 等非法 topicFilter
+        //5 不允许 a/b+/c，a/b# 等非法 topicFilter
+        String[] split = subTopic.split("/");
+        for (String fragment : split) {
             if (fragment.contains("+") || fragment.contains("#")) {
                 if (fragment.length() > 1) {
                     return false;
