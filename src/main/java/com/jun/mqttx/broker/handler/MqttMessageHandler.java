@@ -2,7 +2,6 @@ package com.jun.mqttx.broker.handler;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttMessage;
-import io.netty.handler.codec.mqtt.MqttMessageType;
 
 /**
  * 消息处理器
@@ -19,11 +18,4 @@ public interface MqttMessageHandler {
      * @param msg 解包后的数据
      */
     void process(ChannelHandlerContext ctx, MqttMessage msg);
-
-    /**
-     * 判断报文处理器是否支持处理当前报文类型
-     *
-     * @return 返回处理器对应的处理类别
-     */
-    MqttMessageType handleType();
 }

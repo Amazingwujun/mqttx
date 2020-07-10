@@ -1,12 +1,9 @@
 package com.jun.mqttx.broker.handler;
 
-import com.jun.mqttx.common.config.BizConfig;
 import com.jun.mqttx.service.IPubRelMessageService;
 import com.jun.mqttx.service.IPublishMessageService;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.stereotype.Component;
 
 /**
  * {@link MqttMessageType#PUBREC} 消息处理器
@@ -14,7 +11,7 @@ import org.springframework.stereotype.Component;
  * @author Jun
  * @date 2020-03-04 16:01
  */
-@Component
+@Handler(type = MqttMessageType.PUBREC)
 public class PubRecHandler extends AbstractMqttSessionHandler {
 
     private IPubRelMessageService pubRelMessageService;
@@ -43,10 +40,5 @@ public class PubRecHandler extends AbstractMqttSessionHandler {
                 null
         );
         ctx.writeAndFlush(mqttMessage);
-    }
-
-    @Override
-    public MqttMessageType handleType() {
-        return MqttMessageType.PUBREC;
     }
 }

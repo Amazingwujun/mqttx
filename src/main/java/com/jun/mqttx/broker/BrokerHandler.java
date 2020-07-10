@@ -1,7 +1,13 @@
 package com.jun.mqttx.broker;
 
+import com.alibaba.fastjson.JSONObject;
+import com.jun.mqttx.broker.handler.AbstractMqttSessionHandler;
 import com.jun.mqttx.broker.handler.ConnectHandler;
 import com.jun.mqttx.broker.handler.MessageDelegatingHandler;
+import com.jun.mqttx.common.constant.InternalMessageEnum;
+import com.jun.mqttx.consumer.Watcher;
+import com.jun.mqttx.entity.Authentication;
+import com.jun.mqttx.entity.InternalMessage;
 import com.jun.mqttx.entity.Session;
 import com.jun.mqttx.exception.AuthenticationException;
 import com.jun.mqttx.exception.AuthorizationException;
@@ -19,8 +25,11 @@ import io.netty.util.concurrent.GlobalEventExecutor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
+import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -32,7 +41,7 @@ import java.util.Optional;
 @Slf4j
 @ChannelHandler.Sharable
 @Component
-public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> {
+public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> implements Watcher<Object> {
 
     /**
      * channel 群组
@@ -84,6 +93,30 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> {
                 sessionService.save(session);
             }
         }
+    }
+
+    /**
+     * 修改用户授权的 pub&sub topic 列表
+     *
+     * @param clientId            客户端ID
+     * @param authorizedSubTopics 被授权订阅 topic 列表
+     * @param authorizedPubTopics 被授权发布 topic 列表
+     */
+    public void alterUserAuthorizedTopic(String clientId, List<String> authorizedSubTopics, List<String> authorizedPubTopics) {
+        if (CollectionUtils.isEmpty(authorizedPubTopics) && CollectionUtils.isEmpty(authorizedSubTopics)) {
+            return;
+        }
+
+        Optional.ofNullable(ConnectHandler.clientMap.get(clientId))
+                .map(channels::find)
+                .ifPresent(channel -> {
+                    if (!CollectionUtils.isEmpty(authorizedPubTopics)) {
+                        channel.attr(AttributeKey.valueOf(AbstractMqttSessionHandler.AUTHORIZED_PUB_TOPICS)).set(authorizedPubTopics);
+                    }
+                    if (!CollectionUtils.isEmpty(authorizedSubTopics)) {
+                        channel.attr(AttributeKey.valueOf(AbstractMqttSessionHandler.AUTHORIZED_SUB_TOPICS)).set(authorizedSubTopics);
+                    }
+                });
     }
 
     /**
@@ -180,5 +213,33 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> {
                 ctx.close();
             }
         }
+    }
+
+    /**
+     * 行为：
+     * <ol>
+     *     <li>修改用户权限</li>
+     * </ol>
+     *
+     * @param im {@see InternalMessage}
+     */
+    @Override
+    public void action(InternalMessage<Object> im) {
+        if (im.getData() instanceof JSONObject) {
+            Authentication data = ((JSONObject) im.getData()).toJavaObject(Authentication.class);
+            String username = data.getUsername();
+            List<String> authorizedPub = data.getAuthorizedPub();
+            List<String> authorizedSub = data.getAuthorizedSub();
+            if (StringUtils.isEmpty(username) || (CollectionUtils.isEmpty(authorizedPub) && CollectionUtils.isEmpty(authorizedSub))) {
+                log.info("权限修改参数非法:{}", im);
+                return;
+            }
+            alterUserAuthorizedTopic(username, authorizedSub, authorizedPub);
+        }
+    }
+
+    @Override
+    public boolean support(String channel) {
+        return InternalMessageEnum.ALTER_USER_AUTHORIZED_TOPICS.getChannel().equals(channel);
     }
 }

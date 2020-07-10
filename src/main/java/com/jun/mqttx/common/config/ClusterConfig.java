@@ -77,6 +77,7 @@ public class ClusterConfig {
         list.add(new ChannelTopic(PUB_COM.getChannel()));
         list.add(new ChannelTopic(PUB_REL.getChannel()));
         list.add(new ChannelTopic(DISCONNECT.getChannel()));
+        list.add(new ChannelTopic(ALTER_USER_AUTHORIZED_TOPICS.getChannel()));
         listenerMap.put(messageListener, list);
 
         redisMessageListenerContainer.setMessageListeners(listenerMap);

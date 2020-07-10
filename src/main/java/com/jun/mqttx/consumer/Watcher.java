@@ -1,6 +1,7 @@
 package com.jun.mqttx.consumer;
 
 import com.jun.mqttx.common.config.BizConfig;
+import com.jun.mqttx.common.constant.InternalMessageEnum;
 import com.jun.mqttx.entity.InternalMessage;
 
 /**
@@ -12,16 +13,17 @@ import com.jun.mqttx.entity.InternalMessage;
 public interface Watcher<T> {
 
     /**
-     * 每当有新的集群消息达到是，触发行为
+     * 每当有新的集群消息达到是，触发行为。注意：方法不允许出现阻塞操作
      *
      * @param im {@see InternalMessage}
      */
     void action(InternalMessage<T> im);
 
     /**
-     * 获取观察者具体的观测 channel
+     * Watcher 支持的 channel 类别
      *
-     * @return channel
+     * @param channel {@link InternalMessageEnum}
+     * @return true if Watcher support
      */
-    String channel();
+    boolean support(String channel);
 }

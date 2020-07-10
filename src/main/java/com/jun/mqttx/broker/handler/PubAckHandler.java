@@ -5,7 +5,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttMessageType;
 import io.netty.handler.codec.mqtt.MqttPubAckMessage;
-import org.springframework.stereotype.Component;
 
 /**
  * {@link MqttMessageType#PUBACK} 消息处理器
@@ -13,7 +12,7 @@ import org.springframework.stereotype.Component;
  * @author Jun
  * @date 2020-03-04 15:59
  */
-@Component
+@Handler(type = MqttMessageType.PUBACK)
 public class PubAckHandler extends AbstractMqttSessionHandler {
 
     private IPublishMessageService publishMessageService;
@@ -27,10 +26,5 @@ public class PubAckHandler extends AbstractMqttSessionHandler {
         MqttPubAckMessage mqttPubAckMessage = (MqttPubAckMessage) msg;
         int messageId = mqttPubAckMessage.variableHeader().messageId();
         publishMessageService.remove(clientId(ctx), messageId);
-    }
-
-    @Override
-    public MqttMessageType handleType() {
-        return MqttMessageType.PUBACK;
     }
 }

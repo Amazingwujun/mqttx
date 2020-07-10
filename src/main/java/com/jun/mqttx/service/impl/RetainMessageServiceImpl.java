@@ -17,12 +17,11 @@ import org.springframework.util.Assert;
 @Service
 public class RetainMessageServiceImpl implements IRetainMessageService {
 
-    private StringRedisTemplate stringRedisTemplate;
-
     /**
      * redis retain message prefix
      */
     private final String retainMessageHashKey;
+    private StringRedisTemplate stringRedisTemplate;
 
     public RetainMessageServiceImpl(StringRedisTemplate stringRedisTemplate, BizConfig bizConfig) {
         Assert.notNull(stringRedisTemplate, "stringRedisTemplate can't be null");

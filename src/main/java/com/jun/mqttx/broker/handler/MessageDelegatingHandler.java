@@ -46,7 +46,15 @@ public class MessageDelegatingHandler {
         Assert.notEmpty(mqttMessageHandlers, "messageHandlers can't be empty");
 
         //置入处理器
-        mqttMessageHandlers.forEach(mqttMessageHandler -> handlerMap.put(mqttMessageHandler.handleType(), mqttMessageHandler));
+        mqttMessageHandlers.forEach(mqttMessageHandler -> {
+            Handler annotation = mqttMessageHandler.getClass().getAnnotation(Handler.class);
+            Optional.ofNullable(annotation)
+                    .map(Handler::type)
+                    .ifPresent(mqttMessageType -> handlerMap.put(mqttMessageType, mqttMessageHandler));
+        });
+
+        //保证初始化处理数量正常
+        Assert.isTrue(handlerMap.size() == 10, "broker 消息处理器数量异常:" + handlerMap.size());
     }
 
     /**

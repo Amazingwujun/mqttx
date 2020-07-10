@@ -3,7 +3,6 @@ package com.jun.mqttx.broker.handler;
 import com.jun.mqttx.service.IPubRelMessageService;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
-import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
 /**
@@ -12,7 +11,7 @@ import org.springframework.util.Assert;
  * @author Jun
  * @date 2020-03-17 09:31
  */
-@Component
+@Handler(type = MqttMessageType.PUBREL)
 public class PubRelHandler extends AbstractMqttSessionHandler {
 
     private IPubRelMessageService pubRelMessageService;
@@ -35,10 +34,5 @@ public class PubRelHandler extends AbstractMqttSessionHandler {
                 null
         );
         ctx.writeAndFlush(mqttMessage);
-    }
-
-    @Override
-    public MqttMessageType handleType() {
-        return MqttMessageType.PUBREL;
     }
 }

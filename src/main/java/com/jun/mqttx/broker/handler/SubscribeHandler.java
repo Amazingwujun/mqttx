@@ -9,7 +9,6 @@ import com.jun.mqttx.utils.TopicUtils;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
-import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,14 +19,12 @@ import java.util.List;
  * @author Jun
  * @date 2020-03-04 16:05
  */
-@Component
+@Handler(type = MqttMessageType.SUBSCRIBE)
 public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
 
-    private IRetainMessageService retainMessageService;
-
-    private ISubscriptionService subscriptionService;
-
     private final boolean enableTopicPubSubSecure;
+    private IRetainMessageService retainMessageService;
+    private ISubscriptionService subscriptionService;
 
     public SubscribeHandler(IRetainMessageService retainMessageService, ISubscriptionService subscriptionService,
                             BizConfig bizConfig) {
@@ -92,10 +89,5 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
                 ctx.writeAndFlush(mpm);
             }
         });
-    }
-
-    @Override
-    public MqttMessageType handleType() {
-        return MqttMessageType.SUBSCRIBE;
     }
 }

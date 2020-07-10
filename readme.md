@@ -69,7 +69,7 @@
 
 基于我个人的认知，`mqttx` 接下来可能的开发计划：
 
-~~1. 考虑整合 `SpringCloud`~~ 
+1. ~~考虑整合 `SpringCloud`~~ 
 2. bug fix and optimization
 
 如果你对 **mqttx** 项目有更好的意见或建议，可以通过邮箱联系我：85998282@qq.com

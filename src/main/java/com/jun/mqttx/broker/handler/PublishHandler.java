@@ -14,7 +14,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
 import org.springframework.lang.Nullable;
-import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
 import java.util.List;
@@ -26,7 +25,7 @@ import java.util.Optional;
  * @author Jun
  * @date 2020-03-04 14:30
  */
-@Component
+@Handler(type = MqttMessageType.PUBLISH)
 public class PublishHandler extends AbstractMqttTopicSecureHandler implements Watcher<PubMsg> {
 
     private IRetainMessageService retainMessageService;
@@ -140,13 +139,8 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
     }
 
     @Override
-    public MqttMessageType handleType() {
-        return MqttMessageType.PUBLISH;
-    }
-
-    @Override
-    public String channel() {
-        return InternalMessageEnum.PUB.getChannel();
+    public boolean support(String channel) {
+        return InternalMessageEnum.PUB.getChannel().equals(channel);
     }
 
     /**
@@ -236,6 +230,6 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
      */
     private void internalMessagePublish(PubMsg pubMsg) {
         InternalMessage<PubMsg> im = new InternalMessage<>(pubMsg, System.currentTimeMillis(), brokerId);
-        internalMessagePublishService.publish(im, channel());
+        internalMessagePublishService.publish(im, InternalMessageEnum.PUB.getChannel());
     }
 }

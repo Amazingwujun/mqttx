@@ -15,10 +15,10 @@ public interface IPublishMessageService {
     /**
      * 消息ID
      *
-     * @param pubMsg publish 消息体
+     * @param pubMsg   publish 消息体
      * @param clientId 客户id
      */
-    void save(String clientId,PubMsg pubMsg);
+    void save(String clientId, PubMsg pubMsg);
 
     /**
      * 清理与客户相关连的 publish 消息
@@ -30,7 +30,7 @@ public interface IPublishMessageService {
     /**
      * 移除指定的 publish 消息
      *
-     * @param clientId 客户端id
+     * @param clientId  客户端id
      * @param messageId 消息id
      */
     void remove(String clientId, int messageId);

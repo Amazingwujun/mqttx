@@ -39,6 +39,7 @@ public class InternalMessageSubscriber {
      *     <li>发布消息接收响应_qos2 {@link com.jun.mqttx.common.constant.InternalMessageEnum#PUB_REC}</li>
      *     <li>发布消息释放_qos2 {@link com.jun.mqttx.common.constant.InternalMessageEnum#PUB_REL}</li>
      *     <li>发布消息完成_qos2 {@link com.jun.mqttx.common.constant.InternalMessageEnum#PUB_COM}</li>
+     *     <li>用户权限修改 {@link com.jun.mqttx.common.constant.InternalMessageEnum#ALTER_USER_AUTHORIZED_TOPICS}</li>
      * </ol>
      *
      * @param message 消息内容
@@ -53,8 +54,9 @@ public class InternalMessageSubscriber {
         }
 
         for (Watcher watcher : watchers) {
-            if (watcher.channel().equals(channel)) {
+            if (watcher.support(channel)) {
                 watcher.action(JSON.parseObject(message, InternalMessage.class));
+                //一个消息只能由一个观察者消费
                 break;
             }
         }

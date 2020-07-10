@@ -3,7 +3,6 @@ package com.jun.mqttx.broker.handler;
 import com.jun.mqttx.service.IPubRelMessageService;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
-import org.springframework.stereotype.Component;
 
 /**
  * {@link MqttMessageType#PUBCOMP} 消息处理器
@@ -11,7 +10,7 @@ import org.springframework.stereotype.Component;
  * @author Jun
  * @date 2020-03-04 16:03
  */
-@Component
+@Handler(type = MqttMessageType.PUBCOMP)
 public class PubComHandler extends AbstractMqttSessionHandler {
 
     private IPubRelMessageService pubRelMessageService;
@@ -35,8 +34,4 @@ public class PubComHandler extends AbstractMqttSessionHandler {
         ctx.writeAndFlush(mqttMessage);
     }
 
-    @Override
-    public MqttMessageType handleType() {
-        return MqttMessageType.PUBCOMP;
-    }
 }

@@ -9,7 +9,6 @@ import io.netty.channel.ChannelId;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttMessageType;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 
 /**
  * {@link MqttMessageType#DISCONNECT} 消息处理器
@@ -18,7 +17,7 @@ import org.springframework.stereotype.Component;
  * @date 2020-03-03 23:30
  */
 @Slf4j
-@Component
+@Handler(type = MqttMessageType.DISCONNECT)
 public final class DisconnectHandler extends AbstractMqttSessionHandler implements Watcher<String> {
 
     private ConnectHandler connectHandler;
@@ -37,11 +36,6 @@ public final class DisconnectHandler extends AbstractMqttSessionHandler implemen
     }
 
     @Override
-    public MqttMessageType handleType() {
-        return MqttMessageType.DISCONNECT;
-    }
-
-    @Override
     public void action(InternalMessage<String> im) {
         ChannelId channelId = ConnectHandler.clientMap.get(im.getData());
         if (channelId != null) {
@@ -50,7 +44,7 @@ public final class DisconnectHandler extends AbstractMqttSessionHandler implemen
     }
 
     @Override
-    public String channel() {
-        return InternalMessageEnum.DISCONNECT.getChannel();
+    public boolean support(String channel) {
+        return InternalMessageEnum.DISCONNECT.getChannel().equals(channel);
     }
 }

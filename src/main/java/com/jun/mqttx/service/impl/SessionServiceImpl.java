@@ -19,9 +19,8 @@ import java.util.Optional;
 @Service
 public class SessionServiceImpl implements ISessionService {
 
-    private StringRedisTemplate stringRedisTemplate;
-
     private final String clusterSessionHashKey;
+    private StringRedisTemplate stringRedisTemplate;
 
     public SessionServiceImpl(StringRedisTemplate stringRedisTemplate, BizConfig bizConfig) {
         this.stringRedisTemplate = stringRedisTemplate;

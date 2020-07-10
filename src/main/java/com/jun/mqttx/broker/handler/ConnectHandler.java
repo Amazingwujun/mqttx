@@ -15,7 +15,6 @@ import io.netty.channel.ChannelOutboundInvoker;
 import io.netty.handler.codec.mqtt.*;
 import io.netty.handler.timeout.IdleStateHandler;
 import org.springframework.lang.Nullable;
-import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
@@ -32,22 +31,18 @@ import static io.netty.handler.codec.mqtt.MqttMessageType.CONNECT;
  * @author Jun
  * @date 2020-03-03 22:17
  */
-@Component
+@Handler(type = CONNECT)
 public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
-
-    private static final String NONE_ID_PREFIX = "NONE_ID_";
-
-    private int brokerId;
-
-    final private Boolean enableCluster;
-
-    final private Boolean enableTopicSubPubSecure;
 
     /**
      * 初始化10000长连接客户端
      */
     public final static ConcurrentHashMap<String, ChannelId> clientMap = new ConcurrentHashMap<>(10000);
+    private static final String NONE_ID_PREFIX = "NONE_ID_";
+    final private Boolean enableCluster;
 
+    final private Boolean enableTopicSubPubSecure;
+    private int brokerId;
     /**
      * 认证服务
      */
@@ -265,11 +260,6 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
                 ctx.writeAndFlush(mqttMessage);
             });
         }
-    }
-
-    @Override
-    public MqttMessageType handleType() {
-        return CONNECT;
     }
 
     /**

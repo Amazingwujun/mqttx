@@ -3,7 +3,6 @@ package com.jun.mqttx.broker.handler;
 import com.jun.mqttx.service.ISubscriptionService;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
-import org.springframework.stereotype.Component;
 
 /**
  * {@link MqttMessageType#UNSUBSCRIBE} 消息处理器
@@ -11,7 +10,7 @@ import org.springframework.stereotype.Component;
  * @author Jun
  * @date 2020-03-04 16:07
  */
-@Component
+@Handler(type = MqttMessageType.UNSUBSCRIBE)
 public class UnsubscribeHandler extends AbstractMqttSessionHandler {
 
     private ISubscriptionService subscriptionService;
@@ -36,10 +35,5 @@ public class UnsubscribeHandler extends AbstractMqttSessionHandler {
                 null
         );
         ctx.writeAndFlush(mqttMessage);
-    }
-
-    @Override
-    public MqttMessageType handleType() {
-        return MqttMessageType.UNSUBSCRIBE;
     }
 }

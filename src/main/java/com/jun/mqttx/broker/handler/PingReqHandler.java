@@ -2,7 +2,6 @@ package com.jun.mqttx.broker.handler;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
-import org.springframework.stereotype.Component;
 
 /**
  * {@link MqttMessageType#PINGREQ} 消息处理器
@@ -10,7 +9,7 @@ import org.springframework.stereotype.Component;
  * @author Jun
  * @date 2020-03-04 16:09
  */
-@Component
+@Handler(type = MqttMessageType.PINGREQ)
 public class PingReqHandler implements MqttMessageHandler {
 
     @Override
@@ -19,10 +18,5 @@ public class PingReqHandler implements MqttMessageHandler {
                 new MqttFixedHeader(MqttMessageType.PINGRESP, false, MqttQoS.AT_MOST_ONCE, false, 0),
                 null, null);
         ctx.writeAndFlush(mqttMessage);
-    }
-
-    @Override
-    public MqttMessageType handleType() {
-        return MqttMessageType.PINGREQ;
     }
 }
