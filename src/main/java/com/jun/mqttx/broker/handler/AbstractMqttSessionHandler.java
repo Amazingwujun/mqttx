@@ -58,7 +58,7 @@ public abstract class AbstractMqttSessionHandler implements MqttMessageHandler {
      */
     void saveSessionWithChannel(ChannelHandlerContext ctx, Session session) {
         Channel channel = ctx.channel();
-        AttributeKey<Object> attr = AttributeKey.valueOf("session");
+        AttributeKey<Object> attr = AttributeKey.valueOf(Session.KEY);
         channel.attr(attr).set(session);
     }
 
@@ -84,6 +84,6 @@ public abstract class AbstractMqttSessionHandler implements MqttMessageHandler {
      * @return {@link Session}
      */
     private Session getSession(ChannelHandlerContext ctx) {
-        return (Session) ctx.channel().attr(AttributeKey.valueOf("session")).get();
+        return (Session) ctx.channel().attr(AttributeKey.valueOf(Session.KEY)).get();
     }
 }

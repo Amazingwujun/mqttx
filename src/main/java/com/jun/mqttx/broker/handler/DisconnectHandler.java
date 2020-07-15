@@ -39,7 +39,7 @@ public final class DisconnectHandler extends AbstractMqttSessionHandler implemen
         //stored on the Server and associated with the Network Connection. The Will Message MUST be published when the
         //Network Connection is subsequently closed unless the Will Message has been deleted by the Server on receipt of
         //a DISCONNECT Packet.
-        Session session = (Session) ctx.channel().attr(AttributeKey.valueOf("session")).get();
+        Session session = (Session) ctx.channel().attr(AttributeKey.valueOf(Session.KEY)).get();
         session.clearWillMessage();
 
         ctx.close();

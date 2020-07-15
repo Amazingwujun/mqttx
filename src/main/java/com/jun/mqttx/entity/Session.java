@@ -13,6 +13,8 @@ import lombok.Data;
 @Data
 public class Session {
 
+    public static final String KEY = "session";
+
     /**
      * 客户ID
      */
