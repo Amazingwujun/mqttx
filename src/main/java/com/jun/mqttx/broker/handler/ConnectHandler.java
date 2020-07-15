@@ -225,8 +225,8 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
             List<PubMsg> pubMsgList = publishMessageService.search(clientId);
             pubMsgList.forEach(pubMsg -> {
                 String topic = pubMsg.getTopic();
-                //发布权限判定
-                if (enableTopicSubPubSecure && !hasAuthToPubTopic(ctx, topic)) {
+                //订阅权限判定
+                if (enableTopicSubPubSecure && !hasAuthToSubTopic(ctx, topic)) {
                     return;
                 }
 

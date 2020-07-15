@@ -42,4 +42,11 @@ public class Session {
     public int increaseAndGetMessageId() {
         return ++messageId;
     }
+
+    /**
+     * 清理遗嘱消息
+     */
+    public void clearWillMessage() {
+        willMessage = null;
+    }
 }

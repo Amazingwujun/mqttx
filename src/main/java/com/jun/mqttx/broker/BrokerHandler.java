@@ -75,8 +75,15 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
      * 连接断开后进行如下操作:
      * <ol>
      *     <li>清理 {@link ConnectHandler#clientMap} 中保存的clientId与channelId绑定关系</li>
+     *     <li>遗嘱消息处理</li>
      *     <li>当 cleanSession = 0 时持久化 session,这样做的目的是保存 <code>Session#messageId</code>字段变化</li>
      * </ol>
+     * <p>
+     * [MQTT-3.1.2-8]
+     * If the Will Flag is set to 1 this indicates that, if the Connect request is accepted, a Will Message MUST be
+     * stored on the Server and associated with the Network Connection. The Will Message MUST be published when the
+     * Network Connection is subsequently closed unless the Will Message has been deleted by the Server on receipt of
+     * a DISCONNECT Packet.
      *
      * @param ctx {@link ChannelHandlerContext}
      */
@@ -88,6 +95,11 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
 
         //会话状态处理
         if (session != null) {
+            //发布遗嘱消息
+            Optional.of(session)
+                    .map(Session::getWillMessage)
+                    .ifPresent(msg -> messageDelegatingHandler.handle(ctx, msg));
+
             ConnectHandler.clientMap.remove(session.getClientId());
             if (Boolean.FALSE.equals(session.getClearSession())) {
                 sessionService.save(session);
@@ -188,11 +200,6 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
     /**
      * 处理未通过 {@link MqttMessageType#DISCONNECT} 消息断开连接的客户端的遗嘱消息.
      * <p>
-     * [MQTT-3.1.2-8]
-     * If the Will Flag is set to 1 this indicates that, if the Connect request is accepted, a Will Message MUST be
-     * stored on the Server and associated with the Network Connection. The Will Message MUST be published when the
-     * Network Connection is subsequently closed unless the Will Message has been deleted by the Server on receipt of
-     * a DISCONNECT Packet.
      *
      * @param ctx {@link ChannelHandlerContext}
      * @param evt {@link IdleStateEvent}
@@ -201,14 +208,6 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
         if (evt instanceof IdleStateEvent) {
             if (IdleState.ALL_IDLE.equals(((IdleStateEvent) evt).state())) {
-                //获取当前会话
-                Session session = (Session) ctx.channel().attr(AttributeKey.valueOf("session")).get();
-
-                //发布遗嘱消息
-                Optional.ofNullable(session)
-                        .map(Session::getWillMessage)
-                        .ifPresent(msg -> messageDelegatingHandler.handle(ctx, msg));
-
                 //关闭连接
                 ctx.close();
             }
