@@ -82,16 +82,16 @@
 
 <center>登录、注册</center>
 
-![image-20200721144108376](img/UIIRFe-1595314791620.png)
+![UIIRFe.png](https://s1.ax1x.com/2020/07/21/UIIRFe.png)
 
 <center>好友添加</center>
 
-![image-20200721144633049](img/image-20200721144633049.png)
+![UIIgoD.png](https://s1.ax1x.com/2020/07/21/UIIgoD.png)
 
 <center>聊天界面</center>
 
-![image-20200721144841129](img/image-20200721144841129.png)
+![UIIcdO.png](https://s1.ax1x.com/2020/07/21/UIIcdO.png)
 
 
 
-可直接通过地址 https://wws.lanzous.com/ifPKretv6za 下载后解压运行
+可通过地址 https://wws.lanzous.com/ifPKretv6za 下载后解压运行
