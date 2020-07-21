@@ -73,3 +73,18 @@
 2. bug fix and optimization
 
 如果你对 **mqttx** 项目有更好的意见或建议，可以通过邮箱联系我：85998282@qq.com
+
+---
+
+# 演示项目 lineyou
+
+[lineyou](https://github.com/Amazingwujun/lineyou) 基于 `javafx`开发，运用 `netty、spring、fxlauncher、jfoniex、fontawesomefx、protobuf` 等技术实现的 im 程序，具备基本的聊天交互功能。
+
+![登录、注册](https://upload-images.jianshu.io/upload_images/23452769-9dd8ad215b34f36c.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+![添加好友](https://upload-images.jianshu.io/upload_images/23452769-4bdf69435041fe0e.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+![聊天界面](https://upload-images.jianshu.io/upload_images/23452769-9121c23d1867ffb8.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+
+可通过地址 https://wws.lanzous.com/ifPKretv6za 下载后解压运行

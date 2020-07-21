@@ -1,6 +1,6 @@
 spring:
   redis:
-    host: redis
+    host: localhost
 biz:
   cluster-session-hash-key: "Session:key"
   heartbeat: 50s
