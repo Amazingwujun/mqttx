@@ -76,7 +76,7 @@
 
 ---
 
-# 演示项目 lineyou
+# 演示项目 lineyou - 服务端基于`mqttx`
 
 [lineyou](https://github.com/Amazingwujun/lineyou) 基于 `javafx`开发，运用 `netty、spring、fxlauncher、jfoniex、fontawesomefx、protobuf` 等技术实现的 im 程序，具备基本的聊天交互功能。
 
