@@ -1,7 +1,46 @@
 `mqttx` 基于 [mqtt v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) 官方协议文档开发。
 项目运行的方式：
-  1. 使用`springboot`推荐的启动方式 `java -jar app.jar`，使用 `mvn clean package` 打包，这种方式需要修改配置文件中 redis 地址和端口。
+
+  1. 使用`springboot`推荐的启动方式 `java -jar app.jar`，使用 `mvn clean package` 打包，这种方式需要修改配置文件(`resources/application.yml`)中 redis 地址和端口。
+
+     > mqttx default redis 连接使用的配置：`localhost:6379` **无密码**
+
   2. 基于 `docker` 容器化部署，这个就比较简单，具体的步骤见 **容器化部署**
+
+中间件依赖：
+
+1. **redis**
+
+## 架构
+
+由于 `mqttx` 额外添加了客户端认证、topic 发布/订阅鉴权功能，如果需要配套使用，建议的架构如下图：
+
+![架构图](https://s1.ax1x.com/2020/07/28/ak6KAO.png)
+
+> 客户认证服务由使用者自行实现
+
+内部实现框架关系(仅列出关键项)：
+
+![ak6mB6.png](https://s1.ax1x.com/2020/07/28/ak6mB6.png)
+
+目录结构：
+
+├─java
+│  └─com
+│      └─jun
+│          └─mqttx
+│              ├─broker -- mqttx broker
+│              │  └─handler -- mqtt 消息处理器（pub, sub, conn, disconnect, etc）
+│              ├─common
+│              │  ├─config -- 项目配置，Spring Bean 声明
+│              │  └─constant -- 常量，枚举等
+│              ├─consumer -- 集群消息接收
+│              ├─entity -- pojo
+│              ├─exception -- 异常包
+│              ├─service -- 服务。用户认证，pub/sub 消息存储（Qos1，2）等等
+│              │  └─impl -- 项目默认实现
+│              └─utils -- 一些工具类
+└─resources -- 资源文件夹
 
 ## 容器化部署
 
@@ -46,6 +85,8 @@
 #### 3、集群支持
 
 项目引入 `redis pub/sub ` 分发消息以支持集群功能。如果需要修改为 `kafka` 或其它 mq ，需要修改配置类 `ClusterConfig` 及替换实现类 `InternalMessageServiceImpl`。
+
+![ak6nHK.png](https://s1.ax1x.com/2020/07/28/ak6nHK.png)
 
 > application.yml 中的 biz.enable-cluster 为集群功能开关，默认**关**
 

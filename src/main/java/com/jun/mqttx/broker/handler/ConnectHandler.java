@@ -183,7 +183,9 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         }
         clientMap.put(clientId, ctx.channel().id());
         saveSessionWithChannel(ctx, session);
-        saveAuthorizedTopics(ctx, auth);
+        if (enableTopicSubPubSecure) {
+            saveAuthorizedTopics(ctx, auth);
+        }
 
         //处理遗嘱消息
         //[MQTT-3.1.2-8] If the Will Flag is set to 1 this indicates that, if the Connect request is accepted, a Will
