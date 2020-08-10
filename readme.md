@@ -11,6 +11,10 @@
 
 1. **redis**
 
+其他依赖：
+1. 项目使用了 lombok（用于消除get() set()） ，使用 ide 请安装对应的插件
+> 举例：idea 需要安装插件 Lombok, settings > Build,Execution,Deployment > Compiler > Annotation Processor 开启 Enable annotation processing
+
 ## 架构
 
 由于 `mqttx` 额外添加了客户端认证、topic 发布/订阅鉴权功能，如果需要配套使用，建议的架构如下图：
@@ -24,7 +28,7 @@
 ![ak6mB6.png](https://s1.ax1x.com/2020/07/28/ak6mB6.png)
 
 目录结构：
-
+```
 ├─java
 │  └─com
 │      └─jun
@@ -41,7 +45,7 @@
 │              │  └─impl -- 项目默认实现
 │              └─utils -- 一些工具类
 └─resources -- 资源文件夹
-
+```
 ## 容器化部署
 
 为了方便项目快速的跑起来，引进了docker来方便项目的部署
