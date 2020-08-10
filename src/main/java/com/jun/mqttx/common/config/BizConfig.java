@@ -77,5 +77,10 @@ public class BizConfig {
      */
     private Boolean enableTopicSubPubSecure = false;
 
+    /**
+     * 内部缓存机制，用于性能提升; 如果用户没有设置，非集群状态下，默认开启缓存;如果用户没有设置，集群状态下，默认关闭缓存
+     * 这个参数值必须集群一致，也就是说如果存在多个 mqttx 服务，那么这些服务的 enableInnerCache 值必须相同，否则会出现预期外的行为。
+     */
+    private Boolean enableInnerCache;
     //@formatter:on
 }
