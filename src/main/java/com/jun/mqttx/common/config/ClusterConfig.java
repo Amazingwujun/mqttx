@@ -70,7 +70,7 @@ public class ClusterConfig {
         redisMessageListenerContainer.setConnectionFactory(redisConnectionFactory);
 
         Map<MessageListener, Collection<? extends Topic>> listenerMap = new HashMap<>();
-        List<Topic> list = new ArrayList<>(6);
+        List<Topic> list = new ArrayList<>(8);
         list.add(new ChannelTopic(PUB.getChannel()));
         list.add(new ChannelTopic(PUB_ACK.getChannel()));
         list.add(new ChannelTopic(PUB_REC.getChannel()));
@@ -78,6 +78,7 @@ public class ClusterConfig {
         list.add(new ChannelTopic(PUB_REL.getChannel()));
         list.add(new ChannelTopic(DISCONNECT.getChannel()));
         list.add(new ChannelTopic(ALTER_USER_AUTHORIZED_TOPICS.getChannel()));
+        list.add(new ChannelTopic(SUB_UNSUB.getChannel()));
         listenerMap.put(messageListener, list);
 
         redisMessageListenerContainer.setMessageListeners(listenerMap);
