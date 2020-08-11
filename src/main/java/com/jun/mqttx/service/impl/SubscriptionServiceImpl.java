@@ -69,7 +69,9 @@ public class SubscriptionServiceImpl implements ISubscriptionService, Watcher<Cl
             //如果用户没有设置，集群状态下，默认关闭缓存
             this.enableInnerCache = bizConfig.getEnableInnerCache() == null ? false : bizConfig.getEnableInnerCache();
         }
-        if (!enableInnerCache) {
+        if (enableInnerCache) {
+            initInnerCache(stringRedisTemplate);
+        }else {
             allTopics = null;
             topicClientMap = null;
         }
@@ -225,6 +227,34 @@ public class SubscriptionServiceImpl implements ISubscriptionService, Watcher<Cl
     @Override
     public boolean support(String channel) {
         return InternalMessageEnum.SUB_UNSUB.getChannel().equals(channel);
+    }
+
+    /**
+     * 初始化内部缓存。目前的策略是全部加载，其实可以按需加载，按业务需求来吧。
+     */
+    private void initInnerCache(final StringRedisTemplate redisTemplate) {
+        log.info("enableInnerCache=true, 开始加载缓存...");
+
+        final Set<String> allTopic = redisTemplate.opsForSet().members(topicSetKey);
+        if (!CollectionUtils.isEmpty(allTopic)) {
+            allTopics.addAll(allTopic);
+
+            allTopic.forEach(topic -> {
+                Map<Object, Object> entries = redisTemplate.opsForHash().entries(topicPrefix + topic);
+                if (!CollectionUtils.isEmpty(entries)) {
+                    entries.forEach((k, v) -> {
+                        String key = (String) k;
+                        String val = (String) v;
+                        ConcurrentHashMap.KeySetView<ClientSub, Boolean> orDefault = topicClientMap.getOrDefault(topic, ConcurrentHashMap.newKeySet());
+                        orDefault.add(new ClientSub(key, Integer.parseInt(val), topic));
+                    });
+                }
+            });
+        } else {
+            log.warn("redis 存储的 topic 列表为空");
+        }
+
+        log.info("缓存加载完成...");
     }
 
     /**
