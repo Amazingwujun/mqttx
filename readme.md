@@ -110,10 +110,10 @@
 2. 使用时需要同步实现接口 `AuhenticationService` ，该接口返回对象中含有 `authorizedSub,authorizedPub` 存储 client 被授权订阅及发布的 `topic` 列表。
 3. broker 在消息订阅及发布都会校验客户端权限
 
-### 6、共享订阅机制
+#### 6、共享订阅机制
 
-共享订阅是 `mqtt5` 提出来的概念，但是在很多 MQ 都有实现。`mqttx` 的实现也是基于 `mqtt5`。
-1. 格式: $share/{ShareName}/{filter}, $share 为前缀, ShareName 为共享订阅名, filter 就是非共享订阅主题过滤器。
+共享订阅是 `mqtt5` 协议规定的内容，很多 MQ 都有实现。`mqttx` 的实现也是基于 `mqtt5`。
+1. 格式: `$share/{ShareName}/{filter}`, `$share` 为前缀, `ShareName` 为共享订阅名, `filter` 就是非共享订阅主题过滤器。
 2. 目前仅支持 sender clientId hash 规则
 3. 使用需要配置 `biz.enableShareTopic=true` 
 
