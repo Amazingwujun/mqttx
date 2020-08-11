@@ -71,7 +71,7 @@ public class SubscriptionServiceImpl implements ISubscriptionService, Watcher<Cl
         }
         if (enableInnerCache) {
             initInnerCache(stringRedisTemplate);
-        }else {
+        } else {
             allTopics = null;
             topicClientMap = null;
         }
@@ -245,8 +245,9 @@ public class SubscriptionServiceImpl implements ISubscriptionService, Watcher<Cl
                     entries.forEach((k, v) -> {
                         String key = (String) k;
                         String val = (String) v;
-                        ConcurrentHashMap.KeySetView<ClientSub, Boolean> orDefault = topicClientMap.getOrDefault(topic, ConcurrentHashMap.newKeySet());
-                        orDefault.add(new ClientSub(key, Integer.parseInt(val), topic));
+                        topicClientMap
+                                .computeIfAbsent(topic, s -> ConcurrentHashMap.newKeySet())
+                                .add(new ClientSub(key, Integer.parseInt(val), topic));
                     });
                 }
             });
