@@ -114,7 +114,7 @@
 
 共享订阅是 `mqtt5` 协议规定的内容，很多 MQ 都有实现。`mqttx` 的实现也是基于 `mqtt5`。
 1. 格式: `$share/{ShareName}/{filter}`, `$share` 为前缀, `ShareName` 为共享订阅名, `filter` 就是非共享订阅主题过滤器。
-2. 目前仅支持 sender clientId hash 规则
+2. 目前支持 `hash` 和 `random` 规则
 3. 使用需要配置 `biz.enableShareTopic=true` 
 
 ### 路线图

@@ -13,13 +13,6 @@ public enum ShareStrategy {
     hash,
     random;
 
-    public static void main(String[] args) {
-        ShareStrategy hash = valueOf("hash");
-        System.out.println(hash);
-        ShareStrategy nani = valueOf("nani");
-        System.out.println(nani);
-    }
-
     /**
      * 返回处理共享订阅处理策略
      *
