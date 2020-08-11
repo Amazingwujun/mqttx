@@ -20,3 +20,4 @@ biz:
   enable-cluster: false
   enable-topic-sub-pub-secure: false
   enable-inner-cache: false
+  enable-share-topic: false

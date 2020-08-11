@@ -271,7 +271,9 @@ public class SubscriptionServiceImpl implements ISubscriptionService, Watcher<Cl
         for (String t : allTopics) {
             if (TopicUtils.match(topic, t)) {
                 ConcurrentHashMap.KeySetView<ClientSub, Boolean> clientSubs = topicClientMap.get(t);
-                clientSubList.addAll(clientSubs);
+                if (!CollectionUtils.isEmpty(clientSubs)) {
+                    clientSubList.addAll(clientSubs);
+                }
             }
         }
         return clientSubList;

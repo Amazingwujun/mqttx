@@ -5,6 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
+import java.util.List;
 
 /**
  * 业务配置
@@ -82,5 +83,11 @@ public class BizConfig {
      * 这个参数值必须集群一致，也就是说如果存在多个 mqttx 服务，那么这些服务的 enableInnerCache 值必须相同，否则会出现预期外的行为。
      */
     private Boolean enableInnerCache;
+
+    /**
+     * 共享 topic 支持, 实现参考 MQTT v5, 默认关。目前仅支持根据发送端 clientId 进行 hash 后的共享策略，
+     * 实现见 {@link com.jun.mqttx.broker.handler.PublishHandler} <code>chooseClient(List,String)</code> 方法.
+     */
+    private Boolean enableShareTopic = false;
     //@formatter:on
 }

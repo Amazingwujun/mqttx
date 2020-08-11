@@ -9,6 +9,7 @@ import com.jun.mqttx.entity.InternalMessage;
 import com.jun.mqttx.entity.PubMsg;
 import com.jun.mqttx.exception.AuthorizationException;
 import com.jun.mqttx.service.*;
+import com.jun.mqttx.utils.TopicUtils;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -40,7 +41,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
 
     private int brokerId;
 
-    private Boolean enableCluster, enableTopicSubPubSecure;
+    private Boolean enableCluster, enableTopicSubPubSecure, enableShareTopic;
 
     public PublishHandler(IPublishMessageService publishMessageService, IRetainMessageService retainMessageService,
                           ISubscriptionService subscriptionService, IPubRelMessageService pubRelMessageService,
@@ -57,6 +58,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         this.pubRelMessageService = pubRelMessageService;
         this.enableCluster = bizConfig.getEnableCluster();
         this.enableTopicSubPubSecure = bizConfig.getEnableTopicSubPubSecure();
+        this.enableShareTopic = bizConfig.getEnableShareTopic();
 
         if (enableCluster) {
             this.brokerId = bizConfig.getBrokerId();
@@ -154,47 +156,15 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         String topic = pubMsg.getTopic();
         List<ClientSub> clientList = subscriptionService.searchSubscribeClientList(topic);
 
+        //共享订阅, 目前仅支持 Sender clientId hash
+        if (TopicUtils.isShare(topic)) {
+            ClientSub hashClient = chooseClient(clientList, clientId(ctx));
+            publish(ctx, hashClient, pubMsg, isInternalMessage);
+            return;
+        }
+
         //遍历发送
-        clientList.forEach(clientSub -> {
-            final String clientId = clientSub.getClientId();
-
-            //计算Qos
-            int pubQos = pubMsg.getQoS();
-            int subQos = clientSub.getQos();
-            MqttQoS qos = subQos >= pubQos ? MqttQoS.valueOf(pubQos) : MqttQoS.valueOf(subQos);
-
-            //组装PubMsg
-            int messageId;
-            if (isInternalMessage) {
-                messageId = pubMsg.getMessageId();
-            } else {
-                messageId = nextMessageId(ctx);
-                pubMsg.setMessageId(messageId);
-            }
-            MqttPublishMessage mpm = MqttMessageBuilders.publish()
-                    .messageId(messageId)
-                    .qos(qos)
-                    .topicName(topic)
-                    .retained(pubMsg.isRetain())
-                    .payload(Unpooled.wrappedBuffer(pubMsg.getPayload()))
-                    .build();
-
-            //集群消息不做保存，因为传播消息的 broker 已经保存过了
-            if ((qos == MqttQoS.EXACTLY_ONCE || qos == MqttQoS.AT_LEAST_ONCE) && !isInternalMessage) {
-                publishMessageService.save(clientId, pubMsg);
-            }
-
-            //将消息推送给集群中的broker
-            if (enableCluster) {
-                internalMessagePublish(pubMsg);
-            }
-
-            //发送
-            Optional.of(clientId)
-                    .map(ConnectHandler.clientMap::get)
-                    .map(BrokerHandler.channels::find)
-                    .ifPresent(channel -> channel.writeAndFlush(mpm));
-        });
+        clientList.forEach(clientSub -> publish(ctx, clientSub, pubMsg, isInternalMessage));
     }
 
 
@@ -224,6 +194,51 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
     }
 
     /**
+     * 发布消息给 clientSub
+     *
+     * @param ctx               see {@link ChannelHandlerContext}
+     * @param clientSub         {@link ClientSub}
+     * @param pubMsg            待发布消息
+     * @param isInternalMessage 内部消息flag
+     */
+    private void publish(ChannelHandlerContext ctx, ClientSub clientSub, PubMsg pubMsg, boolean isInternalMessage) {
+        final String clientId = clientSub.getClientId();
+        String topic = pubMsg.getTopic();
+
+        //计算Qos
+        int pubQos = pubMsg.getQoS();
+        int subQos = clientSub.getQos();
+        MqttQoS qos = subQos >= pubQos ? MqttQoS.valueOf(pubQos) : MqttQoS.valueOf(subQos);
+
+        //组装PubMsg
+        int messageId = nextMessageId(ctx);
+        pubMsg.setMessageId(messageId);
+        MqttPublishMessage mpm = MqttMessageBuilders.publish()
+                .messageId(messageId)
+                .qos(qos)
+                .topicName(topic)
+                .retained(pubMsg.isRetain())
+                .payload(Unpooled.wrappedBuffer(pubMsg.getPayload()))
+                .build();
+
+        //集群消息不做保存，因为传播消息的 broker 已经保存过了
+        if ((qos == MqttQoS.EXACTLY_ONCE || qos == MqttQoS.AT_LEAST_ONCE) && !isInternalMessage) {
+            publishMessageService.save(clientId, pubMsg);
+        }
+
+        //将消息推送给集群中的broker
+        if (enableCluster) {
+            internalMessagePublish(pubMsg);
+        }
+
+        //发送
+        Optional.of(clientId)
+                .map(ConnectHandler.clientMap::get)
+                .map(BrokerHandler.channels::find)
+                .ifPresent(channel -> channel.writeAndFlush(mpm));
+    }
+
+    /**
      * 集群内部消息发布
      *
      * @param pubMsg {@link PubMsg}
@@ -231,5 +246,16 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
     private void internalMessagePublish(PubMsg pubMsg) {
         InternalMessage<PubMsg> im = new InternalMessage<>(pubMsg, System.currentTimeMillis(), brokerId);
         internalMessagePublishService.publish(im, InternalMessageEnum.PUB.getChannel());
+    }
+
+    /**
+     * 共享订阅选择客户端，目前仅支持 sender clientId hash
+     *
+     * @param clientSubList 接收客户端列表
+     * @param clientId      发送客户端ID
+     * @return 按规则选择的客户端
+     */
+    private ClientSub chooseClient(List<ClientSub> clientSubList, String clientId) {
+        return clientSubList.get(clientId.hashCode() % (clientSubList.size() - 1));
     }
 }

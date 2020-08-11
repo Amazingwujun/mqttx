@@ -17,6 +17,10 @@ import java.util.Objects;
  */
 public class TopicUtils {
 
+    /**
+     * 共享订阅前缀
+     */
+    private static final String SHARE_TOPIC_PREFIX = "$share";
 
     /**
      * client 是否被允许订阅 topic
@@ -65,6 +69,43 @@ public class TopicUtils {
         return false;
     }
 
+
+    public static void main(String[] args) {
+        System.out.println(isShare("$share/nani"));
+    }
+
+    /**
+     * 共享主题格式：<code>$share/{ShareName}/{filter}</code>;
+     * <ul>
+     *     <li>$share 前缀表示这是一个共享订阅</li>
+     *     <li>ShareName 客户端通过 ShareName 共享同一个订阅</li>
+     *     <li>filter 与非共享订阅含义相同</li>
+     * </ul>
+     *
+     * @param topic 主题
+     * @return true if topic is sharable
+     */
+    public static boolean isShare(String topic) {
+        String[] split = topic.split("/");
+        int len = split.length;
+        if (len < 3) {
+            return false;
+        }
+
+        for (int i = 0; i < split.length; i++) {
+            String s = split[i];
+            if (i == 0 && !SHARE_TOPIC_PREFIX.equals(s)) {
+                return false;
+            }
+            if (i == 1 && (s.contains("+") || s.contains("#"))) {
+                return false;
+            }
+        }
+
+        //共享主题
+        return true;
+    }
+
     /**
      * 用于判定客户端订阅的 topic 是否合法，参考 mqtt-v3.1.1 4.7章进行逻辑实现，以下为定制化通配符处理策略：
      * <ul>
@@ -108,11 +149,21 @@ public class TopicUtils {
 
         //5 不允许 a/b+/c，a/b# 等非法 topicFilter
         String[] split = subTopic.split("/");
-        for (String fragment : split) {
+        boolean isStartWithShare = false;
+        for (int i = 0; i < split.length; i++) {
+            String fragment = split[i];
             if (fragment.contains("+") || fragment.contains("#")) {
                 if (fragment.length() > 1) {
                     return false;
                 }
+            }
+
+            //增加共享订阅主题合法性判断
+            if (i == 0 && SHARE_TOPIC_PREFIX.equals(fragment)) {
+                isStartWithShare = true;
+            }
+            if (isStartWithShare && i == 1 && (fragment.contains("+") || fragment.contains("#"))) {
+                return false;
             }
         }
 
