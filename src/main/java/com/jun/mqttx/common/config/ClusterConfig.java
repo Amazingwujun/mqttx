@@ -27,17 +27,16 @@ import static com.jun.mqttx.common.constant.InternalMessageEnum.*;
  * @date 2020-05-14 14:43
  */
 @Configuration
+@ConditionalOnProperty(name = "biz.enable-cluster", havingValue = "true")
 public class ClusterConfig {
 
     @SuppressWarnings("rawtypes")
     @Bean
-    @ConditionalOnProperty(name = "biz.enable-cluster", havingValue = "true")
     public InternalMessageSubscriber internalMessageSubscriber(List<Watcher> watchers, BizConfig bizConfig) {
         return new InternalMessageSubscriber(watchers, bizConfig);
     }
 
     @Bean
-    @ConditionalOnProperty(name = "biz.enable-cluster", havingValue = "true")
     public IInternalMessagePublishService internalMessagePublishService(StringRedisTemplate stringRedisTemplate) {
         return new InternalMessagePublishServiceImpl(stringRedisTemplate);
     }
@@ -48,7 +47,6 @@ public class ClusterConfig {
      * @param subscriber 消息订阅者
      */
     @Bean
-    @ConditionalOnProperty(name = "biz.enable-cluster", havingValue = "true")
     public MessageListener messageListenerAdapter(InternalMessageSubscriber subscriber) {
         MessageListenerAdapter mla = new MessageListenerAdapter();
         mla.setDelegate(subscriber);
@@ -63,7 +61,6 @@ public class ClusterConfig {
      * @param messageListener        {@link MessageListener}
      */
     @Bean
-    @ConditionalOnProperty(name = "biz.enable-cluster", havingValue = "true")
     public RedisMessageListenerContainer redisMessageListenerContainer(RedisConnectionFactory redisConnectionFactory,
                                                                        MessageListener messageListener) {
         RedisMessageListenerContainer redisMessageListenerContainer = new RedisMessageListenerContainer();

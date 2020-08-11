@@ -1,5 +1,6 @@
 package com.jun.mqttx.common.config;
 
+import com.jun.mqttx.common.constant.ShareStrategy;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
@@ -89,5 +90,10 @@ public class BizConfig {
      * 实现见 {@link com.jun.mqttx.broker.handler.PublishHandler} <code>chooseClient(List,String)</code> 方法.
      */
     private Boolean enableShareTopic = false;
+
+    /**
+     * 共享订阅消息分发策略, see {@link ShareStrategy}, 默认随机分发。
+     */
+    private String shareSubStrategy = ShareStrategy.random.name();
     //@formatter:on
 }

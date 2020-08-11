@@ -69,11 +69,6 @@ public class TopicUtils {
         return false;
     }
 
-
-    public static void main(String[] args) {
-        System.out.println(isShare("$share/nani"));
-    }
-
     /**
      * 共享主题格式：<code>$share/{ShareName}/{filter}</code>;
      * <ul>

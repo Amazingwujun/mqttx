@@ -3,6 +3,7 @@ package com.jun.mqttx.broker.handler;
 import com.jun.mqttx.broker.BrokerHandler;
 import com.jun.mqttx.common.config.BizConfig;
 import com.jun.mqttx.common.constant.InternalMessageEnum;
+import com.jun.mqttx.common.constant.ShareStrategy;
 import com.jun.mqttx.consumer.Watcher;
 import com.jun.mqttx.entity.ClientSub;
 import com.jun.mqttx.entity.InternalMessage;
@@ -19,6 +20,8 @@ import org.springframework.util.Assert;
 
 import java.util.List;
 import java.util.Optional;
+
+import static com.jun.mqttx.common.constant.ShareStrategy.*;
 
 /**
  * {@link MqttMessageType#PUBLISH} 处理器
@@ -42,6 +45,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
     private int brokerId;
 
     private Boolean enableCluster, enableTopicSubPubSecure, enableShareTopic;
+    private ShareStrategy shareStrategy;
 
     public PublishHandler(IPublishMessageService publishMessageService, IRetainMessageService retainMessageService,
                           ISubscriptionService subscriptionService, IPubRelMessageService pubRelMessageService,
@@ -59,6 +63,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         this.enableCluster = bizConfig.getEnableCluster();
         this.enableTopicSubPubSecure = bizConfig.getEnableTopicSubPubSecure();
         this.enableShareTopic = bizConfig.getEnableShareTopic();
+        this.shareStrategy = ShareStrategy.getStrategy(bizConfig.getShareSubStrategy());
 
         if (enableCluster) {
             this.brokerId = bizConfig.getBrokerId();
@@ -256,6 +261,13 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
      * @return 按规则选择的客户端
      */
     private ClientSub chooseClient(List<ClientSub> clientSubList, String clientId) {
-        return clientSubList.get(clientId.hashCode() % (clientSubList.size() - 1));
+        if (hash == shareStrategy) {
+            return clientSubList.get(clientId.hashCode() % (clientSubList.size() - 1));
+        } else if (random == shareStrategy) {
+            int key = (int) (System.currentTimeMillis() + clientId.hashCode());
+            return clientSubList.get(key % (clientSubList.size() - 1));
+        }
+
+        throw new IllegalArgumentException("不可能到达的代码,strategy:" + shareStrategy);
     }
 }
