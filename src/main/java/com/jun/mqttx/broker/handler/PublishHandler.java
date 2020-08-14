@@ -17,6 +17,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+import org.springframework.util.CollectionUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -173,7 +174,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         List<ClientSub> clientList = subscriptionService.searchSubscribeClientList(topic);
 
         //共享订阅, 目前仅支持 Sender clientId hash
-        if (enableShareTopic && TopicUtils.isShare(topic)) {
+        if (enableShareTopic && TopicUtils.isShare(topic) && !CollectionUtils.isEmpty(clientList)) {
             ClientSub hashClient = chooseClient(clientList, clientId(ctx), topic);
             publish0(ctx, hashClient, pubMsg, isInternalMessage);
             return;
@@ -281,13 +282,13 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         clientSubList.sort(ClientSub::compareTo);
 
         if (hash == shareStrategy) {
-            return clientSubList.get(clientId.hashCode() % (clientSubList.size() - 1));
+            return clientSubList.get(clientId.hashCode() % clientSubList.size());
         } else if (random == shareStrategy) {
             int key = (int) (System.currentTimeMillis() + clientId.hashCode());
-            return clientSubList.get(key % (clientSubList.size() - 1));
+            return clientSubList.get(key % clientSubList.size());
         } else if (round == shareStrategy) {
             int i = roundMap.computeIfAbsent(topic, s -> new AtomicInteger(0)).getAndIncrement();
-            return clientSubList.get(i % (clientSubList.size() - 1));
+            return clientSubList.get(i % clientSubList.size());
         }
 
         throw new IllegalArgumentException("不可能到达的代码,strategy:" + shareStrategy);
