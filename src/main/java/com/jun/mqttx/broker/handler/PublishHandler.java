@@ -19,7 +19,10 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.jun.mqttx.common.constant.ShareStrategy.*;
 
@@ -47,6 +50,11 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
     private Boolean enableCluster, enableTopicSubPubSecure, enableShareTopic;
     private ShareStrategy shareStrategy;
 
+    /**
+     * 共享订阅轮询，存储轮询参数
+     */
+    private Map<String, AtomicInteger> roundMap;
+
     public PublishHandler(IPublishMessageService publishMessageService, IRetainMessageService retainMessageService,
                           ISubscriptionService subscriptionService, IPubRelMessageService pubRelMessageService,
                           @Nullable IInternalMessagePublishService internalMessagePublishService, BizConfig bizConfig) {
@@ -64,6 +72,9 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         this.enableTopicSubPubSecure = bizConfig.getEnableTopicSubPubSecure();
         this.enableShareTopic = bizConfig.getEnableShareTopic();
         this.shareStrategy = ShareStrategy.getStrategy(bizConfig.getShareSubStrategy());
+        if (round == shareStrategy) {
+            roundMap = new ConcurrentHashMap<>();
+        }
 
         if (enableCluster) {
             this.brokerId = bizConfig.getBrokerId();
@@ -163,13 +174,13 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
 
         //共享订阅, 目前仅支持 Sender clientId hash
         if (enableShareTopic && TopicUtils.isShare(topic)) {
-            ClientSub hashClient = chooseClient(clientList, clientId(ctx));
-            publish(ctx, hashClient, pubMsg, isInternalMessage);
+            ClientSub hashClient = chooseClient(clientList, clientId(ctx), topic);
+            publish0(ctx, hashClient, pubMsg, isInternalMessage);
             return;
         }
 
         //遍历发送
-        clientList.forEach(clientSub -> publish(ctx, clientSub, pubMsg, isInternalMessage));
+        clientList.forEach(clientSub -> publish0(ctx, clientSub, pubMsg, isInternalMessage));
     }
 
 
@@ -206,7 +217,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
      * @param pubMsg            待发布消息
      * @param isInternalMessage 内部消息flag
      */
-    private void publish(ChannelHandlerContext ctx, ClientSub clientSub, PubMsg pubMsg, boolean isInternalMessage) {
+    private void publish0(ChannelHandlerContext ctx, ClientSub clientSub, PubMsg pubMsg, boolean isInternalMessage) {
         final String clientId = clientSub.getClientId();
         String topic = pubMsg.getTopic();
 
@@ -254,18 +265,29 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
     }
 
     /**
-     * 共享订阅选择客户端，目前仅支持 sender clientId hash
+     * 共享订阅选择客户端, 支持的策略如下：
+     * <ol>
+     *     <li>随机: {@link ShareStrategy#random}</li>
+     *     <li>哈希: {@link ShareStrategy#hash}</li>
+     *     <li>轮询: {@link ShareStrategy#round}</li>
+     * </ol>
      *
      * @param clientSubList 接收客户端列表
      * @param clientId      发送客户端ID
      * @return 按规则选择的客户端
      */
-    private ClientSub chooseClient(List<ClientSub> clientSubList, String clientId) {
+    private ClientSub chooseClient(List<ClientSub> clientSubList, String clientId, String topic) {
+        //集合排序
+        clientSubList.sort(ClientSub::compareTo);
+
         if (hash == shareStrategy) {
             return clientSubList.get(clientId.hashCode() % (clientSubList.size() - 1));
         } else if (random == shareStrategy) {
             int key = (int) (System.currentTimeMillis() + clientId.hashCode());
             return clientSubList.get(key % (clientSubList.size() - 1));
+        } else if (round == shareStrategy) {
+            int i = roundMap.computeIfAbsent(topic, s -> new AtomicInteger(0)).getAndIncrement();
+            return clientSubList.get(i % (clientSubList.size() - 1));
         }
 
         throw new IllegalArgumentException("不可能到达的代码,strategy:" + shareStrategy);

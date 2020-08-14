@@ -106,8 +106,8 @@ public class TopicUtils {
      * <ul>
      *     <li>第一个字符及最后一个字符不可为'/'</li>
      *     <li># 通配符如果存在，必须是最后一个字符</li>
+     *     <li>共享订阅主题的 ShareName 不允许含有 "+", "#" 符号</li>
      * </ul>
-     * 这里的判断做的还不是很严谨，所以客户端对 topic 的使用还是得遵循规范，不要乱来
      *
      * @param subTopic 订阅主题
      * @return true if topic valid
@@ -117,10 +117,10 @@ public class TopicUtils {
             return false;
         }
 
-        //1 不允许 "/" 连续出现, 如 "//"
+        //1 不允许 "/" 连续出现, 如 "//"; 不允许 "/" 出现在首位
         //2 不允许 " " 空字符串出现
         //3 "#" 只能出现在末位
-        //4 '/' 不允许出现在末位及首位
+        //4 "/" 不允许出现在末位
         char[] allChar = subTopic.toCharArray();
         int len = allChar.length;
         for (int i = 0, j = -1; i < len; i++) {
@@ -137,7 +137,7 @@ public class TopicUtils {
             if (c == '#' && i != len - 1) {
                 return false;
             }
-            if ('/' == c && (i == len - 1 || i == 0)) {
+            if ('/' == c && i == len - 1 ) {
                 return false;
             }
         }

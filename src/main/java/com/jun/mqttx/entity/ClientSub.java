@@ -11,11 +11,25 @@ import lombok.Data;
  */
 @Data
 @AllArgsConstructor
-public class ClientSub {
+public class ClientSub implements Comparable {
 
     private String clientId;
 
     private int qos;
 
     private String topic;
+
+    /**
+     * 共享订阅发布机制需要有序的集合,对象按 {@link ClientSub#clientId#hashCode()} 排序.
+     *
+     * @param o 比较对象
+     */
+    @Override
+    public int compareTo(Object o) {
+        if (o instanceof ClientSub) {
+            return clientId.hashCode() - o.hashCode();
+        }else {
+            throw new IllegalArgumentException("非法的比较对象:" + o);
+        }
+    }
 }
