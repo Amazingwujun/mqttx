@@ -48,4 +48,12 @@ public interface ISubscriptionService {
      * @param topic 主题
      */
     void removeTopic(String topic);
+
+    /**
+     * 移除未包含在 authorizedSub 集合中的客户端订阅
+     *
+     * @param clientId      客户端ID
+     * @param authorizedSub 客户端被允许订阅的 topic 集合
+     */
+    void clearClientSub(String clientId, List<String> authorizedSub);
 }

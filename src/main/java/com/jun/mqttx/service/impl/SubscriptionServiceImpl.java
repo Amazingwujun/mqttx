@@ -18,6 +18,7 @@ import org.springframework.util.CollectionUtils;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * 主题订阅服务
@@ -32,7 +33,7 @@ public class SubscriptionServiceImpl implements ISubscriptionService, Watcher<Cl
     /**
      * 按顺序 -> 订阅，解除订阅，删除 topic
      */
-    public static final int SUB = 1, UN_SUB = 2, DEL_TOPIC = 3;
+    private static final int SUB = 1, UN_SUB = 2, DEL_TOPIC = 3;
 
     private StringRedisTemplate stringRedisTemplate;
     private IInternalMessagePublishService internalMessagePublishService;
@@ -201,6 +202,16 @@ public class SubscriptionServiceImpl implements ISubscriptionService, Watcher<Cl
                 internalMessagePublishService.publish(im, InternalMessageEnum.SUB_UNSUB.getChannel());
             }
         }
+    }
+
+    @Override
+    public void clearClientSub(String clientId, List<String> authorizedSub) {
+        List<String> collect = allTopics
+                .stream()
+                .filter(topic -> !authorizedSub.contains(topic))
+                .collect(Collectors.toList());
+
+        unsubscribe(clientId, collect);
     }
 
     @Override

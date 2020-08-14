@@ -12,6 +12,7 @@ import com.jun.mqttx.entity.Session;
 import com.jun.mqttx.exception.AuthenticationException;
 import com.jun.mqttx.exception.AuthorizationException;
 import com.jun.mqttx.service.ISessionService;
+import com.jun.mqttx.service.ISubscriptionService;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -57,6 +58,8 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
      * 会话服务
      */
     private ISessionService sessionService;
+
+    private ISubscriptionService subscriptionService;
 
     public BrokerHandler(MessageDelegatingHandler messageDelegatingHandler, ISessionService sessionService) {
         Assert.notNull(messageDelegatingHandler, "messageDelegatingHandler can't be null");
@@ -114,7 +117,7 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
      * @param authorizedSubTopics 被授权订阅 topic 列表
      * @param authorizedPubTopics 被授权发布 topic 列表
      */
-    public void alterUserAuthorizedTopic(String clientId, List<String> authorizedSubTopics, List<String> authorizedPubTopics) {
+    private void alterUserAuthorizedTopic(String clientId, List<String> authorizedSubTopics, List<String> authorizedPubTopics) {
         if (CollectionUtils.isEmpty(authorizedPubTopics) && CollectionUtils.isEmpty(authorizedSubTopics)) {
             return;
         }
@@ -226,14 +229,20 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
     public void action(InternalMessage<Object> im) {
         if (im.getData() instanceof JSONObject) {
             Authentication data = ((JSONObject) im.getData()).toJavaObject(Authentication.class);
-            String username = data.getUsername();
+            // 目的是为了兼容 v1.0.2(含) 之前的版本
+            String clientId = StringUtils.isEmpty(data.getClientId()) ? data.getUsername() : data.getClientId();
             List<String> authorizedPub = data.getAuthorizedPub();
             List<String> authorizedSub = data.getAuthorizedSub();
-            if (StringUtils.isEmpty(username) || (CollectionUtils.isEmpty(authorizedPub) && CollectionUtils.isEmpty(authorizedSub))) {
+            if (StringUtils.isEmpty(clientId) || (CollectionUtils.isEmpty(authorizedPub) && CollectionUtils.isEmpty(authorizedSub))) {
                 log.info("权限修改参数非法:{}", im);
                 return;
             }
-            alterUserAuthorizedTopic(username, authorizedSub, authorizedPub);
+            alterUserAuthorizedTopic(clientId, authorizedSub, authorizedPub);
+
+            // 移除 cache&redis 中客户端订阅的 topic
+            if (!CollectionUtils.isEmpty(authorizedSub)) {
+                subscriptionService.clearClientSub(clientId, authorizedSub);
+            }
         }
     }
 
