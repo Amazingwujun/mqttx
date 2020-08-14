@@ -172,9 +172,12 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         //获取topic订阅者id列表
         String topic = pubMsg.getTopic();
         List<ClientSub> clientList = subscriptionService.searchSubscribeClientList(topic);
+        if (CollectionUtils.isEmpty(clientList)) {
+            return;
+        }
 
         //共享订阅, 目前仅支持 Sender clientId hash
-        if (enableShareTopic && TopicUtils.isShare(topic) && !CollectionUtils.isEmpty(clientList)) {
+        if (enableShareTopic && TopicUtils.isShare(topic)) {
             ClientSub hashClient = chooseClient(clientList, clientId(ctx), topic);
             publish0(ctx, hashClient, pubMsg, isInternalMessage);
             return;

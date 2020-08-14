@@ -38,8 +38,11 @@ public class SubscriptionServiceImpl implements ISubscriptionService, Watcher<Cl
     private StringRedisTemplate stringRedisTemplate;
     private IInternalMessagePublishService internalMessagePublishService;
 
-    private Set<String> allTopics = ConcurrentHashMap.newKeySet();
-    private Map<String, ConcurrentHashMap.KeySetView<ClientSub, Boolean>> topicClientMap = new ConcurrentHashMap<>();
+    /**
+     * 内部缓存，{@link this#enableInnerCache} == true 时使用
+     */
+    private Set<String> allTopics;
+    private Map<String, ConcurrentHashMap.KeySetView<ClientSub, Boolean>> topicClientMap;
 
     /**
      * 订阅主题前缀
@@ -71,10 +74,9 @@ public class SubscriptionServiceImpl implements ISubscriptionService, Watcher<Cl
             this.enableInnerCache = bizConfig.getEnableInnerCache() == null ? false : bizConfig.getEnableInnerCache();
         }
         if (enableInnerCache) {
+            allTopics = ConcurrentHashMap.newKeySet();
+            topicClientMap = new ConcurrentHashMap<>();
             initInnerCache(stringRedisTemplate);
-        } else {
-            allTopics = null;
-            topicClientMap = null;
         }
         this.brokerId = bizConfig.getBrokerId();
 
