@@ -40,6 +40,7 @@ public class InternalMessageSubscriber {
      *     <li>发布消息释放_qos2 {@link com.jun.mqttx.common.constant.InternalMessageEnum#PUB_REL}</li>
      *     <li>发布消息完成_qos2 {@link com.jun.mqttx.common.constant.InternalMessageEnum#PUB_COM}</li>
      *     <li>用户权限修改 {@link com.jun.mqttx.common.constant.InternalMessageEnum#ALTER_USER_AUTHORIZED_TOPICS}</li>
+     *     <li>订阅与删除订阅 {@link com.jun.mqttx.common.constant.InternalMessageEnum#SUB_UNSUB}</li>
      * </ol>
      *
      * @param message 消息内容

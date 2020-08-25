@@ -23,7 +23,7 @@ public abstract class AbstractMqttTopicSecureHandler extends AbstractMqttSession
      * @param topic 订阅 topic
      * @return true 如果被授权
      */
-    protected boolean hasAuthToSubTopic(ChannelHandlerContext ctx, String topic) {
+    boolean hasAuthToSubTopic(ChannelHandlerContext ctx, String topic) {
         return TopicUtils.hasAuthToSubTopic(ctx, topic);
     }
 
@@ -34,7 +34,7 @@ public abstract class AbstractMqttTopicSecureHandler extends AbstractMqttSession
      * @param topic 订阅 topic
      * @return true if client authorised
      */
-    protected boolean hasAuthToPubTopic(ChannelHandlerContext ctx, String topic) {
+    boolean hasAuthToPubTopic(ChannelHandlerContext ctx, String topic) {
         return TopicUtils.hasAuthToPubTopic(ctx, topic);
     }
 }

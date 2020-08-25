@@ -6,7 +6,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
-import java.util.List;
 
 /**
  * 业务配置
@@ -95,5 +94,10 @@ public class BizConfig {
      * 共享订阅消息分发策略, see {@link ShareStrategy}, 默认随机分发。
      */
     private String shareSubStrategy = ShareStrategy.random.name();
+
+    /**
+     * 用于集群内部缓存开启状态一致性检查。
+     */
+    private String innerCacheConsistencyKey;
     //@formatter:on
 }

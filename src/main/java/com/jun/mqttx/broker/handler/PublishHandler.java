@@ -169,14 +169,14 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
      * @param isInternalMessage 标志消息源是集群还是客户端
      */
     private void publish(final PubMsg pubMsg, ChannelHandlerContext ctx, boolean isInternalMessage) {
-        //获取topic订阅者id列表
+        //获取 topic 订阅者 id 列表
         String topic = pubMsg.getTopic();
         List<ClientSub> clientList = subscriptionService.searchSubscribeClientList(topic);
         if (CollectionUtils.isEmpty(clientList)) {
             return;
         }
 
-        //共享订阅, 目前仅支持 Sender clientId hash
+        //共享订阅
         if (enableShareTopic && TopicUtils.isShare(topic)) {
             ClientSub hashClient = chooseClient(clientList, clientId(ctx), topic);
             publish0(ctx, hashClient, pubMsg, isInternalMessage);

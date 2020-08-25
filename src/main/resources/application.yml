@@ -17,8 +17,9 @@ biz:
   pub-rel-msg-set-prefix: "MQTT:CLIENT:PUBRELMSG:"
   topic-set-key: "MQTT:ALLTOPIC"
   broker-id: 1
-  enable-cluster: false
+  enable-cluster: true
   enable-topic-sub-pub-secure: false
-  enable-inner-cache: false
+  enable-inner-cache: true
   enable-share-topic: true
   share-sub-strategy: round
+  inner-cache-consistency-key: "MQTTX:CACHE_CONSISTENCY"
