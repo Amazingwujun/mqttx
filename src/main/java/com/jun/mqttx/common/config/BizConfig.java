@@ -99,5 +99,15 @@ public class BizConfig {
      * 用于集群内部缓存开启状态一致性检查。
      */
     private String innerCacheConsistencyKey;
+
+    /**
+     * websocket 地址
+     */
+    private String websocketPath;
+
+    /**
+     * websocket 监听端口
+     */
+    private Integer wsPort;
     //@formatter:on
 }

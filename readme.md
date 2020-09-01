@@ -33,22 +33,23 @@
 │  └─com
 │      └─jun
 │          └─mqttx
-│              ├─broker -- mqttx broker
-│              │  └─handler -- mqtt 消息处理器（pub, sub, conn, disconnect, etc）
+│              ├─broker
+│              │  ├─codec      编解码
+│              │  └─handler    消息处理器（pub, sub, connn, etc）
 │              ├─common
-│              │  ├─config -- 项目配置，Spring Bean 声明
-│              │  └─constant -- 常量，枚举等
-│              ├─consumer -- 集群消息接收
-│              ├─entity -- pojo
-│              ├─exception -- 异常包
-│              ├─service -- 服务。用户认证，pub/sub 消息存储（Qos1，2）等等
-│              │  └─impl -- 项目默认实现
-│              └─utils -- 一些工具类
-└─resources -- 资源文件夹
+│              │  ├─config     配置，主要是 bean 声明
+│              │  └─constant   常量
+│              ├─consumer      集群消息消费者
+│              ├─entity        实体类
+│              ├─exception     异常包
+│              ├─service       业务服务（用户认证, 消息存储等）接口
+│              │  └─impl       默认实现
+│              └─utils         工具类
+└─resources                    资源文件（application.yml 在此文件夹）
 ```
 ## 容器化部署
 
-为了方便项目快速的跑起来，引进了docker来方便项目的部署
+为了方便项目快速的部署，引进 docker
 
 > 执行本地部署动作前，需要先下载docker
 
@@ -117,15 +118,18 @@
 2. 目前支持 `hash`, `random`, `round` 三种规则
 3. 使用需要配置 `biz.enableShareTopic=true` 
 
+#### 7、websocket 支持
+mqttx 新增 websocket 支持
+
 ### 路线图
 
 基于我个人的认知，`mqttx` 接下来可能的开发计划：
 
 1. ~~考虑整合 `SpringCloud`~~ 
 2. bug fix and optimization
-3. websocket 支持？
+3. 目前正在开发基于 `vue2.0`, `element-ui` 的 [mqttx-admin](https://github.com/Amazingwujun/mqttx-admin) 管理平台，`mqttx` 的功能更新可能会暂停一段时间(最近在看 [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html))
 
-如果你对 **mqttx** 项目有更好的意见或建议，可以通过邮箱联系我：85998282@qq.com
+任何问题，请联系我。邮箱：85998282@qq.com.
 
 ---
 

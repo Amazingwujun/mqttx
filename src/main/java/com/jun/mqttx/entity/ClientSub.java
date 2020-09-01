@@ -11,7 +11,7 @@ import lombok.Data;
  */
 @Data
 @AllArgsConstructor
-public class ClientSub implements Comparable {
+public class ClientSub implements Comparable<ClientSub> {
 
     private String clientId;
 
@@ -25,10 +25,10 @@ public class ClientSub implements Comparable {
      * @param o 比较对象
      */
     @Override
-    public int compareTo(Object o) {
-        if (o instanceof ClientSub) {
+    public int compareTo(ClientSub o) {
+        if (o != null) {
             return clientId.hashCode() - o.hashCode();
-        }else {
+        } else {
             throw new IllegalArgumentException("非法的比较对象:" + o);
         }
     }

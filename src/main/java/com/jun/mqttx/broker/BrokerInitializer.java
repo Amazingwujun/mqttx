@@ -1,12 +1,20 @@
 package com.jun.mqttx.broker;
 
+import com.jun.mqttx.broker.codec.MqttWebsocketCodec;
 import com.jun.mqttx.common.config.BizConfig;
 import com.jun.mqttx.utils.SslUtils;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.*;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
+import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketServerCompressionHandler;
 import io.netty.handler.codec.mqtt.MqttDecoder;
 import io.netty.handler.codec.mqtt.MqttEncoder;
 import io.netty.handler.logging.LogLevel;
@@ -15,11 +23,13 @@ import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.timeout.IdleStateHandler;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
 import javax.net.ssl.SSLException;
 import java.time.Duration;
+import java.util.Objects;
 
 /**
  * broker 启动器
@@ -27,6 +37,7 @@ import java.time.Duration;
  * @author Jun
  * @date 2020-03-03 20:55
  */
+@Slf4j
 @Component
 public class BrokerInitializer {
     //@formatter:off
@@ -40,6 +51,10 @@ public class BrokerInitializer {
     /** 心跳 */
     private Duration heartbeat;
 
+    private Integer wsPort;
+
+    private String websocketPath;
+
     /** 握手队列 */
     private Integer soBacklog;
 
@@ -52,6 +67,10 @@ public class BrokerInitializer {
     /** broker handler */
     private BrokerHandler brokerHandler;
 
+    /** reactor 线程，提供给 socket, websocket 使用 */
+    private EventLoopGroup boss, work;
+
+    private SslContext sslContext;
     //@formatter:on
 
     public BrokerInitializer(BizConfig bizConfig, BrokerHandler brokerHandler, SslUtils sslUtils) {
@@ -66,57 +85,100 @@ public class BrokerInitializer {
         this.heartbeat = bizConfig.getHeartbeat();
         this.soBacklog = bizConfig.getSoBacklog();
         this.sslEnable = bizConfig.getSslEnable();
+        this.websocketPath = bizConfig.getWebsocketPath();
+        this.wsPort = bizConfig.getWsPort();
 
         //参数校验
         Assert.hasText(host, "host can't be null");
         Assert.notNull(port, "port can't be null");
         Assert.notNull(heartbeat, "heartbeat can't be null");
         Assert.notNull(soBacklog, "soBacklog can't be null");
+        Assert.hasText(websocketPath, "websocketPath can't be null");
+        Assert.notNull(wsPort, "wsPort can't be null");
+        Assert.isTrue(!Objects.equals(wsPort, port), "websocket 与 socket 监听端口不能相同");
+    }
+
+    public void start() throws InterruptedException {
+        if (boss == null || work == null) {
+            boss = new NioEventLoopGroup(1);
+            work = new NioEventLoopGroup();
+        }
+        if (sslEnable) {
+            try {
+                sslContext = SslContextBuilder
+                        .forServer(sslUtils.getKeyManagerFactory())
+                        .clientAuth(ClientAuth.NONE) //不校验客户端
+                        .build();
+            } catch (SSLException e) {
+                //do nothing
+            }
+        }
+
+        socket();
+        websocket();
     }
 
 
     /**
-     * 启动服务
+     * socket 服务
      */
-    public void start() throws InterruptedException {
-        EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-        EventLoopGroup workGroup = new NioEventLoopGroup();
+    private void socket() throws InterruptedException {
+        ServerBootstrap b = new ServerBootstrap();
 
-        try {
-            ServerBootstrap b = new ServerBootstrap();
+        b
+                .group(boss, work)
+                .channel(NioServerSocketChannel.class)
+                .handler(new LoggingHandler(LogLevel.INFO))
+                .option(ChannelOption.SO_BACKLOG, soBacklog)
+                .childHandler(new ChannelInitializer<SocketChannel>() {
+                    @Override
+                    protected void initChannel(SocketChannel socketChannel) {
+                        ChannelPipeline pipeline = socketChannel.pipeline();
 
-            b
-                    .group(bossGroup, workGroup)
-                    .channel(NioServerSocketChannel.class)
-                    .handler(new LoggingHandler(LogLevel.INFO))
-                    .option(ChannelOption.SO_BACKLOG, soBacklog)
-                    .childHandler(new ChannelInitializer<SocketChannel>() {
-                        @Override
-                        protected void initChannel(SocketChannel socketChannel) throws SSLException {
-                            ChannelPipeline pipeline = socketChannel.pipeline();
-
-                            //心跳检测
-                            pipeline.addLast(new IdleStateHandler(0, 0,
-                                    (int) heartbeat.getSeconds()));
-                            if (Boolean.TRUE.equals(sslEnable)) {
-                                //SslContext
-                                SslContext sslContext = SslContextBuilder
-                                        .forServer(sslUtils.getKeyManagerFactory())
-                                        .clientAuth(ClientAuth.NONE) //不校验客户端
-                                        .build();
-                                pipeline.addLast(sslContext.newHandler(socketChannel.alloc()));
-                            }
-                            pipeline.addLast(MqttEncoder.INSTANCE);
-                            pipeline.addLast(new MqttDecoder());
-                            pipeline.addLast(brokerHandler);
+                        if (sslEnable) {
+                            pipeline.addLast(sslContext.newHandler(socketChannel.alloc()));
                         }
-                    });
+                        //心跳检测
+                        pipeline.addLast(new IdleStateHandler(0, 0,
+                                (int) heartbeat.getSeconds()));
+                        pipeline.addLast(MqttEncoder.INSTANCE);
+                        pipeline.addLast(new MqttDecoder());
+                        pipeline.addLast(brokerHandler);
+                    }
+                });
+        b.bind(host, port).sync();
+    }
 
-            Channel channel = b.bind(host, port).sync().channel();
-            channel.closeFuture().sync();
-        } finally {
-            bossGroup.shutdownGracefully();
-            workGroup.shutdownGracefully();
-        }
+    /**
+     * websocket 服务
+     */
+    private void websocket() throws InterruptedException {
+        ServerBootstrap b = new ServerBootstrap();
+        b
+                .group(boss, work)
+                .channel(NioServerSocketChannel.class)
+                .handler(new LoggingHandler(LogLevel.INFO))
+                .childHandler(new ChannelInitializer<SocketChannel>() {
+
+                    protected void initChannel(SocketChannel socketChannel) {
+                        ChannelPipeline pipeline = socketChannel.pipeline();
+
+                        if (sslEnable) {
+                            pipeline.addLast(sslContext.newHandler(socketChannel.alloc()));
+                        }
+                        pipeline.addLast(new IdleStateHandler(0, 0, (int) heartbeat.getSeconds()));
+                        pipeline.addLast(new HttpServerCodec());
+                        pipeline.addLast(new HttpObjectAggregator(65536));
+                        pipeline.addLast(new WebSocketServerCompressionHandler());
+                        // 请求头中 Sec-WebSocket-Protocol: mqtt, 故 subprotocols 应该支持 mqtt
+                        pipeline.addLast(new WebSocketServerProtocolHandler(websocketPath, "mqtt", true));
+                        pipeline.addLast(new MqttWebsocketCodec());
+                        pipeline.addLast(MqttEncoder.INSTANCE);
+                        pipeline.addLast(new MqttDecoder());
+                        pipeline.addLast(brokerHandler);
+                    }
+                });
+
+        b.bind(host, wsPort).sync().channel();
     }
 }
