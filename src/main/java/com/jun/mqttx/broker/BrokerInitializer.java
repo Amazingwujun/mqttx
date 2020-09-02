@@ -61,16 +61,27 @@ public class BrokerInitializer {
     /** ssl开关 */
     private Boolean sslEnable;
 
-    /** 证书工具 */
+    /**
+     * 证书工具
+     */
     private SslUtils sslUtils;
 
-    /** broker handler */
+    /**
+     * broker handler
+     */
     private BrokerHandler brokerHandler;
 
-    /** reactor 线程，提供给 socket, websocket 使用 */
+    /**
+     * reactor 线程，提供给 socket, websocket 使用
+     */
     private EventLoopGroup boss, work;
 
     private SslContext sslContext;
+
+    /**
+     * websocket 开关
+     */
+    private Boolean enableWebsocket;
     //@formatter:on
 
     public BrokerInitializer(BizConfig bizConfig, BrokerHandler brokerHandler, SslUtils sslUtils) {
@@ -87,6 +98,7 @@ public class BrokerInitializer {
         this.sslEnable = bizConfig.getSslEnable();
         this.websocketPath = bizConfig.getWebsocketPath();
         this.wsPort = bizConfig.getWsPort();
+        this.enableWebsocket = bizConfig.getEnableWebsocket();
 
         //参数校验
         Assert.hasText(host, "host can't be null");
@@ -115,7 +127,9 @@ public class BrokerInitializer {
         }
 
         socket();
-        websocket();
+        if (enableWebsocket) {
+            websocket();
+        }
     }
 
 

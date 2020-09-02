@@ -29,7 +29,7 @@ public class BizConfig {
     private String host;
 
     /** ssl认证开关 */
-    private Boolean sslEnable;
+    private Boolean sslEnable = false;
 
     /** tcp连接队列 */
     private Integer soBacklog;
@@ -55,7 +55,7 @@ public class BizConfig {
     /** client pub消息 redis set 前缀 */
     private String pubMsgSetPrefix;
 
-    /** client pubRel消息 redis set 前缀 */
+    /** client pubRel 消息 redis set 前缀 */
     private String pubRelMsgSetPrefix;
 
     /**
@@ -91,7 +91,8 @@ public class BizConfig {
     private Boolean enableShareTopic = false;
 
     /**
-     * 共享订阅消息分发策略, see {@link ShareStrategy}, 默认随机分发。
+     * 共享订阅消息分发策略, 默认随机分发。
+     * @see ShareStrategy
      */
     private String shareSubStrategy = ShareStrategy.random.name();
 
@@ -101,13 +102,18 @@ public class BizConfig {
     private String innerCacheConsistencyKey;
 
     /**
+     * websocket 支持，默认关
+     */
+    private Boolean enableWebsocket = false;
+
+    /**
      * websocket 地址
      */
-    private String websocketPath;
+    private String websocketPath = "/mqtt";
 
     /**
      * websocket 监听端口
      */
-    private Integer wsPort;
+    private Integer wsPort = 8083;
     //@formatter:on
 }

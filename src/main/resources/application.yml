@@ -1,6 +1,6 @@
 spring:
   redis:
-    host: localhost
+    host:
 biz:
   cluster-session-hash-key: "Session:key"
   heartbeat: 50s
@@ -25,3 +25,5 @@ biz:
   inner-cache-consistency-key: "MQTTX:CACHE_CONSISTENCY"
   websocket-path: "/mqtt"
   ws-port: 8083
+  enable-websocket: true
+
