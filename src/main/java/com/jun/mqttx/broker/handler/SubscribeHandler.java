@@ -1,6 +1,6 @@
 package com.jun.mqttx.broker.handler;
 
-import com.jun.mqttx.common.config.BizConfig;
+import com.jun.mqttx.config.BizConfig;
 import com.jun.mqttx.entity.ClientSub;
 import com.jun.mqttx.entity.PubMsg;
 import com.jun.mqttx.service.IRetainMessageService;

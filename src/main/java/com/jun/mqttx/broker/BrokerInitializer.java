@@ -1,7 +1,8 @@
 package com.jun.mqttx.broker;
 
 import com.jun.mqttx.broker.codec.MqttWebsocketCodec;
-import com.jun.mqttx.common.config.BizConfig;
+import com.jun.mqttx.config.BizConfig;
+import com.jun.mqttx.exception.GlobalException;
 import com.jun.mqttx.utils.SslUtils;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInitializer;
@@ -48,11 +49,16 @@ public class BrokerInitializer {
     /** 端口 */
     private Integer port;
 
+    /** socket 开关 */
+    private Boolean enableSocket;
+
     /** 心跳 */
     private Duration heartbeat;
 
+    /** websocket 端口 */
     private Integer wsPort;
 
+    /** websocket 地址 */
     private String websocketPath;
 
     /** 握手队列 */
@@ -89,16 +95,21 @@ public class BrokerInitializer {
         Assert.notNull(sslUtils, "sslUtils can't be null");
         Assert.notNull(brokerHandler, "brokerHandler can't be null");
 
+        BizConfig.Ssl ssl = bizConfig.getSsl();
+        BizConfig.Socket socket = bizConfig.getSocket();
+        BizConfig.WebSocket webSocket = bizConfig.getWebSocket();
+
         this.sslUtils = sslUtils;
         this.brokerHandler = brokerHandler;
         this.host = bizConfig.getHost();
-        this.port = bizConfig.getPort();
+        this.port = socket.getPort();
+        this.enableSocket = socket.getEnable();
         this.heartbeat = bizConfig.getHeartbeat();
         this.soBacklog = bizConfig.getSoBacklog();
-        this.sslEnable = bizConfig.getSslEnable();
-        this.websocketPath = bizConfig.getWebsocketPath();
-        this.wsPort = bizConfig.getWsPort();
-        this.enableWebsocket = bizConfig.getEnableWebsocket();
+        this.sslEnable = ssl.getEnable();
+        this.websocketPath = webSocket.getPath();
+        this.wsPort = webSocket.getPort();
+        this.enableWebsocket = webSocket.getEnable();
 
         //参数校验
         Assert.hasText(host, "host can't be null");
@@ -108,6 +119,9 @@ public class BrokerInitializer {
         Assert.hasText(websocketPath, "websocketPath can't be null");
         Assert.notNull(wsPort, "wsPort can't be null");
         Assert.isTrue(!Objects.equals(wsPort, port), "websocket 与 socket 监听端口不能相同");
+        if (!enableSocket && !enableWebsocket) {
+            throw new GlobalException("socket 或 websocket 服务最少存在一个");
+        }
     }
 
     public void start() throws InterruptedException {
@@ -123,10 +137,13 @@ public class BrokerInitializer {
                         .build();
             } catch (SSLException e) {
                 //do nothing
+                log.error(e.getMessage(), e);
             }
         }
 
-        socket();
+        if (enableSocket) {
+            socket();
+        }
         if (enableWebsocket) {
             websocket();
         }
@@ -193,6 +210,6 @@ public class BrokerInitializer {
                     }
                 });
 
-        b.bind(host, wsPort).sync().channel();
+        b.bind(host, wsPort).sync();
     }
 }

@@ -4,7 +4,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.jun.mqttx.broker.handler.AbstractMqttSessionHandler;
 import com.jun.mqttx.broker.handler.ConnectHandler;
 import com.jun.mqttx.broker.handler.MessageDelegatingHandler;
-import com.jun.mqttx.common.constant.InternalMessageEnum;
+import com.jun.mqttx.constants.InternalMessageEnum;
 import com.jun.mqttx.consumer.Watcher;
 import com.jun.mqttx.entity.Authentication;
 import com.jun.mqttx.entity.InternalMessage;
@@ -19,6 +19,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.handler.codec.mqtt.*;
+import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.util.AttributeKey;
@@ -30,6 +31,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Optional;
 
@@ -214,6 +216,13 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
         if (evt instanceof IdleStateEvent) {
             if (IdleState.ALL_IDLE.equals(((IdleStateEvent) evt).state())) {
                 //关闭连接
+                ctx.close();
+            }
+        } else if (evt instanceof SslHandshakeCompletionEvent) {
+            // 监听 ssl 握手事件
+            if (!((SslHandshakeCompletionEvent) evt).isSuccess()) {
+                InetSocketAddress socketAddress = (InetSocketAddress) ctx.channel().remoteAddress();
+                log.warn("ssl 握手失败，客户端ip:{}", socketAddress.getHostName());
                 ctx.close();
             }
         }

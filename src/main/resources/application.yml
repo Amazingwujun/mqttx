@@ -1,29 +1,49 @@
 spring:
   redis:
-    host:
+    host: localhost
+
 biz:
-  cluster-session-hash-key: "Session:key"
-  heartbeat: 50s
-  port: 1883
-  host: "0.0.0.0"
-  key-store-location:
-  ssl-enable: false
-  key-store-password:
-  so-backlog: 512
-  message-id-prefix: "MQTT:MESSAGEID:"
-  retain-message-prefix: "MQTT:RETAIN:"
-  topic-prefix: "MQTT:TOPIC:"
-  pub-msg-set-prefix: "MQTT:CLIENT:PUBMSG:"
-  pub-rel-msg-set-prefix: "MQTT:CLIENT:PUBRELMSG:"
-  topic-set-key: "MQTT:ALLTOPIC"
-  broker-id: 1
-  enable-cluster: false
-  enable-topic-sub-pub-secure: false
-  enable-inner-cache: true
-  enable-share-topic: true
-  share-sub-strategy: round
-  inner-cache-consistency-key: "MQTTX:CACHE_CONSISTENCY"
-  websocket-path: "/mqtt"
-  ws-port: 8083
-  enable-websocket: true
+  broker-id: 1001
+  #  该证书用于测试，生产环境请替换为自己的证书
+  ssl:
+    enable: false
+    key-store-location: "classpath:tls/mqttx.keystore"
+    key-store-password: "123456"
+    key-store-type: "PKCS12"
+
+#下方是配置示例，提供参考。如果你手动配置了，那么你的配置将被采用。
+#默认配置值可查看 com.jun.mqttx.config.BizConfig 配置类
+#biz:
+#  heartbeat: 50s
+#  host: "0.0.0.0"
+#  so-backlog: 512
+#  enable-topic-sub-pub-secure: false
+#  enable-inner-cache: true
+#  redis:
+#    cluster-session-hash-key: "Session:key"
+#    message-id-prefix: "MQTT:MESSAGEID:"
+#    retain-message-prefix: "MQTT:RETAIN:"
+#    topic-prefix: "MQTT:TOPIC:"
+#    pub-msg-set-prefix: "MQTT:CLIENT:PUBMSG:"
+#    pub-rel-msg-set-prefix: "MQTT:CLIENT:PUBRELMSG:"
+#    topic-set-key: "MQTT:ALLTOPIC"
+#  ssl:
+#    enable: false
+#    key-store-location: "classpath:tls/mqttx.keystore"
+#    key-store-password: "123456"
+#    key-store-type: "PKCS12"
+#  socket:
+#    port: 1883
+#    enable: true
+#  web-socket:
+#    path: "/mqtt"
+#    port: 8083
+#    enable: true
+#  cluster:
+#    broker-id: 1
+#    enable: true
+#    inner-cache-consistency-key: "mqttx:cache_consistence"
+#  share-topic:
+#    share-sub-strategy: "round"
+#    enable: true
 

@@ -1,7 +1,7 @@
 package com.jun.mqttx.broker.handler;
 
 import com.jun.mqttx.broker.BrokerHandler;
-import com.jun.mqttx.common.constant.InternalMessageEnum;
+import com.jun.mqttx.constants.InternalMessageEnum;
 import com.jun.mqttx.consumer.Watcher;
 import com.jun.mqttx.entity.InternalMessage;
 import com.jun.mqttx.entity.Session;

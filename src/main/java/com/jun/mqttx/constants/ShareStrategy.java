@@ -1,4 +1,4 @@
-package com.jun.mqttx.common.constant;
+package com.jun.mqttx.constants;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -25,7 +25,7 @@ public enum ShareStrategy {
         try {
             shareStrategy = valueOf(strategy);
         } catch (IllegalArgumentException e) {
-            return random;
+            return round;
         }
 
         return shareStrategy;

@@ -1,7 +1,8 @@
 package com.jun.mqttx.consumer;
 
 import com.alibaba.fastjson.JSON;
-import com.jun.mqttx.common.config.BizConfig;
+import com.jun.mqttx.config.BizConfig;
+import com.jun.mqttx.constants.InternalMessageEnum;
 import com.jun.mqttx.entity.InternalMessage;
 import org.springframework.util.Assert;
 
@@ -25,22 +26,20 @@ public class InternalMessageSubscriber {
         Assert.notNull(bizConfig, "bizConfig can't be null");
 
         this.watchers = watchers;
-        if (bizConfig.getEnableCluster()) {
-            this.brokerId = bizConfig.getBrokerId();
-        }
+        this.brokerId = bizConfig.getBrokerId();
     }
 
     /**
      * 分发集群消息，当前处理类别：
      * <ol>
-     *     <li>客户端连接断开 {@link com.jun.mqttx.common.constant.InternalMessageEnum#DISCONNECT}</li>
-     *     <li>发布消息_qos012 {@link com.jun.mqttx.common.constant.InternalMessageEnum#PUB}</li>
-     *     <li>发布消息响应_qos1 {@link com.jun.mqttx.common.constant.InternalMessageEnum#PUB_ACK}</li>
-     *     <li>发布消息接收响应_qos2 {@link com.jun.mqttx.common.constant.InternalMessageEnum#PUB_REC}</li>
-     *     <li>发布消息释放_qos2 {@link com.jun.mqttx.common.constant.InternalMessageEnum#PUB_REL}</li>
-     *     <li>发布消息完成_qos2 {@link com.jun.mqttx.common.constant.InternalMessageEnum#PUB_COM}</li>
-     *     <li>用户权限修改 {@link com.jun.mqttx.common.constant.InternalMessageEnum#ALTER_USER_AUTHORIZED_TOPICS}</li>
-     *     <li>订阅与删除订阅 {@link com.jun.mqttx.common.constant.InternalMessageEnum#SUB_UNSUB}</li>
+     *     <li>客户端连接断开 {@link InternalMessageEnum#DISCONNECT}</li>
+     *     <li>发布消息_qos012 {@link InternalMessageEnum#PUB}</li>
+     *     <li>发布消息响应_qos1 {@link InternalMessageEnum#PUB_ACK}</li>
+     *     <li>发布消息接收响应_qos2 {@link InternalMessageEnum#PUB_REC}</li>
+     *     <li>发布消息释放_qos2 {@link InternalMessageEnum#PUB_REL}</li>
+     *     <li>发布消息完成_qos2 {@link InternalMessageEnum#PUB_COM}</li>
+     *     <li>用户权限修改 {@link InternalMessageEnum#ALTER_USER_AUTHORIZED_TOPICS}</li>
+     *     <li>订阅与删除订阅 {@link InternalMessageEnum#SUB_UNSUB}</li>
      * </ol>
      *
      * @param message 消息内容

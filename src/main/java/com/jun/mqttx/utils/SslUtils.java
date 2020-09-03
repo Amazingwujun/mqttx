@@ -1,6 +1,6 @@
 package com.jun.mqttx.utils;
 
-import com.jun.mqttx.common.config.BizConfig;
+import com.jun.mqttx.config.BizConfig;
 import com.jun.mqttx.exception.SslException;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
@@ -30,15 +30,16 @@ public class SslUtils {
 
     public SslUtils(BizConfig bizConfig, ResourceLoader resourceLoader) throws IOException, KeyStoreException,
             CertificateException, NoSuchAlgorithmException {
-        if (!Boolean.TRUE.equals(bizConfig.getSslEnable())) {
+        BizConfig.Ssl ssl = bizConfig.getSsl();
+        if (!Boolean.TRUE.equals(ssl.getEnable())) {
             return;
         }
 
-        storePassword = bizConfig.getKeyStorePassword();
+        storePassword = ssl.getKeyStorePassword();
 
-        Resource pk = resourceLoader.getResource(bizConfig.getKeyStoreLocation());
+        Resource pk = resourceLoader.getResource(ssl.getKeyStoreLocation());
 
-        keyStore = KeyStore.getInstance("PKCS12");
+        keyStore = KeyStore.getInstance(ssl.getKeyStoreType());
         keyStore.load(pk.getInputStream(), storePassword.toCharArray());
     }
 

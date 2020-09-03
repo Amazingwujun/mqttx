@@ -1,4 +1,4 @@
-package com.jun.mqttx.common.constant;
+package com.jun.mqttx.constants;
 
 /**
  * 集群消息枚举

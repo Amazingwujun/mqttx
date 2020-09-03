@@ -1,9 +1,9 @@
 package com.jun.mqttx.broker.handler;
 
 import com.jun.mqttx.broker.BrokerHandler;
-import com.jun.mqttx.common.config.BizConfig;
-import com.jun.mqttx.common.constant.InternalMessageEnum;
-import com.jun.mqttx.common.constant.ShareStrategy;
+import com.jun.mqttx.config.BizConfig;
+import com.jun.mqttx.constants.InternalMessageEnum;
+import com.jun.mqttx.constants.ShareStrategy;
 import com.jun.mqttx.consumer.Watcher;
 import com.jun.mqttx.entity.ClientSub;
 import com.jun.mqttx.entity.InternalMessage;
@@ -25,7 +25,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.jun.mqttx.common.constant.ShareStrategy.*;
+import static com.jun.mqttx.constants.ShareStrategy.*;
 
 /**
  * {@link MqttMessageType#PUBLISH} 处理器
@@ -65,20 +65,22 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         Assert.notNull(pubRelMessageService, "publishMessageService can't be null");
         Assert.notNull(bizConfig, "bizConfig can't be null");
 
+        BizConfig.Cluster cluster = bizConfig.getCluster();
+        BizConfig.ShareTopic shareTopic = bizConfig.getShareTopic();
         this.publishMessageService = publishMessageService;
         this.retainMessageService = retainMessageService;
         this.subscriptionService = subscriptionService;
         this.pubRelMessageService = pubRelMessageService;
-        this.enableCluster = bizConfig.getEnableCluster();
+        this.brokerId = bizConfig.getBrokerId();
+        this.enableCluster = cluster.getEnable();
         this.enableTopicSubPubSecure = bizConfig.getEnableTopicSubPubSecure();
-        this.enableShareTopic = bizConfig.getEnableShareTopic();
-        this.shareStrategy = ShareStrategy.getStrategy(bizConfig.getShareSubStrategy());
+        this.enableShareTopic = shareTopic.getEnable();
+        this.shareStrategy = ShareStrategy.getStrategy(shareTopic.getShareSubStrategy());
         if (round == shareStrategy) {
             roundMap = new ConcurrentHashMap<>();
         }
 
         if (enableCluster) {
-            this.brokerId = bizConfig.getBrokerId();
             this.internalMessagePublishService = internalMessagePublishService;
             Assert.notNull(internalMessagePublishService, "internalMessagePublishService can't be null");
         }

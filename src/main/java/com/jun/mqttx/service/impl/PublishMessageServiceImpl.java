@@ -1,12 +1,13 @@
 package com.jun.mqttx.service.impl;
 
 import com.alibaba.fastjson.JSON;
-import com.jun.mqttx.common.config.BizConfig;
+import com.jun.mqttx.config.BizConfig;
 import com.jun.mqttx.entity.PubMsg;
 import com.jun.mqttx.service.IPublishMessageService;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
+import org.springframework.util.CollectionUtils;
 
 import java.util.Collections;
 import java.util.List;
@@ -28,7 +29,7 @@ public class PublishMessageServiceImpl implements IPublishMessageService {
     public PublishMessageServiceImpl(StringRedisTemplate stringRedisTemplate, BizConfig bizConfig) {
         this.stringRedisTemplate = stringRedisTemplate;
 
-        this.pubMsgSetPrefix = bizConfig.getPubMsgSetPrefix();
+        this.pubMsgSetPrefix = bizConfig.getRedis().getPubMsgSetPrefix();
         Assert.hasText(pubMsgSetPrefix, "pubMsgSetPrefix can't be null");
     }
 
@@ -54,7 +55,8 @@ public class PublishMessageServiceImpl implements IPublishMessageService {
     @Override
     public List<PubMsg> search(String clientId) {
         List<Object> values = stringRedisTemplate.opsForHash().values(key(clientId));
-        if (values == null) {
+        if (CollectionUtils.isEmpty(values)) {
+            //noinspection unchecked
             return Collections.EMPTY_LIST;
         }
 

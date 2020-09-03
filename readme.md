@@ -28,24 +28,25 @@
 ![ak6mB6.png](https://s1.ax1x.com/2020/07/28/ak6mB6.png)
 
 目录结构：
+
 ```
 ├─java
 │  └─com
 │      └─jun
 │          └─mqttx
-│              ├─broker
-│              │  ├─codec      编解码
-│              │  └─handler    消息处理器（pub, sub, connn, etc）
-│              ├─common
-│              │  ├─config     配置，主要是 bean 声明
-│              │  └─constant   常量
-│              ├─consumer      集群消息消费者
-│              ├─entity        实体类
-│              ├─exception     异常包
-│              ├─service       业务服务（用户认证, 消息存储等）接口
-│              │  └─impl       默认实现
-│              └─utils         工具类
-└─resources                    资源文件（application.yml 在此文件夹）
+│              ├─broker         mqtt 协议实现及处理包
+│              │  ├─codec       编解码
+│              │  └─handler     消息处理器（pub, sub, connn, etc）
+│              ├─config         配置，主要是 bean 声明
+│              ├─constants      常量
+│              ├─consumer       集群消息消费者
+│              ├─entity         实体类
+│              ├─exception      异常类
+│              ├─service        业务服务（用户认证, 消息存储等）接口
+│              │  └─impl        默认实现
+│              └─utils          工具类
+└─resources                     资源文件（application.yml 在此文件夹）
+    └─tls                       ca 存放地址
 ```
 ## 容器化部署
 
@@ -93,33 +94,34 @@
 
 ![ak6nHK.png](https://s1.ax1x.com/2020/07/28/ak6nHK.png)
 
-> application.yml 中的 biz.enable-cluster 为集群功能开关，默认**关**
+1. `biz.cluster.enable`：功能开关，默认 `false`
 
 #### 4、ssl支持
 
 开启 ssl 你首先应该有了ca，然后修改 `application.yml` 文件中几个配置：
 
-1. `biz.key-store-location`: 证书地址，基于 `classpath`
-2. `biz.ssl-enable`: 功能开关，默认 `false`
-3. `biz.key-store-password`: 证书密码
+1. `biz.ssl.enable`：功能开关，默认 `false`，同时控制 `websocket` 与 `socket`
+2. `biz.ssl.key-store-location`: 证书地址，基于 `classpath`
+3. `biz.ssl.key-store-password`: 证书密码
+4. `biz.ssl.key-store-type`: keystore 类别，如 `PKCS12`
 
 #### 5、topic 安全机制
 
 为了对 client 订阅 topic 进行限制，项目引入了简单的 topic 订阅&发布鉴权机制:
 
-1. `biz.enable-topic-sub-pub-secure`: 功能开关，默认`false`
+1. `biz.enable-topic-sub-pub-secure`: 功能开关，默认 `false`
 2. 使用时需要同步实现接口 `AuhenticationService` ，该接口返回对象中含有 `authorizedSub,authorizedPub` 存储 client 被授权订阅及发布的 `topic` 列表。
 3. broker 在消息订阅及发布都会校验客户端权限
 
 #### 6、共享订阅机制
 
 共享订阅是 `mqtt5` 协议规定的内容，很多 MQ 都有实现。`mqttx` 的实现也是基于 `mqtt5`。
-1. 格式: `$share/{ShareName}/{filter}`, `$share` 为前缀, `ShareName` 为共享订阅名, `filter` 就是非共享订阅主题过滤器。
-2. 目前支持 `hash`, `random`, `round` 三种规则
-3. 使用需要配置 `biz.enableShareTopic=true` 
+1. `biz.share-topic.enable`: 功能开关，默认 `true` 
+2. 格式: `$share/{ShareName}/{filter}`, `$share` 为前缀, `ShareName` 为共享订阅名, `filter` 就是非共享订阅主题过滤器。
+3. 目前支持 `hash`, `random`, `round` 三种规则
+
 
 #### 7、websocket 支持
-mqttx 新增 websocket 支持
 
 ### 路线图
 

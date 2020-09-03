@@ -1,8 +1,8 @@
 package com.jun.mqttx.broker.handler;
 
 import com.jun.mqttx.broker.BrokerHandler;
-import com.jun.mqttx.common.config.BizConfig;
-import com.jun.mqttx.common.constant.InternalMessageEnum;
+import com.jun.mqttx.config.BizConfig;
+import com.jun.mqttx.constants.InternalMessageEnum;
 import com.jun.mqttx.entity.Authentication;
 import com.jun.mqttx.entity.InternalMessage;
 import com.jun.mqttx.entity.PubMsg;
@@ -80,16 +80,17 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         Assert.notNull(pubRelMessageService, "pubRelMessageService can't be null");
         Assert.notNull(bizConfig, "bizConfig can't be null");
 
+        BizConfig.Cluster cluster = bizConfig.getCluster();
         this.authenticationService = authenticationService;
         this.sessionService = sessionService;
         this.subscriptionService = subscriptionService;
         this.publishMessageService = publishMessageService;
         this.pubRelMessageService = pubRelMessageService;
-        this.enableCluster = bizConfig.getEnableCluster();
+        this.enableCluster = cluster.getEnable();
+        this.brokerId = bizConfig.getBrokerId();
         this.enableTopicSubPubSecure = bizConfig.getEnableTopicSubPubSecure();
 
         if (enableCluster) {
-            this.brokerId = bizConfig.getBrokerId();
             this.internalMessagePublishService = internalMessagePublishService;
             Assert.notNull(internalMessagePublishService, "internalMessagePublishService can't be null");
         }

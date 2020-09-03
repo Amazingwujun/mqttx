@@ -1,7 +1,7 @@
 package com.jun.mqttx.consumer;
 
-import com.jun.mqttx.common.config.BizConfig;
-import com.jun.mqttx.common.constant.InternalMessageEnum;
+import com.jun.mqttx.config.BizConfig;
+import com.jun.mqttx.constants.InternalMessageEnum;
 import com.jun.mqttx.entity.InternalMessage;
 
 /**

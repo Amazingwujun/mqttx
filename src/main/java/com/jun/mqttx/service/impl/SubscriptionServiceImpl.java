@@ -1,7 +1,7 @@
 package com.jun.mqttx.service.impl;
 
-import com.jun.mqttx.common.config.BizConfig;
-import com.jun.mqttx.common.constant.InternalMessageEnum;
+import com.jun.mqttx.config.BizConfig;
+import com.jun.mqttx.constants.InternalMessageEnum;
 import com.jun.mqttx.consumer.Watcher;
 import com.jun.mqttx.entity.ClientSub;
 import com.jun.mqttx.entity.ClientSubOrUnsubMsg;
@@ -63,9 +63,11 @@ public class SubscriptionServiceImpl implements ISubscriptionService, Watcher<Cl
 
         this.stringRedisTemplate = stringRedisTemplate;
         this.internalMessagePublishService = internalMessagePublishService;
-        this.topicPrefix = bizConfig.getTopicPrefix();
-        this.topicSetKey = bizConfig.getTopicSetKey();
-        this.enableCluster = bizConfig.getEnableCluster();
+        this.topicPrefix = bizConfig.getRedis().getTopicPrefix();
+        this.topicSetKey = bizConfig.getRedis().getTopicSetKey();
+
+        BizConfig.Cluster cluster = bizConfig.getCluster();
+        this.enableCluster = cluster.getEnable();
         if (!enableCluster) {
             //如果用户没有设置，非集群状态下，默认开启缓存
             this.enableInnerCache = bizConfig.getEnableInnerCache() == null ? true : bizConfig.getEnableInnerCache();

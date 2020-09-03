@@ -1,4 +1,4 @@
-package com.jun.mqttx.common.config;
+package com.jun.mqttx.config;
 
 import com.jun.mqttx.consumer.InternalMessageSubscriber;
 import com.jun.mqttx.consumer.Watcher;
@@ -18,7 +18,7 @@ import org.springframework.data.redis.serializer.RedisSerializer;
 
 import java.util.*;
 
-import static com.jun.mqttx.common.constant.InternalMessageEnum.*;
+import static com.jun.mqttx.constants.InternalMessageEnum.*;
 
 /**
  * 集群配置
@@ -27,7 +27,7 @@ import static com.jun.mqttx.common.constant.InternalMessageEnum.*;
  * @date 2020-05-14 14:43
  */
 @Configuration
-@ConditionalOnProperty(name = "biz.enable-cluster", havingValue = "true")
+@ConditionalOnProperty(name = "biz.cluster.enable", havingValue = "true")
 public class ClusterConfig {
 
     @SuppressWarnings("rawtypes")
