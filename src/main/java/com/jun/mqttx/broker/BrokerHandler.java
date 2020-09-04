@@ -81,9 +81,9 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
     /**
      * 连接断开后进行如下操作:
      * <ol>
-     *     <li>清理 {@link ConnectHandler#clientMap} 中保存的clientId与channelId绑定关系</li>
+     *     <li>清理 {@link ConnectHandler#clientMap} 中保存的 clientId 与 channelId 绑定关系</li>
      *     <li>遗嘱消息处理</li>
-     *     <li>当 cleanSession = 0 时持久化 session,这样做的目的是保存 <code>Session#messageId</code>字段变化</li>
+     *     <li>当 cleanSession = 0 时持久化 session,这样做的目的是保存 <code>Session#messageId</code> 字段变化</li>
      * </ol>
      * <p>
      * [MQTT-3.1.2-8]
@@ -117,7 +117,7 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
     /**
      * 修改用户授权的 pub&sub topic 列表
      *
-     * @param clientId            客户端ID
+     * @param clientId            客户端 ID
      * @param authorizedSubTopics 被授权订阅 topic 列表
      * @param authorizedPubTopics 被授权发布 topic 列表
      */

@@ -58,7 +58,7 @@ public class MqttxApplication {
             Boolean enableInnerCache = mqttxConfig.getEnableInnerCache();
             String innerCacheConsistencyKey = cluster.getInnerCacheConsistencyKey();
             if (Boolean.TRUE.equals(enableInnerCache) && StringUtils.isEmpty(innerCacheConsistencyKey)) {
-                throw new IllegalArgumentException("biz.innerCacheConsistencyKey 值不能为空");
+                throw new IllegalArgumentException("mqttx.cluster.innerCacheConsistencyKey 值不能为空");
             }
             StringRedisTemplate redisTemplate = ctx.getBean(StringRedisTemplate.class);
             String clusterCacheStatus = redisTemplate.opsForValue().get(innerCacheConsistencyKey);
@@ -74,7 +74,7 @@ public class MqttxApplication {
                 if (Objects.equals(clusterCacheStatus, String.valueOf(enableInnerCache))) {
                     log.info("自检->集群缓存状态：{}", enableInnerCache ? "开" : "关");
                 } else {
-                    throw new IllegalArgumentException("mqttx 集群状态 biz.enableInnerCache 不一致, 这会导致集群整体消息不一致!");
+                    throw new IllegalArgumentException("mqttx 集群状态 mqttx.enableInnerCache 不一致, 这会导致集群整体消息不一致!");
                 }
             }
         }
