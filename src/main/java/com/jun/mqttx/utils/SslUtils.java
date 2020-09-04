@@ -5,6 +5,7 @@ import com.jun.mqttx.exception.SslException;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Component;
+import org.springframework.util.Assert;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
@@ -36,9 +37,9 @@ public class SslUtils {
         }
 
         storePassword = ssl.getKeyStorePassword();
+        Assert.hasText(storePassword, "keystore password can't be null");
 
         Resource pk = resourceLoader.getResource(ssl.getKeyStoreLocation());
-
         keyStore = KeyStore.getInstance(ssl.getKeyStoreType());
         keyStore.load(pk.getInputStream(), storePassword.toCharArray());
     }
