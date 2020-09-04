@@ -91,7 +91,7 @@ public class BrokerInitializer {
     //@formatter:on
 
     public BrokerInitializer(MqttxConfig mqttxConfig, BrokerHandler brokerHandler, SslUtils sslUtils) {
-        Assert.notNull(mqttxConfig, "bizConfig can't be null");
+        Assert.notNull(mqttxConfig, "mqttxConfig can't be null");
         Assert.notNull(sslUtils, "sslUtils can't be null");
         Assert.notNull(brokerHandler, "brokerHandler can't be null");
 

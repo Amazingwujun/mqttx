@@ -5,6 +5,7 @@ services:
     image: redis
   mqttx:
     container_name: mqttx
-    image: mqttx:v0.1
+    image: mqttx:v1.0.4.RELEASE
     ports:
       - 1883:1883
+      - 8083:8083

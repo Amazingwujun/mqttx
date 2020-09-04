@@ -78,7 +78,7 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         Assert.notNull(subscriptionService, "subscriptionService can't be null");
         Assert.notNull(publishMessageService, "publishMessageService can't be null");
         Assert.notNull(pubRelMessageService, "pubRelMessageService can't be null");
-        Assert.notNull(mqttxConfig, "bizConfig can't be null");
+        Assert.notNull(mqttxConfig, "mqttxConfig can't be null");
 
         MqttxConfig.Cluster cluster = mqttxConfig.getCluster();
         this.authenticationService = authenticationService;

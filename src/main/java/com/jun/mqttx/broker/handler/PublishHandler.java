@@ -63,7 +63,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         Assert.notNull(retainMessageService, "retainMessageService can't be null");
         Assert.notNull(subscriptionService, "publishMessageService can't be null");
         Assert.notNull(pubRelMessageService, "publishMessageService can't be null");
-        Assert.notNull(mqttxConfig, "bizConfig can't be null");
+        Assert.notNull(mqttxConfig, "mqttxConfig can't be null");
 
         MqttxConfig.Cluster cluster = mqttxConfig.getCluster();
         MqttxConfig.ShareTopic shareTopic = mqttxConfig.getShareTopic();

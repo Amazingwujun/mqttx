@@ -52,10 +52,11 @@
 
 为了方便项目快速的部署，引进 docker
 
-> 执行本地部署动作前，需要先下载docker
+> 1. 执行本地部署动作前，需要先下载docker。
+> 2. docker-compose 文件中写死了端口映射（`1883, 8083`）， 如果你修改了 `mqttx` 的端口配置，则 `docker-compose.yml` 中也应修改
 
 1. 通过IDE提供的打包功能将项目打包为 target/*.jar
-2. 进入 dockerfile 同级目录，执行 `docker build -t mqttx:v0.1 .`
+2. 进入 dockerfile 同级目录，执行 `docker build -t mqttx:v1.0.4.RELEASE .`
 3. 执行 docker-compose up
 
 ## 功能说明
@@ -127,9 +128,12 @@
 
 基于我个人的认知，`mqttx` 接下来可能的开发计划：
 
-1. ~~考虑整合 `SpringCloud`~~ 
-2. bug fix and optimization
-3. 目前正在开发基于 `vue2.0`, `element-ui` 的 [mqttx-admin](https://github.com/Amazingwujun/mqttx-admin) 管理平台，`mqttx` 的功能更新可能会暂停一段时间(最近在看 [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html))
+1. 集群态考虑整合服务注册的功能，便于管理集群状态，可能会使用 `consul`，做不做看我后面的想法吧
+2. `mqtt5` 有一个消息过期功能，感觉有点用，但这个特新依赖 `variableHeader properties`，貌似基于 `mqttv3.1.1` 没法实现？
+3. bug fix and optimization，这个会一直继续的，不过主要靠使用和学习 `mqttx` 的同学反馈问题给我（没反馈我就当没有呗~摊手.jpg）
+4. 目前正在开发基于 `vue2.0`, `element-ui` 的 [mqttx-admin](https://github.com/Amazingwujun/mqttx-admin) 管理平台，`mqttx` 的功能更新会暂停一段时间~~(最近在看 [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html))~~。
+项目开发过程中发现需要对 `mqttx` 做一些改动，但这些改动不应该 push 给 mqttx master（比如 topic 安全认证这个功能需要配合 `mqttx-platform`，我可能会引入 [Retrofit](https://square.github.io/retrofit/) 处理接口调用，其实可以用 `feign`，我觉的这两个都差不多），我应该会开一个业务 branch 处理这个事情。话说 `javascript` 写项目可太爽了，以前怎么不觉得?
+5. `mqttx` 还没压测过，算了，看心情吧~ （有同学帮忙不？） 
 
 任何问题，请联系我。邮箱：85998282@qq.com.
 

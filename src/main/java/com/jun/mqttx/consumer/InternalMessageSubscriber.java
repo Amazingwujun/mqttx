@@ -23,7 +23,7 @@ public class InternalMessageSubscriber {
 
     public InternalMessageSubscriber(List<Watcher> watchers, MqttxConfig mqttxConfig) {
         Assert.notNull(watchers, "watchers can't be null");
-        Assert.notNull(mqttxConfig, "bizConfig can't be null");
+        Assert.notNull(mqttxConfig, "mqttxConfig can't be null");
 
         this.watchers = watchers;
         this.brokerId = mqttxConfig.getBrokerId();
