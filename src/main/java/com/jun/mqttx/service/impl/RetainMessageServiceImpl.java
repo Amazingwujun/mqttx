@@ -1,7 +1,7 @@
 package com.jun.mqttx.service.impl;
 
 import com.alibaba.fastjson.JSON;
-import com.jun.mqttx.config.BizConfig;
+import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.entity.PubMsg;
 import com.jun.mqttx.service.IRetainMessageService;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -23,11 +23,11 @@ public class RetainMessageServiceImpl implements IRetainMessageService {
     private final String retainMessageHashKey;
     private StringRedisTemplate stringRedisTemplate;
 
-    public RetainMessageServiceImpl(StringRedisTemplate stringRedisTemplate, BizConfig bizConfig) {
+    public RetainMessageServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig) {
         Assert.notNull(stringRedisTemplate, "stringRedisTemplate can't be null");
 
         this.stringRedisTemplate = stringRedisTemplate;
-        this.retainMessageHashKey = bizConfig.getRedis().getRetainMessagePrefix();
+        this.retainMessageHashKey = mqttxConfig.getRedis().getRetainMessagePrefix();
 
         Assert.hasText(retainMessageHashKey, "retainMessagePrefix can't be null");
     }

@@ -1,6 +1,6 @@
 package com.jun.mqttx.utils;
 
-import com.jun.mqttx.config.BizConfig;
+import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.exception.SslException;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
@@ -29,9 +29,9 @@ public class SslUtils {
 
     private String storePassword;
 
-    public SslUtils(BizConfig bizConfig, ResourceLoader resourceLoader) throws IOException, KeyStoreException,
+    public SslUtils(MqttxConfig mqttxConfig, ResourceLoader resourceLoader) throws IOException, KeyStoreException,
             CertificateException, NoSuchAlgorithmException {
-        BizConfig.Ssl ssl = bizConfig.getSsl();
+        MqttxConfig.Ssl ssl = mqttxConfig.getSsl();
         if (!Boolean.TRUE.equals(ssl.getEnable())) {
             return;
         }

@@ -1,6 +1,6 @@
 package com.jun.mqttx.service.impl;
 
-import com.jun.mqttx.config.BizConfig;
+import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.service.IPubRelMessageService;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
@@ -25,10 +25,10 @@ public class PubRelMessageServiceImpl implements IPubRelMessageService {
 
     private String pubRelMsgSetPrefix;
 
-    public PubRelMessageServiceImpl(StringRedisTemplate stringRedisTemplate, BizConfig bizConfig) {
+    public PubRelMessageServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig) {
         this.stringRedisTemplate = stringRedisTemplate;
 
-        this.pubRelMsgSetPrefix = bizConfig.getRedis().getPubRelMsgSetPrefix();
+        this.pubRelMsgSetPrefix = mqttxConfig.getRedis().getPubRelMsgSetPrefix();
         Assert.notNull(pubRelMsgSetPrefix, "pubRelMsgSetPrefix can't be null");
     }
 

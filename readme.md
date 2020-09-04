@@ -94,29 +94,29 @@
 
 ![ak6nHK.png](https://s1.ax1x.com/2020/07/28/ak6nHK.png)
 
-1. `biz.cluster.enable`：功能开关，默认 `false`
+1. `mqttx.cluster.enable`：功能开关，默认 `false`
 
 #### 4、ssl支持
 
 开启 ssl 你首先应该有了ca，然后修改 `application.yml` 文件中几个配置：
 
-1. `biz.ssl.enable`：功能开关，默认 `false`，同时控制 `websocket` 与 `socket`
-2. `biz.ssl.key-store-location`: 证书地址，基于 `classpath`
-3. `biz.ssl.key-store-password`: 证书密码
-4. `biz.ssl.key-store-type`: keystore 类别，如 `PKCS12`
+1. `mqttx.ssl.enable`：功能开关，默认 `false`，同时控制 `websocket` 与 `socket`
+2. `mqttx.ssl.key-store-location`: 证书地址，基于 `classpath`
+3. `mqttx.ssl.key-store-password`: 证书密码
+4. `mqttx.ssl.key-store-type`: keystore 类别，如 `PKCS12`
 
 #### 5、topic 安全机制
 
 为了对 client 订阅 topic 进行限制，项目引入了简单的 topic 订阅&发布鉴权机制:
 
-1. `biz.enable-topic-sub-pub-secure`: 功能开关，默认 `false`
+1. `mqttx.enable-topic-sub-pub-secure`: 功能开关，默认 `false`
 2. 使用时需要同步实现接口 `AuhenticationService` ，该接口返回对象中含有 `authorizedSub,authorizedPub` 存储 client 被授权订阅及发布的 `topic` 列表。
 3. broker 在消息订阅及发布都会校验客户端权限
 
 #### 6、共享订阅机制
 
 共享订阅是 `mqtt5` 协议规定的内容，很多 MQ 都有实现。`mqttx` 的实现也是基于 `mqtt5`。
-1. `biz.share-topic.enable`: 功能开关，默认 `true` 
+1. `mqttx.share-topic.enable`: 功能开关，默认 `true` 
 2. 格式: `$share/{ShareName}/{filter}`, `$share` 为前缀, `ShareName` 为共享订阅名, `filter` 就是非共享订阅主题过滤器。
 3. 目前支持 `hash`, `random`, `round` 三种规则
 

@@ -1,7 +1,7 @@
 package com.jun.mqttx.broker.handler;
 
 import com.jun.mqttx.broker.BrokerHandler;
-import com.jun.mqttx.config.BizConfig;
+import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.constants.InternalMessageEnum;
 import com.jun.mqttx.constants.ShareStrategy;
 import com.jun.mqttx.consumer.Watcher;
@@ -58,22 +58,22 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
 
     public PublishHandler(IPublishMessageService publishMessageService, IRetainMessageService retainMessageService,
                           ISubscriptionService subscriptionService, IPubRelMessageService pubRelMessageService,
-                          @Nullable IInternalMessagePublishService internalMessagePublishService, BizConfig bizConfig) {
+                          @Nullable IInternalMessagePublishService internalMessagePublishService, MqttxConfig mqttxConfig) {
         Assert.notNull(publishMessageService, "publishMessageService can't be null");
         Assert.notNull(retainMessageService, "retainMessageService can't be null");
         Assert.notNull(subscriptionService, "publishMessageService can't be null");
         Assert.notNull(pubRelMessageService, "publishMessageService can't be null");
-        Assert.notNull(bizConfig, "bizConfig can't be null");
+        Assert.notNull(mqttxConfig, "bizConfig can't be null");
 
-        BizConfig.Cluster cluster = bizConfig.getCluster();
-        BizConfig.ShareTopic shareTopic = bizConfig.getShareTopic();
+        MqttxConfig.Cluster cluster = mqttxConfig.getCluster();
+        MqttxConfig.ShareTopic shareTopic = mqttxConfig.getShareTopic();
         this.publishMessageService = publishMessageService;
         this.retainMessageService = retainMessageService;
         this.subscriptionService = subscriptionService;
         this.pubRelMessageService = pubRelMessageService;
-        this.brokerId = bizConfig.getBrokerId();
+        this.brokerId = mqttxConfig.getBrokerId();
         this.enableCluster = cluster.getEnable();
-        this.enableTopicSubPubSecure = bizConfig.getEnableTopicSubPubSecure();
+        this.enableTopicSubPubSecure = mqttxConfig.getEnableTopicSubPubSecure();
         this.enableShareTopic = shareTopic.getEnable();
         this.shareStrategy = ShareStrategy.getStrategy(shareTopic.getShareSubStrategy());
         if (round == shareStrategy) {

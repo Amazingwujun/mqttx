@@ -1,6 +1,6 @@
 package com.jun.mqttx.service.impl;
 
-import com.jun.mqttx.config.BizConfig;
+import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.constants.InternalMessageEnum;
 import com.jun.mqttx.consumer.Watcher;
 import com.jun.mqttx.entity.ClientSub;
@@ -57,30 +57,30 @@ public class SubscriptionServiceImpl implements ISubscriptionService, Watcher<Cl
     private Boolean enableInnerCache, enableCluster;
     private int brokerId;
 
-    public SubscriptionServiceImpl(StringRedisTemplate stringRedisTemplate, BizConfig bizConfig,
+    public SubscriptionServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig,
                                    @Nullable IInternalMessagePublishService internalMessagePublishService) {
         Assert.notNull(stringRedisTemplate, "stringRedisTemplate can't be null");
 
         this.stringRedisTemplate = stringRedisTemplate;
         this.internalMessagePublishService = internalMessagePublishService;
-        this.topicPrefix = bizConfig.getRedis().getTopicPrefix();
-        this.topicSetKey = bizConfig.getRedis().getTopicSetKey();
+        this.topicPrefix = mqttxConfig.getRedis().getTopicPrefix();
+        this.topicSetKey = mqttxConfig.getRedis().getTopicSetKey();
 
-        BizConfig.Cluster cluster = bizConfig.getCluster();
+        MqttxConfig.Cluster cluster = mqttxConfig.getCluster();
         this.enableCluster = cluster.getEnable();
         if (!enableCluster) {
             //如果用户没有设置，非集群状态下，默认开启缓存
-            this.enableInnerCache = bizConfig.getEnableInnerCache() == null ? true : bizConfig.getEnableInnerCache();
+            this.enableInnerCache = mqttxConfig.getEnableInnerCache() == null ? true : mqttxConfig.getEnableInnerCache();
         } else {
             //如果用户没有设置，集群状态下，默认关闭缓存
-            this.enableInnerCache = bizConfig.getEnableInnerCache() == null ? false : bizConfig.getEnableInnerCache();
+            this.enableInnerCache = mqttxConfig.getEnableInnerCache() == null ? false : mqttxConfig.getEnableInnerCache();
         }
         if (enableInnerCache) {
             allTopics = ConcurrentHashMap.newKeySet();
             topicClientMap = new ConcurrentHashMap<>();
             initInnerCache(stringRedisTemplate);
         }
-        this.brokerId = bizConfig.getBrokerId();
+        this.brokerId = mqttxConfig.getBrokerId();
 
         Assert.hasText(this.topicPrefix, "topicPrefix can't be null");
         Assert.hasText(this.topicSetKey, "topicSetKey can't be null");

@@ -1,7 +1,7 @@
 package com.jun.mqttx.service.impl;
 
 import com.alibaba.fastjson.JSON;
-import com.jun.mqttx.config.BizConfig;
+import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.entity.PubMsg;
 import com.jun.mqttx.service.IPublishMessageService;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -26,10 +26,10 @@ public class PublishMessageServiceImpl implements IPublishMessageService {
 
     private String pubMsgSetPrefix;
 
-    public PublishMessageServiceImpl(StringRedisTemplate stringRedisTemplate, BizConfig bizConfig) {
+    public PublishMessageServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig) {
         this.stringRedisTemplate = stringRedisTemplate;
 
-        this.pubMsgSetPrefix = bizConfig.getRedis().getPubMsgSetPrefix();
+        this.pubMsgSetPrefix = mqttxConfig.getRedis().getPubMsgSetPrefix();
         Assert.hasText(pubMsgSetPrefix, "pubMsgSetPrefix can't be null");
     }
 

@@ -1,7 +1,7 @@
 package com.jun.mqttx.consumer;
 
 import com.alibaba.fastjson.JSON;
-import com.jun.mqttx.config.BizConfig;
+import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.constants.InternalMessageEnum;
 import com.jun.mqttx.entity.InternalMessage;
 import org.springframework.util.Assert;
@@ -21,12 +21,12 @@ public class InternalMessageSubscriber {
 
     private List<Watcher> watchers;
 
-    public InternalMessageSubscriber(List<Watcher> watchers, BizConfig bizConfig) {
+    public InternalMessageSubscriber(List<Watcher> watchers, MqttxConfig mqttxConfig) {
         Assert.notNull(watchers, "watchers can't be null");
-        Assert.notNull(bizConfig, "bizConfig can't be null");
+        Assert.notNull(mqttxConfig, "bizConfig can't be null");
 
         this.watchers = watchers;
-        this.brokerId = bizConfig.getBrokerId();
+        this.brokerId = mqttxConfig.getBrokerId();
     }
 
     /**

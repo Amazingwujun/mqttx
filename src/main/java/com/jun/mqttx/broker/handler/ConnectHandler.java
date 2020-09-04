@@ -1,7 +1,7 @@
 package com.jun.mqttx.broker.handler;
 
 import com.jun.mqttx.broker.BrokerHandler;
-import com.jun.mqttx.config.BizConfig;
+import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.constants.InternalMessageEnum;
 import com.jun.mqttx.entity.Authentication;
 import com.jun.mqttx.entity.InternalMessage;
@@ -72,23 +72,23 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
 
     public ConnectHandler(IAuthenticationService authenticationService, ISessionService sessionService,
                           ISubscriptionService subscriptionService, IPublishMessageService publishMessageService,
-                          IPubRelMessageService pubRelMessageService, BizConfig bizConfig, @Nullable IInternalMessagePublishService internalMessagePublishService) {
+                          IPubRelMessageService pubRelMessageService, MqttxConfig mqttxConfig, @Nullable IInternalMessagePublishService internalMessagePublishService) {
         Assert.notNull(authenticationService, "authentication can't be null");
         Assert.notNull(sessionService, "sessionService can't be null");
         Assert.notNull(subscriptionService, "subscriptionService can't be null");
         Assert.notNull(publishMessageService, "publishMessageService can't be null");
         Assert.notNull(pubRelMessageService, "pubRelMessageService can't be null");
-        Assert.notNull(bizConfig, "bizConfig can't be null");
+        Assert.notNull(mqttxConfig, "bizConfig can't be null");
 
-        BizConfig.Cluster cluster = bizConfig.getCluster();
+        MqttxConfig.Cluster cluster = mqttxConfig.getCluster();
         this.authenticationService = authenticationService;
         this.sessionService = sessionService;
         this.subscriptionService = subscriptionService;
         this.publishMessageService = publishMessageService;
         this.pubRelMessageService = pubRelMessageService;
         this.enableCluster = cluster.getEnable();
-        this.brokerId = bizConfig.getBrokerId();
-        this.enableTopicSubPubSecure = bizConfig.getEnableTopicSubPubSecure();
+        this.brokerId = mqttxConfig.getBrokerId();
+        this.enableTopicSubPubSecure = mqttxConfig.getEnableTopicSubPubSecure();
 
         if (enableCluster) {
             this.internalMessagePublishService = internalMessagePublishService;

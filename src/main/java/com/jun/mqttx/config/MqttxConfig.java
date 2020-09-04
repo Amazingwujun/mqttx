@@ -15,8 +15,8 @@ import java.time.Duration;
  */
 @Data
 @Component
-@ConfigurationProperties(prefix = "biz")
-public class BizConfig {
+@ConfigurationProperties(prefix = "mqttx")
+public class MqttxConfig {
     //@formatter:off
 
     /*--------------------------------------------
@@ -120,9 +120,9 @@ public class BizConfig {
         private String keyStorePassword;
 
         /**
-         * keyStore 类别,i.e PKCS12 jks
+         * keyStore 类别,i.e pkcs12 jks
          */
-        private String keyStoreType = "PKCS12";
+        private String keyStoreType = "pkcs12";
     }
 
     /**

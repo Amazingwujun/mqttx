@@ -1,7 +1,7 @@
 package com.jun.mqttx.service.impl;
 
 import com.alibaba.fastjson.JSON;
-import com.jun.mqttx.config.BizConfig;
+import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.entity.Session;
 import com.jun.mqttx.service.ISessionService;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -22,9 +22,9 @@ public class SessionServiceImpl implements ISessionService {
     private final String clusterSessionHashKey;
     private StringRedisTemplate stringRedisTemplate;
 
-    public SessionServiceImpl(StringRedisTemplate stringRedisTemplate, BizConfig bizConfig) {
+    public SessionServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig) {
         this.stringRedisTemplate = stringRedisTemplate;
-        this.clusterSessionHashKey = bizConfig.getRedis().getClusterSessionHashKey();
+        this.clusterSessionHashKey = mqttxConfig.getRedis().getClusterSessionHashKey();
 
         Assert.notNull(stringRedisTemplate, "stringRedisTemplate can't be null");
         Assert.hasText(clusterSessionHashKey, "clusterSessionHashKey can't be null");

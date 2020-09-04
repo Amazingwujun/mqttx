@@ -1,6 +1,6 @@
 package com.jun.mqttx.broker.handler;
 
-import com.jun.mqttx.config.BizConfig;
+import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.entity.ClientSub;
 import com.jun.mqttx.entity.PubMsg;
 import com.jun.mqttx.service.IRetainMessageService;
@@ -27,10 +27,10 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
     private ISubscriptionService subscriptionService;
 
     public SubscribeHandler(IRetainMessageService retainMessageService, ISubscriptionService subscriptionService,
-                            BizConfig bizConfig) {
+                            MqttxConfig mqttxConfig) {
         this.retainMessageService = retainMessageService;
         this.subscriptionService = subscriptionService;
-        this.enableTopicPubSubSecure = bizConfig.getEnableTopicSubPubSecure();
+        this.enableTopicPubSubSecure = mqttxConfig.getEnableTopicSubPubSecure();
     }
 
     @Override

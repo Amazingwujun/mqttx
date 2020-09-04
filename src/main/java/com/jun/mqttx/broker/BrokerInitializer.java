@@ -1,7 +1,7 @@
 package com.jun.mqttx.broker;
 
 import com.jun.mqttx.broker.codec.MqttWebsocketCodec;
-import com.jun.mqttx.config.BizConfig;
+import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.exception.GlobalException;
 import com.jun.mqttx.utils.SslUtils;
 import io.netty.bootstrap.ServerBootstrap;
@@ -90,22 +90,22 @@ public class BrokerInitializer {
     private Boolean enableWebsocket;
     //@formatter:on
 
-    public BrokerInitializer(BizConfig bizConfig, BrokerHandler brokerHandler, SslUtils sslUtils) {
-        Assert.notNull(bizConfig, "bizConfig can't be null");
+    public BrokerInitializer(MqttxConfig mqttxConfig, BrokerHandler brokerHandler, SslUtils sslUtils) {
+        Assert.notNull(mqttxConfig, "bizConfig can't be null");
         Assert.notNull(sslUtils, "sslUtils can't be null");
         Assert.notNull(brokerHandler, "brokerHandler can't be null");
 
-        BizConfig.Ssl ssl = bizConfig.getSsl();
-        BizConfig.Socket socket = bizConfig.getSocket();
-        BizConfig.WebSocket webSocket = bizConfig.getWebSocket();
+        MqttxConfig.Ssl ssl = mqttxConfig.getSsl();
+        MqttxConfig.Socket socket = mqttxConfig.getSocket();
+        MqttxConfig.WebSocket webSocket = mqttxConfig.getWebSocket();
 
         this.sslUtils = sslUtils;
         this.brokerHandler = brokerHandler;
-        this.host = bizConfig.getHost();
+        this.host = mqttxConfig.getHost();
         this.port = socket.getPort();
         this.enableSocket = socket.getEnable();
-        this.heartbeat = bizConfig.getHeartbeat();
-        this.soBacklog = bizConfig.getSoBacklog();
+        this.heartbeat = mqttxConfig.getHeartbeat();
+        this.soBacklog = mqttxConfig.getSoBacklog();
         this.sslEnable = ssl.getEnable();
         this.websocketPath = webSocket.getPath();
         this.wsPort = webSocket.getPort();

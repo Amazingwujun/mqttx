@@ -27,13 +27,13 @@ import static com.jun.mqttx.constants.InternalMessageEnum.*;
  * @date 2020-05-14 14:43
  */
 @Configuration
-@ConditionalOnProperty(name = "biz.cluster.enable", havingValue = "true")
+@ConditionalOnProperty(name = "mqttx.cluster.enable", havingValue = "true")
 public class ClusterConfig {
 
     @SuppressWarnings("rawtypes")
     @Bean
-    public InternalMessageSubscriber internalMessageSubscriber(List<Watcher> watchers, BizConfig bizConfig) {
-        return new InternalMessageSubscriber(watchers, bizConfig);
+    public InternalMessageSubscriber internalMessageSubscriber(List<Watcher> watchers, MqttxConfig mqttxConfig) {
+        return new InternalMessageSubscriber(watchers, mqttxConfig);
     }
 
     @Bean

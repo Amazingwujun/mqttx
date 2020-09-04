@@ -1,7 +1,7 @@
 package com.jun.mqttx;
 
 import com.jun.mqttx.broker.BrokerInitializer;
-import com.jun.mqttx.config.BizConfig;
+import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.exception.GlobalException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
@@ -49,13 +49,13 @@ public class MqttxApplication {
      * @param ctx {@link StringRedisTemplate}
      */
     private static void innerCacheConsistencyCheck(ApplicationContext ctx) {
-        BizConfig bizConfig = ctx.getBean(BizConfig.class);
-        BizConfig.Cluster cluster = bizConfig.getCluster();
+        MqttxConfig mqttxConfig = ctx.getBean(MqttxConfig.class);
+        MqttxConfig.Cluster cluster = mqttxConfig.getCluster();
 
         Boolean enableCluster = cluster.getEnable();
-        Integer brokerId = bizConfig.getBrokerId();
+        Integer brokerId = mqttxConfig.getBrokerId();
         if (Boolean.TRUE.equals(enableCluster)) {
-            Boolean enableInnerCache = bizConfig.getEnableInnerCache();
+            Boolean enableInnerCache = mqttxConfig.getEnableInnerCache();
             String innerCacheConsistencyKey = cluster.getInnerCacheConsistencyKey();
             if (Boolean.TRUE.equals(enableInnerCache) && StringUtils.isEmpty(innerCacheConsistencyKey)) {
                 throw new IllegalArgumentException("biz.innerCacheConsistencyKey 值不能为空");

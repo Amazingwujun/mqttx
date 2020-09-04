@@ -1,11 +1,11 @@
 package com.jun.mqttx.consumer;
 
-import com.jun.mqttx.config.BizConfig;
+import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.constants.InternalMessageEnum;
 import com.jun.mqttx.entity.InternalMessage;
 
 /**
- * 观察者，实现此接口。当 {@link BizConfig#getEnableCluster()} 开启后
+ * 观察者，实现此接口。当 {@link MqttxConfig#getEnableCluster()} 开启后
  *
  * @author Jun
  * @date 2020-05-14 09:15
