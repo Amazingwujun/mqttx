@@ -46,7 +46,7 @@ public class MqttxApplication {
     /**
      * 检查集群内部缓存开启状态是否一致
      *
-     * @param ctx {@link StringRedisTemplate}
+     * @param ctx {@link ApplicationContext}
      */
     private static void innerCacheConsistencyCheck(ApplicationContext ctx) {
         MqttxConfig mqttxConfig = ctx.getBean(MqttxConfig.class);

@@ -12,8 +12,16 @@
 1. **redis**
 
 其他依赖：
-1. 项目使用了 lombok（用于消除get() set()） ，使用 ide 请安装对应的插件
+1. 项目使用了 lombok，使用 ide 请安装对应的插件
 > 举例：idea 需要安装插件 Lombok, settings > Build,Execution,Deployment > Compiler > Annotation Processor 开启 Enable annotation processing
+
+我在云端部署了一个 `mqttx` 单例服务，可供功能测试：
+1. 不支持 ssl
+2. 开启了 websocket, 可通过 http://tools.emqx.io/ 测试，仅需将域名修改为：`119.45.158.51`(端口、地址不变)
+3. 支持 共享订阅功能
+4. 部署版本 `v1.0.4.RELEASE`
+
+![websocket](https://s1.ax1x.com/2020/09/05/wV578J.png)
 
 ## 架构
 
