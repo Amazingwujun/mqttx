@@ -12,7 +12,7 @@ import java.lang.annotation.Target;
  * mqtt 消息处理器
  *
  * @author Jun
- * @date 2020-07-10 17:15
+ * @since 1.0.4
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)

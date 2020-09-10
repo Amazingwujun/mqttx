@@ -9,7 +9,7 @@ import org.springframework.util.Assert;
  * {@link MqttMessageType#PUBREL} 消息处理器
  *
  * @author Jun
- * @date 2020-03-17 09:31
+ * @since 1.0.4
  */
 @Handler(type = MqttMessageType.PUBREL)
 public class PubRelHandler extends AbstractMqttSessionHandler {

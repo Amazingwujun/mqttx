@@ -6,7 +6,7 @@ import com.jun.mqttx.entity.PubMsg;
  * retain 消息服务
  *
  * @author Jun
- * @date 2020-03-09 20:17
+ * @since 1.0.4
  */
 public interface IRetainMessageService {
 

@@ -11,7 +11,7 @@ import java.time.Duration;
  * 业务配置
  *
  * @author Jun
- * @date 2020-03-03 20:57
+ * @since 1.0.4
  */
 @Data
 @Component
@@ -22,6 +22,9 @@ public class MqttxConfig {
     /*--------------------------------------------
     |                 基础配置项                   |
     ============================================*/
+
+    /** mqttx 版本 */
+    private String version;
 
     /** broker id。区分集群内不同的 broker（如果集群功能开启） */
     private Integer brokerId = 1;
@@ -72,9 +75,6 @@ public class MqttxConfig {
         /** redis map key,应用于集群的会话存储 */
         private String clusterSessionHashKey = "mqttx:session:key";
 
-        /** redis increase 生成messageId的前缀 */
-        private String messageIdPrefix = "mqttx:messageid:";
-
         /** 主题前缀 */
         private String topicPrefix = "mqttx:topic:";
 
@@ -88,7 +88,7 @@ public class MqttxConfig {
         private String pubRelMsgSetPrefix = "mqttx:client:pubrelmsg:";
 
         /** topic集合，redis set key值 */
-        private String topicSetKey = "mqttx:alltopic:";
+        private String topicSetKey = "mqttx:alltopic";
     }
 
     /**

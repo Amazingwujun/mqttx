@@ -7,7 +7,7 @@ import io.netty.handler.codec.mqtt.*;
  * {@link MqttMessageType#PINGREQ} 消息处理器
  *
  * @author Jun
- * @date 2020-03-04 16:09
+ * @since 1.0.4
  */
 @Handler(type = MqttMessageType.PINGREQ)
 public class PingReqHandler implements MqttMessageHandler {

@@ -10,7 +10,7 @@ import io.netty.util.AttributeKey;
  * 该抽象类提供 {@link Session} 相关方法
  *
  * @author Jun
- * @date 2020-03-07 22:20
+ * @since 1.0.4
  */
 public abstract class AbstractMqttSessionHandler implements MqttMessageHandler {
 

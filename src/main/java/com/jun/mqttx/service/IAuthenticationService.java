@@ -8,7 +8,7 @@ import com.jun.mqttx.exception.AuthorizationException;
  * 客户端认证服务
  *
  * @author Jun
- * @date 2020-03-04 11:33
+ * @since 1.0.4
  */
 public interface IAuthenticationService {
 

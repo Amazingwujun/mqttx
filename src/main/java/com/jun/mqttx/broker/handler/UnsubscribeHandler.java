@@ -8,7 +8,7 @@ import io.netty.handler.codec.mqtt.*;
  * {@link MqttMessageType#UNSUBSCRIBE} 消息处理器
  *
  * @author Jun
- * @date 2020-03-04 16:07
+ * @since 1.0.4
  */
 @Handler(type = MqttMessageType.UNSUBSCRIBE)
 public class UnsubscribeHandler extends AbstractMqttSessionHandler {

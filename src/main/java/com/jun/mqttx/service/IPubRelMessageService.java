@@ -6,7 +6,7 @@ import java.util.List;
  * pubRel 消息相关服务，主要是crud相关
  *
  * @author Jun
- * @date 2020-03-17 09:35
+ * @since 1.0.4
  */
 public interface IPubRelMessageService {
 

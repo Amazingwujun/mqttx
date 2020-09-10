@@ -31,7 +31,7 @@ import static com.jun.mqttx.constants.ShareStrategy.*;
  * {@link MqttMessageType#PUBLISH} 处理器
  *
  * @author Jun
- * @date 2020-03-04 14:30
+ * @since 1.0.4
  */
 @Handler(type = MqttMessageType.PUBLISH)
 public class PublishHandler extends AbstractMqttTopicSecureHandler implements Watcher<PubMsg> {

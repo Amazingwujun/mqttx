@@ -20,7 +20,7 @@ import java.security.cert.CertificateException;
  * 用于加载生成 {@link KeyManagerFactory} 及 {@link TrustManagerFactory}
  *
  * @author Jun
- * @date 2020-03-03 21:19
+ * @since 1.0.4
  */
 @Component
 public class SslUtils {

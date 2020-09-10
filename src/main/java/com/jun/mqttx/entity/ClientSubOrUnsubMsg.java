@@ -8,6 +8,9 @@ import java.util.List;
 
 /**
  * 客户端订阅或解除订阅消息, 用于集群内部广播
+ *
+ * @author Jun
+ * @since 1.0.4
  */
 @Data
 @AllArgsConstructor

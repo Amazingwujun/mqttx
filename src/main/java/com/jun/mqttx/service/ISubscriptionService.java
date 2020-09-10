@@ -8,7 +8,7 @@ import java.util.List;
  * 订阅相关服务
  *
  * @author Jun
- * @date 2020-03-09 21:03
+ * @since 1.0.4
  */
 public interface ISubscriptionService {
 

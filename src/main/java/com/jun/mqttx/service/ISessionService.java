@@ -6,7 +6,7 @@ import com.jun.mqttx.entity.Session;
  * 会话相关业务
  *
  * @author Jun
- * @date 2020-03-04 13:58
+ * @since 1.0.4
  */
 public interface ISessionService {
 

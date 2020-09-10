@@ -6,7 +6,7 @@ import com.jun.mqttx.entity.InternalMessage;
  * 内部消息发布服务
  *
  * @author Jun
- * @date 2020-05-14 10:27
+ * @since 1.0.4
  */
 public interface IInternalMessagePublishService {
 

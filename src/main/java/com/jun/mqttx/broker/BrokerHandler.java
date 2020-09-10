@@ -39,7 +39,7 @@ import java.util.Optional;
  * broker handler
  *
  * @author Jun
- * @date 2020-03-03 21:30
+ * @since 1.0.4
  */
 @Slf4j
 @ChannelHandler.Sharable

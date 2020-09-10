@@ -29,7 +29,7 @@ import static io.netty.handler.codec.mqtt.MqttMessageType.CONNECT;
  * {@link io.netty.handler.codec.mqtt.MqttMessageType#CONNECT} 消息处理器
  *
  * @author Jun
- * @date 2020-03-03 22:17
+ * @since 1.0.4
  */
 @Handler(type = CONNECT)
 public final class ConnectHandler extends AbstractMqttTopicSecureHandler {

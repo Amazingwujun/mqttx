@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
  * 基于 redis 的实现
  *
  * @author Jun
- * @date 2020-03-17 09:36
+ * @since 1.0.4
  */
 @Component
 public class PubRelMessageServiceImpl implements IPubRelMessageService {

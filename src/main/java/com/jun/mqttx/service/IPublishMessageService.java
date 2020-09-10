@@ -8,7 +8,7 @@ import java.util.List;
  * publish msg service
  *
  * @author Jun
- * @date 2020-03-13 14:31
+ * @since 1.0.4
  */
 public interface IPublishMessageService {
 

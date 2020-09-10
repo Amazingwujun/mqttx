@@ -4,7 +4,7 @@ package com.jun.mqttx.constants;
  * 集群消息枚举
  *
  * @author Jun
- * @date 2020-05-14 09:36
+ * @since 1.0.4
  */
 public enum InternalMessageEnum {
 

@@ -1,16 +1,10 @@
 spring:
-  application:
-    name: mqttx
-  profiles:
-    active: @profile@
+  redis:
+    host: localhost
 
-# 建议其它配置项位于 dev 或 prod
 mqttx:
-  version: @version@
-  broker-id: 1001
-
-
-
+  web-socket:
+    enable: true
 
 #下方是配置示例，提供参考。如果你手动配置了，那么你的配置将被采用。
 #默认配置值可查看 com.jun.mqttx.config.MqttxConfig 配置类
@@ -47,4 +41,3 @@ mqttx:
 #  share-topic:
 #    share-sub-strategy: "round"
 #    enable: true
-

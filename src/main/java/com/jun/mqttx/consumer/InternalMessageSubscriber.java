@@ -12,7 +12,7 @@ import java.util.List;
  * 集群消息接收器，默认采用 redis 实现，这样不用引入多余的依赖。但是个人推荐后面结合公司自身的业务需求使用合适的 mq ，比如 KAFKA。
  *
  * @author Jun
- * @date 2020-05-14 09:17
+ * @since 1.0.4
  */
 @SuppressWarnings("rawtypes")
 public class InternalMessageSubscriber {

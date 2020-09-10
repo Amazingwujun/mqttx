@@ -17,7 +17,7 @@ import java.util.List;
  * {@link MqttMessageType#SUBSCRIBE} 消息处理器
  *
  * @author Jun
- * @date 2020-03-04 16:05
+ * @since 1.0.4
  */
 @Handler(type = MqttMessageType.SUBSCRIBE)
 public class SubscribeHandler extends AbstractMqttTopicSecureHandler {

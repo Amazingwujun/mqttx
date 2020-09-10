@@ -12,7 +12,7 @@ import org.springframework.util.Assert;
  * 存储通过 redis 实现
  *
  * @author Jun
- * @date 2020-03-13 10:48
+ * @since 1.0.4
  */
 @Service
 public class RetainMessageServiceImpl implements IRetainMessageService {

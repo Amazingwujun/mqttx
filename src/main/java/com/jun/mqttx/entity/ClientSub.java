@@ -7,7 +7,7 @@ import lombok.Data;
  * topic 订阅的用户信息
  *
  * @author Jun
- * @date 2020-03-10 11:22
+ * @since 1.0.4
  */
 @Data
 @AllArgsConstructor

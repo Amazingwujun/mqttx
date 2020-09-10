@@ -16,7 +16,7 @@ import lombok.extern.slf4j.Slf4j;
  * {@link MqttMessageType#DISCONNECT} 消息处理器
  *
  * @author Jun
- * @date 2020-03-03 23:30
+ * @since 1.0.4
  */
 @Slf4j
 @Handler(type = MqttMessageType.DISCONNECT)

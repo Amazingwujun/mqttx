@@ -4,7 +4,7 @@ package com.jun.mqttx.exception;
  * 证书相关异常
  *
  * @author Jun
- * @date 2020-03-03 23:34
+ * @since 1.0.4
  */
 public class SslException extends GlobalException {
 

@@ -7,7 +7,7 @@ import lombok.Data;
  * 发布的消息
  *
  * @author Jun
- * @date 2020-03-09 22:02
+ * @since 1.0.4
  */
 @Data
 @AllArgsConstructor

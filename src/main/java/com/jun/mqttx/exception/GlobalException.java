@@ -4,7 +4,7 @@ package com.jun.mqttx.exception;
  * 项目顶级异常
  *
  * @author Jun
- * @date 2020-03-03 21:19
+ * @since 1.0.4
  */
 public class GlobalException extends RuntimeException {
 

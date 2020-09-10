@@ -6,7 +6,7 @@ import lombok.Data;
  * PubRel 消息
  *
  * @author Jun
- * @date 2020-03-09 22:12
+ * @since 1.0.4
  */
 @Data
 public class PubRelMsg {

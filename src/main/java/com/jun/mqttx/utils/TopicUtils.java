@@ -13,7 +13,7 @@ import java.util.Objects;
  * mqtt topic工具类
  *
  * @author Jun
- * @date 2020-04-23 09:55
+ * @since 1.0.4
  */
 public class TopicUtils {
 
@@ -104,7 +104,7 @@ public class TopicUtils {
     /**
      * 用于判定客户端订阅的 topic 是否合法，参考 mqtt-v3.1.1 4.7章进行逻辑实现，以下为定制化通配符处理策略：
      * <ul>
-     *     <li>第一个字符及最后一个字符不可为'/'</li>
+     *     <li>最后一个字符不可为'/'</li>
      *     <li># 通配符如果存在，必须是最后一个字符</li>
      *     <li>共享订阅主题的 ShareName 不允许含有 "+", "#" 符号</li>
      * </ul>
@@ -117,13 +117,13 @@ public class TopicUtils {
             return false;
         }
 
-        //1 不允许 "/" 连续出现, 如 "//"; 不允许 "/" 出现在首位
-        //2 不允许 " " 空字符串出现
+        //1 不允许 "/" 连续出现, 如 "//";
+        //2 不允许 " " 空字符出现
         //3 "#" 只能出现在末位
         //4 "/" 不允许出现在末位
         char[] allChar = subTopic.toCharArray();
         int len = allChar.length;
-        for (int i = 0, j = -1; i < len; i++) {
+        for (int i = 0, j = Integer.MIN_VALUE; i < len; i++) {
             char c = allChar[i];
             if (c == '/') {
                 if (i == j + 1) {

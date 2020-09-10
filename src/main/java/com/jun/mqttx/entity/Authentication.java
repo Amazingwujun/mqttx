@@ -9,7 +9,7 @@ import java.util.List;
  * 默认 clientId 导致的 bug.
  *
  * @author Jun
- * @date 2020-06-09 16:13
+ * @since 1.0.4
  */
 @Data
 public class Authentication {

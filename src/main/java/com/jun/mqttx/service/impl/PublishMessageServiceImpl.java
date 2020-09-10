@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
  * publish message store by redis
  *
  * @author Jun
- * @date 2020-03-13 14:33
+ * @since 1.0.4
  */
 @Service
 public class PublishMessageServiceImpl implements IPublishMessageService {

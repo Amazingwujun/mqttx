@@ -17,6 +17,7 @@ import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
 import org.springframework.data.redis.serializer.RedisSerializer;
 
 import java.util.*;
+import java.util.concurrent.Executors;
 
 import static com.jun.mqttx.constants.InternalMessageEnum.*;
 
@@ -24,7 +25,7 @@ import static com.jun.mqttx.constants.InternalMessageEnum.*;
  * 集群配置
  *
  * @author Jun
- * @date 2020-05-14 14:43
+ * @since 1.0.4
  */
 @Configuration
 @ConditionalOnProperty(name = "mqttx.cluster.enable", havingValue = "true")
@@ -65,6 +66,8 @@ public class ClusterConfig {
                                                                        MessageListener messageListener) {
         RedisMessageListenerContainer redisMessageListenerContainer = new RedisMessageListenerContainer();
         redisMessageListenerContainer.setConnectionFactory(redisConnectionFactory);
+        // 替换默认实现（默认实现未使用线程池）, 使用单线程执行任务
+        redisMessageListenerContainer.setTaskExecutor(Executors.newSingleThreadExecutor());
 
         Map<MessageListener, Collection<? extends Topic>> listenerMap = new HashMap<>();
         List<Topic> list = new ArrayList<>(8);

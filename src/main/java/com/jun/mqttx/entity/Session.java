@@ -8,7 +8,7 @@ import lombok.Data;
  * MQTT 会话
  *
  * @author Jun
- * @date 2020-03-04 13:19
+ * @since 1.0.4
  */
 @Data
 public class Session {

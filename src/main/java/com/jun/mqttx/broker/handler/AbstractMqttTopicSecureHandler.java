@@ -11,7 +11,7 @@ import io.netty.channel.ChannelHandlerContext;
  * </ol>
  *
  * @author Jun
- * @date 2020-06-09 15:34
+ * @since 1.0.4
  */
 public abstract class AbstractMqttTopicSecureHandler extends AbstractMqttSessionHandler {
 

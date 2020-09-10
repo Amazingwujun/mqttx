@@ -7,7 +7,7 @@ import io.netty.handler.codec.mqtt.MqttMessage;
  * 消息处理器
  *
  * @author Jun
- * @date 2020-03-03 22:04
+ * @since 1.0.4
  */
 public interface MqttMessageHandler {
 

@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
  * 认证服务
  *
  * @author Jun
- * @date 2020-03-04 12:44
+ * @since 1.0.4
  */
 @Service
 public class AuthenticationServiceImpl implements IAuthenticationService {

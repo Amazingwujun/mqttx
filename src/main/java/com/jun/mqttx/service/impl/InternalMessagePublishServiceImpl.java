@@ -10,7 +10,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
  * 基于 Redis 的实现
  *
  * @author Jun
- * @date 2020-05-14 10:30
+ * @since 1.0.4
  */
 @Slf4j
 public class InternalMessagePublishServiceImpl implements IInternalMessagePublishService {

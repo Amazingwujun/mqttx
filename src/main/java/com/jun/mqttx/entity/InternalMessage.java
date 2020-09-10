@@ -7,7 +7,7 @@ import lombok.Data;
  * 集群消息，用于集群间消息发布
  *
  * @author Jun
- * @date 2020-05-14 09:09
+ * @since 1.0.4
  */
 @Data
 @AllArgsConstructor

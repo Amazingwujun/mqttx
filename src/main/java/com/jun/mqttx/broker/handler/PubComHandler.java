@@ -8,7 +8,7 @@ import io.netty.handler.codec.mqtt.*;
  * {@link MqttMessageType#PUBCOMP} 消息处理器
  *
  * @author Jun
- * @date 2020-03-04 16:03
+ * @since 1.0.4
  */
 @Handler(type = MqttMessageType.PUBCOMP)
 public class PubComHandler extends AbstractMqttSessionHandler {
