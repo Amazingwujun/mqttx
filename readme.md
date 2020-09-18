@@ -155,8 +155,8 @@
 
 > `repeat`:
 >
-> - 当 `repeat = true` : 只需订阅一次，broker 会定时发布数据到此主题. 
-> - 当 `repeat = false` : 订阅一次，broker 发布一次，可多次订阅.
+> - `repeat = false` : 只需订阅一次，broker 会定时发布数据到此主题. 
+> - `repeat = true` : 订阅一次，broker 发布一次，可多次订阅.
 >
 > 注意：
 >
