@@ -1,5 +1,6 @@
 package com.jun.mqttx.broker.handler;
 
+import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.service.ISubscriptionService;
 import com.jun.mqttx.utils.TopicUtils;
 import io.netty.channel.Channel;
@@ -18,9 +19,12 @@ import java.util.stream.Collectors;
 @Handler(type = MqttMessageType.UNSUBSCRIBE)
 public class UnsubscribeHandler extends AbstractMqttSessionHandler {
 
+    private Boolean enableSysTopic;
+
     private ISubscriptionService subscriptionService;
 
-    public UnsubscribeHandler(ISubscriptionService subscriptionService) {
+    public UnsubscribeHandler(MqttxConfig config, ISubscriptionService subscriptionService) {
+        this.enableSysTopic = config.getSysTopic().getEnable();
         this.subscriptionService = subscriptionService;
     }
 
@@ -31,7 +35,10 @@ public class UnsubscribeHandler extends AbstractMqttSessionHandler {
         MqttUnsubscribePayload payload = mqttUnsubscribeMessage.payload();
 
         // 系统主题
-        List<String> collect = unsubscribeSysTopics(payload.topics(), ctx.channel());
+        List<String> collect = payload.topics();
+        if (enableSysTopic) {
+            collect = unsubscribeSysTopics(payload.topics(), ctx.channel());
+        }
 
         // 非系统主题
         subscriptionService.unsubscribe(clientId(ctx), collect);

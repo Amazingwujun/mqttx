@@ -10,12 +10,10 @@ import com.jun.mqttx.service.ISubscriptionService;
 import com.jun.mqttx.utils.TopicUtils;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.handler.codec.mqtt.*;
-import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.GlobalEventExecutor;
 
 import java.util.ArrayList;
@@ -34,9 +32,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Handler(type = MqttMessageType.SUBSCRIBE)
 public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
     //@formatter:off
-    /** 客户端订阅的系统主题 key, 用于 {@link Channel#attr( AttributeKey)} */
-    public static final String SYS_TOPICS_ATTR = "sys_topics";
-
     private final boolean enableTopicPubSubSecure;
     private IRetainMessageService retainMessageService;
     private ISubscriptionService subscriptionService;
@@ -46,9 +41,13 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
     private MqttQoS sysTopicQos;
     private String version;
 
-    /** 系统主题 $SYS 订阅群组 */
-    public static final ChannelGroup sysChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
-    /** 定时任务执行器 */
+    /**
+     * 系统主题 $SYS 订阅群组
+     */
+    public static ChannelGroup sysChannels;
+    /**
+     * 定时任务执行器
+     */
     private ScheduledExecutorService fixRateExecutor;
     /** 系统主题消息 id  */
     private AtomicInteger sysTopicMsgId;
@@ -64,6 +63,7 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
         this.version = mqttxConfig.getVersion();
         this.enableSysTopic = mqttxConfig.getSysTopic().getEnable();
         if (enableSysTopic) {
+            SubscribeHandler.sysChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
             this.interval = mqttxConfig.getSysTopic().getInterval().getSeconds();
             this.sysTopicQos = MqttQoS.valueOf(mqttxConfig.getSysTopic().getQos());
             fixRateExecutor = Executors.newSingleThreadScheduledExecutor();
