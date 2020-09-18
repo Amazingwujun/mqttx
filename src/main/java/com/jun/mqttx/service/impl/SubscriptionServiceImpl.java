@@ -68,13 +68,7 @@ public class SubscriptionServiceImpl implements ISubscriptionService, Watcher<Cl
 
         MqttxConfig.Cluster cluster = mqttxConfig.getCluster();
         this.enableCluster = cluster.getEnable();
-        if (!enableCluster) {
-            //如果用户没有设置，非集群状态下，默认开启缓存
-            this.enableInnerCache = mqttxConfig.getEnableInnerCache() == null ? true : mqttxConfig.getEnableInnerCache();
-        } else {
-            //如果用户没有设置，集群状态下，默认关闭缓存
-            this.enableInnerCache = mqttxConfig.getEnableInnerCache() == null ? false : mqttxConfig.getEnableInnerCache();
-        }
+        this.enableInnerCache = mqttxConfig.getEnableInnerCache();
         if (enableInnerCache) {
             allTopics = ConcurrentHashMap.newKeySet();
             topicClientMap = new ConcurrentHashMap<>();
@@ -123,6 +117,9 @@ public class SubscriptionServiceImpl implements ISubscriptionService, Watcher<Cl
      */
     @Override
     public void unsubscribe(String clientId, List<String> topics) {
+        if (CollectionUtils.isEmpty(topics)) {
+            return;
+        }
         topics.forEach(topic -> stringRedisTemplate.opsForHash().delete(topicPrefix + topic, clientId));
 
         //启用内部缓存机制
@@ -313,7 +310,9 @@ public class SubscriptionServiceImpl implements ISubscriptionService, Watcher<Cl
     private void unsubscribeWithCache(String clientId, List<String> topics) {
         for (String topic : topics) {
             ConcurrentHashMap.KeySetView<ClientSub, Boolean> clientSubs = topicClientMap.get(topic);
-            clientSubs.removeIf(clientSub -> Objects.equals(clientId, clientSub.getClientId()));
+            if (clientSubs != null) {
+                clientSubs.removeIf(clientSub -> Objects.equals(clientId, clientSub.getClientId()));
+            }
         }
     }
 

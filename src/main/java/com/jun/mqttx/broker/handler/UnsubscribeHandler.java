@@ -1,8 +1,13 @@
 package com.jun.mqttx.broker.handler;
 
 import com.jun.mqttx.service.ISubscriptionService;
+import com.jun.mqttx.utils.TopicUtils;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * {@link MqttMessageType#UNSUBSCRIBE} 消息处理器
@@ -25,15 +30,37 @@ public class UnsubscribeHandler extends AbstractMqttSessionHandler {
         int messageId = mqttUnsubscribeMessage.variableHeader().messageId();
         MqttUnsubscribePayload payload = mqttUnsubscribeMessage.payload();
 
-        //unsubscribe
-        subscriptionService.unsubscribe(clientId(ctx), payload.topics());
+        // 系统主题
+        List<String> collect = unsubscribeSysTopics(payload.topics(), ctx.channel());
 
-        //response
+        // 非系统主题
+        subscriptionService.unsubscribe(clientId(ctx), collect);
+
+        // response
         MqttMessage mqttMessage = MqttMessageFactory.newMessage(
                 new MqttFixedHeader(MqttMessageType.UNSUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
                 MqttMessageIdVariableHeader.from(messageId),
                 null
         );
         ctx.writeAndFlush(mqttMessage);
+    }
+
+    /**
+     * 系统主题订阅处理. 系统主题订阅没有持久化，仅保存在内存，需要单独处理.
+     *
+     * @param unSub   解除订阅的主题列表
+     * @param channel {@link Channel}
+     * @return 非系统主题列表
+     */
+    private List<String> unsubscribeSysTopics(List<String> unSub, Channel channel) {
+        return unSub.stream()
+                .peek(topic -> {
+                    if (TopicUtils.BROKER_STATUS.equals(topic)) {
+                        SubscribeHandler.sysChannels.remove(channel);
+                    }
+                })
+                .filter(topic -> !TopicUtils.isSys(topic))
+                .collect(Collectors.toList());
+
     }
 }

@@ -42,8 +42,8 @@ public class MqttxConfig {
     private Boolean enableTopicSubPubSecure = false;
 
     /**
-     * 内部缓存机制，用于性能提升。如果用户没有设置，非集群状态下，默认开启缓存;如果用户没有设置，集群状态下，默认关闭缓存
-     * 这个参数值必须集群一致，也就是说如果存在多个 mqttx 服务，那么这些服务的 enableInnerCache 值必须相同，否则会出现预期外的行为。
+     * 内部缓存机制，用于性能提升. 这个参数值必须集群一致，也就是说如果存在多个 mqttx 服务，
+     * 那么这些服务的 enableInnerCache 值必须相同，否则会出现预期外的行为。
      */
     private Boolean enableInnerCache = true;
 
@@ -62,6 +62,8 @@ public class MqttxConfig {
     private WebSocket webSocket = new WebSocket();
 
     private ShareTopic shareTopic = new ShareTopic();
+
+    private SysTopic sysTopic = new SysTopic();
 
     /**
      * redis 配置
@@ -176,5 +178,27 @@ public class MqttxConfig {
          * @see ShareStrategy
          */
         private String shareSubStrategy = ShareStrategy.round.name();
+    }
+
+    /**
+     * 系统管理 topic
+     *
+     * <ol>
+     *     <li>当应用重启时，会丢失订阅信息，如有需要则应该重新发起系统管理主题的订阅</li>
+     *     <li>当 {@link #enableTopicSubPubSecure} 开启时，系统管理主题也会被保护</li>
+     * </ol>
+     * topic 写死在 {@link com.jun.mqttx.utils.TopicUtils}
+     */
+    @Data
+    public static class SysTopic {
+
+        /** 开关 */
+        private Boolean enable = false;
+
+        /** 定时发送时间，默认一分钟 */
+        private Duration interval = Duration.ofMinutes(1);
+
+        /** 系统主题qos, 默认qos0; 参数适用所有的系统主题. ps: 除开特殊需求，qos0 应该是比较合适的*/
+        private Integer qos = 0;
     }
 }

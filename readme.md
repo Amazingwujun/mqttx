@@ -129,6 +129,8 @@
 2. 使用时需要同步实现接口 `AuhenticationService` ，该接口返回对象中含有 `authorizedSub,authorizedPub` 存储 client 被授权订阅及发布的 `topic` 列表。
 3. broker 在消息订阅及发布都会校验客户端权限
 
+> 含*系统主题*
+
 #### 4.6 共享订阅机制
 
 共享订阅是 `mqtt5` 协议规定的内容，很多 MQ 都有实现。`mqttx` 的实现也是基于 `mqtt5`。
@@ -136,8 +138,48 @@
 2. 格式: `$share/{ShareName}/{filter}`, `$share` 为前缀, `ShareName` 为共享订阅名, `filter` 就是非共享订阅主题过滤器。
 3. 目前支持 `hash`, `random`, `round` 三种规则
 
+#### 4.7 websocket 
 
-#### 4.7 websocket 支持
+支持
+
+#### 4.8 系统主题
+
+客户端可通过订阅系统主题获取 broker 状态，目前系统支持如下主题：
+
+| topic                            | repeat  | comment                                                      |
+| -------------------------------- | ------- | ------------------------------------------------------------ |
+| `$SYS/broker/status`             | `false` | 订阅此主题的客户端会定期（`mqttx.sys-topic.interval`）收到 broker 的状态，该状态涵盖下面所有主题的状态值. <br/>**注意：客户端连接断开后，订阅取消** |
+| `$SYS/broker/activeConnectCount` | `true`  | 立即返回当前的活动连接数量                                   |
+| `$SYS/broker/time`               | `true`  | 立即返回当前时间戳                                           |
+| `$SYS/broker/version`            | `true`  | 立即返回 `broker` 版本                                       |
+
+> `repeat`:
+>
+> - 当 `repeat = true` : 只需订阅一次，broker 会定时发布数据到此主题. 
+> - 当 `repeat = false` : 订阅一次，broker 发布一次，可多次订阅.
+>
+> 注意：
+>
+> 1. *topic 安全机制* 同样会影响客户端订阅系统主题, 未授权客户端将无法订阅系统主题
+> 2. 系统主题订阅不会持久化
+
+响应对象格式为 `json` 字符串：
+
+```json
+{
+	"activeConnectCount": 2,
+	"timestamp": "2020-09-18 15:13:46",
+	"version": "1.0.5.ALPHA"
+}
+```
+
+| field                | 说明                            |
+| -------------------- | ------------------------------- |
+| `activeConnectCount` | 当前活跃连接数量                |
+| `timestamp`          | 时间戳；(`yyyy-MM-dd HH:mm:ss`) |
+| `version`            | `mqttx` 版本                    |
+
+
 
 ### 5 路线图
 
@@ -184,4 +226,7 @@
 | `mqttx.websocket.path`                   | `/mqtt`                         | websocket uri                                                |
 | `mqttx.share-topic.enable`               | `true`                          | 共享主题功能开关                                             |
 | `mqttx.share-topic.share-sub-strategy`   | `round`                         | 负载均衡策略, 目前支持随机、轮询、哈希                       |
+| `mqttx.sys-topic.enable` | `false` | 系统主题功能开关 |
+| `mqttx.sys-topic.interval` | `60s` | 定时发布间隔 |
+| `mqttx.sys-topic.qos` | `0` | 主题 qos. |
 
