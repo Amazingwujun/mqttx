@@ -41,13 +41,9 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
     private MqttQoS sysTopicQos;
     private String version;
 
-    /**
-     * 系统主题 $SYS 订阅群组
-     */
-    public static ChannelGroup sysChannels;
-    /**
-     * 定时任务执行器
-     */
+    /** 系统主题 $SYS 订阅群组 */
+    static ChannelGroup SYS_CHANNELS;
+    /** 定时任务执行器 */
     private ScheduledExecutorService fixRateExecutor;
     /** 系统主题消息 id  */
     private AtomicInteger sysTopicMsgId;
@@ -63,7 +59,7 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
         this.version = mqttxConfig.getVersion();
         this.enableSysTopic = mqttxConfig.getSysTopic().getEnable();
         if (enableSysTopic) {
-            SubscribeHandler.sysChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+            SubscribeHandler.SYS_CHANNELS = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
             this.interval = mqttxConfig.getSysTopic().getInterval().getSeconds();
             this.sysTopicQos = MqttQoS.valueOf(mqttxConfig.getSysTopic().getQos());
             fixRateExecutor = Executors.newSingleThreadScheduledExecutor();
@@ -162,9 +158,10 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
      * </pre>
      * repeat 说明:
      * <ul>
-     *     <li>当 repeat = true : 只需订阅一次，broker 会定时发布数据到此主题.</li>
-     *     <li>当 repeat = false : 订阅一次，发布一次.</li>
+     *     <li>当 repeat = false : 只需订阅一次，broker 会定时发布数据到此主题.</li>
+     *     <li>当 repeat = true : 订阅一次，发布一次.</li>
      * </ul>
+     *
      *
      * @param topic 系统主题
      * @param ctx   {@link ChannelHandlerContext}
@@ -172,7 +169,7 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
     private void sysTopicSubscribeHandle(final String topic, final ChannelHandlerContext ctx) {
         switch (topic) {
             case TopicUtils.BROKER_STATUS: {
-                sysChannels.add(ctx.channel());
+                SYS_CHANNELS.add(ctx.channel());
                 break;
             }
             case TopicUtils.BROKER_VERSION: {
@@ -190,7 +187,7 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
                 break;
             }
             case TopicUtils.BROKER_CLIENTS_ACTIVE_CONNECTED_COUNT: {
-                byte[] activeConnected = BrokerStatus.of(BrokerHandler.channels.size(), null, null)
+                byte[] activeConnected = BrokerStatus.of(BrokerHandler.CHANNELS.size(), null, null)
                         .toUtf8Bytes();
 
                 MqttPublishMessage timeResponse = MqttMessageBuilders.publish()
@@ -226,12 +223,12 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
      */
     private void initSystemStatePublishTimer() {
         fixRateExecutor.scheduleAtFixedRate(() -> {
-            if (sysChannels.size() == 0) {
+            if (SYS_CHANNELS.size() == 0) {
                 return;
             }
 
             // broker 状态
-            byte[] bytes = BrokerStatus.of(BrokerHandler.channels.size(), version).toUtf8Bytes();
+            byte[] bytes = BrokerStatus.of(BrokerHandler.CHANNELS.size(), version).toUtf8Bytes();
             ByteBuf payload = Unpooled.buffer(bytes.length).writeBytes(bytes);
 
             MqttPublishMessage mpm = MqttMessageBuilders.publish()
@@ -241,7 +238,7 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
                     .messageId(sysTopicMsgId.getAndIncrement())
                     .payload(payload)
                     .build();
-            sysChannels.writeAndFlush(mpm);
+            SYS_CHANNELS.writeAndFlush(mpm);
         }, 0, interval, TimeUnit.SECONDS);
     }
 }

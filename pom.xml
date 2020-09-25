@@ -71,12 +71,21 @@
             </activation>
             <properties>
                 <profile>dev</profile>
+                <enableTestMode>false</enableTestMode>
             </properties>
         </profile>
         <profile>
             <id>prod</id>
             <properties>
                 <profile>prod</profile>
+                <enableTestMode>false</enableTestMode>
+            </properties>
+        </profile>
+        <profile>
+            <id>test</id>
+            <properties>
+                <profile>dev</profile>
+                <enableTestMode>true</enableTestMode>
             </properties>
         </profile>
     </profiles>

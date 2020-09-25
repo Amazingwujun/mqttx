@@ -54,7 +54,7 @@ public class SubscriptionServiceImpl implements ISubscriptionService, Watcher<Cl
      */
     private String topicSetKey;
 
-    private Boolean enableInnerCache, enableCluster;
+    private Boolean enableInnerCache, enableCluster, enableTestMode;
     private int brokerId;
 
     public SubscriptionServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig,
@@ -69,10 +69,14 @@ public class SubscriptionServiceImpl implements ISubscriptionService, Watcher<Cl
         MqttxConfig.Cluster cluster = mqttxConfig.getCluster();
         this.enableCluster = cluster.getEnable();
         this.enableInnerCache = mqttxConfig.getEnableInnerCache();
+        this.enableTestMode = mqttxConfig.getEnableTestMode();
         if (enableInnerCache) {
             allTopics = ConcurrentHashMap.newKeySet();
             topicClientMap = new ConcurrentHashMap<>();
-            initInnerCache(stringRedisTemplate);
+            if (!enableTestMode) {
+                // 非测试模式，初始化缓存
+                initInnerCache(stringRedisTemplate);
+            }
         }
         this.brokerId = mqttxConfig.getBrokerId();
 
@@ -91,20 +95,24 @@ public class SubscriptionServiceImpl implements ISubscriptionService, Watcher<Cl
         String clientId = clientSub.getClientId();
         int qos = clientSub.getQos();
 
-        //保存topic <---> client 映射
-        stringRedisTemplate.opsForHash()
-                .put(topicPrefix + topic, clientId, String.valueOf(qos));
-
-        //将topic保存到redis set集合中
-        stringRedisTemplate.opsForSet().add(topicSetKey, topic);
-
-        if (enableInnerCache) {
+        if (enableTestMode) {
             subscribeWithCache(clientSub);
+        } else {
+            //保存topic <---> client 映射
+            stringRedisTemplate.opsForHash()
+                    .put(topicPrefix + topic, clientId, String.valueOf(qos));
 
-            //发布集群广播
-            if (enableCluster) {
-                InternalMessage<ClientSub> im = new InternalMessage<>(clientSub, System.currentTimeMillis(), brokerId);
-                internalMessagePublishService.publish(im, InternalMessageEnum.SUB_UNSUB.getChannel());
+            //将topic保存到redis set集合中
+            stringRedisTemplate.opsForSet().add(topicSetKey, topic);
+
+            if (enableInnerCache) {
+                subscribeWithCache(clientSub);
+
+                //发布集群广播
+                if (enableCluster) {
+                    InternalMessage<ClientSub> im = new InternalMessage<>(clientSub, System.currentTimeMillis(), brokerId);
+                    internalMessagePublishService.publish(im, InternalMessageEnum.SUB_UNSUB.getChannel());
+                }
             }
         }
     }
@@ -120,17 +128,22 @@ public class SubscriptionServiceImpl implements ISubscriptionService, Watcher<Cl
         if (CollectionUtils.isEmpty(topics)) {
             return;
         }
-        topics.forEach(topic -> stringRedisTemplate.opsForHash().delete(topicPrefix + topic, clientId));
 
-        //启用内部缓存机制
-        if (enableInnerCache) {
+        if (enableTestMode) {
             unsubscribeWithCache(clientId, topics);
+        } else {
+            topics.forEach(topic -> stringRedisTemplate.opsForHash().delete(topicPrefix + topic, clientId));
 
-            //集群广播
-            if (enableCluster) {
-                ClientSubOrUnsubMsg clientSubOrUnsubMsg = new ClientSubOrUnsubMsg(clientId, 0, null, topics, UN_SUB);
-                InternalMessage<ClientSubOrUnsubMsg> im = new InternalMessage<>(clientSubOrUnsubMsg, System.currentTimeMillis(), brokerId);
-                internalMessagePublishService.publish(im, InternalMessageEnum.SUB_UNSUB.getChannel());
+            //启用内部缓存机制
+            if (enableInnerCache) {
+                unsubscribeWithCache(clientId, topics);
+
+                //集群广播
+                if (enableCluster) {
+                    ClientSubOrUnsubMsg clientSubOrUnsubMsg = new ClientSubOrUnsubMsg(clientId, 0, null, topics, UN_SUB);
+                    InternalMessage<ClientSubOrUnsubMsg> im = new InternalMessage<>(clientSubOrUnsubMsg, System.currentTimeMillis(), brokerId);
+                    internalMessagePublishService.publish(im, InternalMessageEnum.SUB_UNSUB.getChannel());
+                }
             }
         }
     }
@@ -147,7 +160,7 @@ public class SubscriptionServiceImpl implements ISubscriptionService, Watcher<Cl
     @Override
     public List<ClientSub> searchSubscribeClientList(String topic) {
         //启用内部缓存机制
-        if (enableInnerCache) {
+        if (enableInnerCache || enableTestMode) {
             return searchSubscribeClientListByCache(topic);
         }
 
@@ -245,6 +258,9 @@ public class SubscriptionServiceImpl implements ISubscriptionService, Watcher<Cl
      * 初始化内部缓存。目前的策略是全部加载，其实可以按需加载，按业务需求来吧。
      */
     private void initInnerCache(final StringRedisTemplate redisTemplate) {
+        if (enableTestMode) {
+            return;
+        }
         log.info("enableInnerCache=true, 开始加载缓存...");
 
         final Set<String> allTopic = redisTemplate.opsForSet().members(topicSetKey);

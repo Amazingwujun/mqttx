@@ -49,7 +49,7 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
     /**
      * channel 群组
      */
-    public static final ChannelGroup channels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+    public static final ChannelGroup CHANNELS = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
 
     /**
      * 消息处理器
@@ -75,7 +75,7 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
-        channels.add(ctx.channel());
+        CHANNELS.add(ctx.channel());
     }
 
     /**
@@ -127,7 +127,7 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
         }
 
         Optional.ofNullable(ConnectHandler.clientMap.get(clientId))
-                .map(channels::find)
+                .map(CHANNELS::find)
                 .ifPresent(channel -> {
                     if (!CollectionUtils.isEmpty(authorizedPubTopics)) {
                         channel.attr(AttributeKey.valueOf(AbstractMqttSessionHandler.AUTHORIZED_PUB_TOPICS)).set(authorizedPubTopics);

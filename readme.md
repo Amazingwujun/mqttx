@@ -3,6 +3,8 @@
  ![license](https://img.shields.io/github/license/tensorflow/tensorflow.svg) ![language](https://img.shields.io/badge/language-java-orange.svg)
 
 - [1 介绍](#1-介绍)
+    - [1.1 快速开始](#11-快速开始)
+    - [1.2 线上实例](#12-线上实例)
 - [2 架构](#2-架构)
     - [2.1 目录结构](#21-目录结构)
 - [3 容器化部署](#3-容器化部署)
@@ -21,26 +23,48 @@
 
 ## 1 介绍
 
-`mqttx` 基于 [mqtt v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) 官方协议文档开发。
-项目运行说明：
+`Mqttx` 基于 [mqtt v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) 协议开发，旨在提供*易于使用*且*兼顾性能*的 **mqtt 服务端**。
 
-  1. 使用`springboot`推荐的启动方式 `java -jar app.jar`，使用 `mvn clean package` 打包，这种方式需要修改配置文件(`resources/application.yml`)中 redis 地址和端口。
+### 1.1 快速开始
 
-     > mqttx default redis 连接使用的配置：`localhost:6379`， **无密码**
-     >
-     > 配置项见 ***[6.1 配置项](#61-配置项)***
+1. 打包
+   - 测试模式：运行  `mvnw -P test -DskipTests=true clean package`
 
-  2. 基于 `docker` 容器化部署，这个就比较简单，具体的步骤见 ***[容器化部署](#3-容器化部署)***
+   - 开发模式：
+     1. 启动 `redis` 实例
+     2. 运行 `mvnw -P dev -DskipTests=true clean package`
+2. 运行
+   
+   1. 运行命令：`java -jar mqttx-1.0.5.BETA.jar`
 
-中间件依赖：
+***快速开始-测试模式***图例：
+
+<img src="https://s1.ax1x.com/2020/09/27/0kJp3F.gif" alt="快速开始" style="zoom: 80%;" />
+
+- 测试模式
+  1. 集群功能被强制关闭
+  2. 消息保存在内存而不是 `redis`
+
+- 开发模式
+    1. 消息会持久化到 `redis`, 默认连接 `localhost:6376` 无密码
+
+所谓的**测试模式**、**开发模式**只是方便同学们快速启动项目，方便测试功能测试。熟悉项目后，同学们可通过修改***[6.1 配置项](#61-配置项)*** 开启或关闭 `mqttx` 提供的各项功能。
+
+> `mqttx` 依赖 `redis` 实现消息持久化、集群等功能，使用其它中间件（`mysql`, `mongodb`, `kafka` 等）同样能够实现，而 `springboot` 具备 `spring-boot-starter-***`  等各种可插拔组件，方便大家修改默认的实现
+
+项目依赖中间件（非测试模式）：
 
 - [x] redis
 
-其他依赖：
+其它说明：
 1. 项目使用了 lombok，使用 ide 请安装对应的插件
-> 举例：idea 需要安装插件 Lombok, settings > Build,Execution,Deployment > Compiler > Annotation Processor 开启 Enable annotation processing
+> 开发工具建议使用 [Intellij IDEA](https://www.jetbrains.com/idea/) :blush:
+> 
+> 举例：`idea` 需要安装插件 `Lombok`, `settings > Build,Execution,Deployment > Compiler > Annotation Processor` 开启 `Enable annotation processing`
 
-我在云端部署了一个 `mqttx` 单例服务，可供功能测试：
+### 1.2 线上实例
+
+云端部署了一个 `mqttx` 单例服务，可供功能测试：
 1. 不支持 ssl
 2. 开启了 websocket, 可通过 http://tools.emqx.io/ 测试，仅需将域名修改为：`119.45.158.51`(端口、地址不变)
 3. 支持 共享订阅功能
@@ -85,12 +109,12 @@
 
 为了方便项目快速的部署，引进 docker
 
-> 1. 执行本地部署动作前，需要先下载docker。
+> 1. 执行本地部署动作前，需要先下载 docker。
 > 2. docker-compose 文件中写死了端口映射（`1883, 8083`）， 如果你修改了 `mqttx` 的端口配置，则 `docker-compose.yml` 中也应修改
 
 1. 通过IDE提供的打包功能将项目打包为 target/*.jar
-2. 进入 dockerfile 同级目录，执行 `docker build -t mqttx:v1.0.4.RELEASE .`
-3. 执行 docker-compose up
+2. 进入 `dockerfile` 同级目录，执行 `docker build -t mqttx:v1.0.4.RELEASE .`
+3. 执行 `docker-compose up`
 
 ## 4 功能说明
 
@@ -108,9 +132,9 @@
 3. 不支持以 `/`结尾的topic，比如 a/b/，请改为 a/b。
 4. 其它规则见 [mqtt v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) 4.7 Topic Names and Topic Filters
 
-> ps：实际上 **mqttx** 仅对订阅 topicFilter 进行校验，publish 的 topic 是没有做合法性检查的。
+>  **mqttx** 仅对订阅 topicFilter 进行校验，publish 的 topic 是没有做合法性检查的。如果 [4.5 topic 安全支持](#45-topic) 功能开启
 >
-> 当 topic 安全功能开启后，客户端只允许发布消息到被授权的主题
+> ，客户端只允许发布消息到被授权的主题。
 
 举例：
 
@@ -125,7 +149,7 @@
 
 #### 4.3 集群支持
 
-项目引入 `redis pub/sub ` 分发消息以支持集群功能。如果需要修改为 `kafka` 或其它 mq ，需要修改配置类 `ClusterConfig` 及替换实现类 `InternalMessageServiceImpl`。
+项目引入 `redis pub/sub ` 分发消息以支持集群功能。如果需要修改为 `kafka` 或其它 `mq` ，需要修改配置类 `ClusterConfig` 及替换实现类 `InternalMessageServiceImpl`。
 
 ![ak6nHK.png](https://s1.ax1x.com/2020/07/28/ak6nHK.png)
 
@@ -249,6 +273,15 @@
 ## 6 附表
 
 ### 6.1 配置项
+`src/main/resources` 目录下有三个配置文件：
+
+1. `application.yml`
+2. `application-dev.yml`
+3. `application-prod.yml`
+
+后两个配置文件目的是区分不同环境下的配置，便于管理。
+
+配置项说明：
 
 | 配置                                     | 默认值                        | 说明                                                         |
 | ---------------------------------------- | ----------------------------- | ------------------------------------------------------------ |
@@ -259,6 +292,7 @@
 | `mqttx.soBacklog`                        | `512`                           | tcp 连接处理队列                                             |
 | `mqttx.enableTopicSubPubSecure`          | `false`                         | 客户订阅/发布主题安全功能，开启后将限制客户端发布/订阅的主题 |
 | `mqttx.enableInnerCache`                 | `true`                          | 发布消息每次都需要查询 redis 来获取订阅的客户端列表。开启此功能后，将在内存中建立一个主题-客户端关系映射, 应用直接访问内存中的数据即可 |
+| `mqttx.enableTestMode` | `false` | 开启测试模式 |
 | `mqttx.redis.clusterSessionHashKey`      | `mqttx.session.key`             | redis map key；用于集群的会话存储                          |
 | `mqttx.redis.topicPrefix`                | `mqttx:topic:`                  | 主题前缀； topic <--> client 映射关系保存                    |
 | `mqttx.redis.retainMessagePrefix`        | `mqttx:retain:`                 | 保留消息前缀, 保存 retian 消息                               |
@@ -280,5 +314,8 @@
 | `mqttx.share-topic.share-sub-strategy`   | `round`                         | 负载均衡策略, 目前支持随机、轮询、哈希                       |
 | `mqttx.sys-topic.enable` | `false` | 系统主题功能开关 |
 | `mqttx.sys-topic.interval` | `60s` | 定时发布间隔 |
-| `mqttx.sys-topic.qos` | `0` | 主题 qos. |
+| `mqttx.sys-topic.qos` | `0` | 主题 qos |
+| `mqttx.enableTestMode` | false | 测试模式开关，开启后系统进入测试模式 |
+
+
 

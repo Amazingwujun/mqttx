@@ -36,6 +36,12 @@ public class MqttxApplication {
      * @param ctx {@link ConfigurableApplicationContext}
      */
     private static void preCheck(ApplicationContext ctx) {
+        MqttxConfig mqttxConfig = ctx.getBean(MqttxConfig.class);
+        if (Boolean.TRUE.equals(mqttxConfig.getEnableTestMode())) {
+            log.warn("mqttx 处于测试模式!!!");
+            return;
+        }
+
         log.info("开始自检...");
 
         innerCacheConsistencyCheck(ctx);

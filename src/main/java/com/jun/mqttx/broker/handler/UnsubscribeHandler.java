@@ -63,7 +63,7 @@ public class UnsubscribeHandler extends AbstractMqttSessionHandler {
         return unSub.stream()
                 .peek(topic -> {
                     if (TopicUtils.BROKER_STATUS.equals(topic)) {
-                        SubscribeHandler.sysChannels.remove(channel);
+                        SubscribeHandler.SYS_CHANNELS.remove(channel);
                     }
                 })
                 .filter(topic -> !TopicUtils.isSys(topic))

@@ -1,15 +1,16 @@
+# 公共配置文件
+
 spring:
   application:
     name: mqttx
   profiles:
+    # 该配置决定使用 application-dev.yml 还是 application-prod.yml 作为附加配置文件
     active: @profile@
 
-# 建议其它配置项位于 dev 或 prod
 mqttx:
   version: @version@
   broker-id: 1001
-
-
+  enable-test-mode: @enableTestMode@
 
 
 #下方是配置示例，提供参考。如果你手动配置了，那么你的配置将被采用。
