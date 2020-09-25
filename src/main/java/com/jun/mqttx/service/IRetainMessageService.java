@@ -2,6 +2,8 @@ package com.jun.mqttx.service;
 
 import com.jun.mqttx.entity.PubMsg;
 
+import java.util.List;
+
 /**
  * retain 消息服务
  *
@@ -9,6 +11,14 @@ import com.jun.mqttx.entity.PubMsg;
  * @since 1.0.4
  */
 public interface IRetainMessageService {
+
+    /**
+     * 搜索匹配 newSubTopic 的 retain 消息列表
+     *
+     * @param newSubTopic 客户端新订阅主题
+     * @return 匹配的消息列表
+     */
+    List<PubMsg> searchListBySubTopic(String newSubTopic);
 
     /**
      * 存储当前 topic 的 retain 消息

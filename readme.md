@@ -109,6 +109,8 @@
 4. 其它规则见 [mqtt v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) 4.7 Topic Names and Topic Filters
 
 > ps：实际上 **mqttx** 仅对订阅 topicFilter 进行校验，publish 的 topic 是没有做合法性检查的。
+>
+> 当 topic 安全功能开启后，客户端只允许发布消息到被授权的主题
 
 举例：
 
@@ -142,13 +144,17 @@
 
 #### 4.5 topic 安全支持
 
-为了对 client 订阅 topic 进行限制，项目引入了简单的 topic 订阅&发布鉴权机制:
+为了对 client 订阅 topic 进行限制，加入 topic 订阅&发布鉴权机制:
 
 1. `mqttx.enable-topic-sub-pub-secure`: 功能开关，默认 `false`
 2. 使用时需要实现接口 `AuhenticationService` ，该接口返回对象中含有 `authorizedSub,authorizedPub` 存储 client 被授权订阅及发布的 `topic` 列表。
 3. broker 在消息订阅及发布都会校验客户端权限
 
-> 含**系统主题**
+支持的主题类型：
+
+- [x] 普通主题
+- [x] 共享主题
+- [x] 系统主题
 
 #### 4.6 共享主题支持
 
@@ -161,7 +167,7 @@
 
 ![share-topic](https://s1.ax1x.com/2020/09/22/wXddnU.png)
 
-> `msg-a` 消息分发规制取决于 `mqttx.share-topic.share-sub-strategy` 配置
+> `msg-a` 消息分发策略取决于配置项 `mqttx.share-topic.share-sub-strategy`
 
 #### 4.7 websocket 支持
 

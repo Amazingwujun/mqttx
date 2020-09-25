@@ -124,7 +124,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
             case 1: //at least once
                 publish(pubMsg, ctx, false);
                 MqttMessage pubAck = MqttMessageFactory.newMessage(
-                        new MqttFixedHeader(MqttMessageType.PUBACK, false, MqttQoS.valueOf(mqttQoS), retain, 0),
+                        new MqttFixedHeader(MqttMessageType.PUBACK, false, MqttQoS.valueOf(mqttQoS), false, 0),
                         MqttMessageIdVariableHeader.from(packetId),
                         null
                 );
@@ -132,7 +132,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                 break;
             case 2: //exactly once
                 MqttMessage pubRec = MqttMessageFactory.newMessage(
-                        new MqttFixedHeader(MqttMessageType.PUBREC, false, MqttQoS.valueOf(mqttQoS), retain, 0),
+                        new MqttFixedHeader(MqttMessageType.PUBREC, false, MqttQoS.valueOf(mqttQoS), false, 0),
                         MqttMessageIdVariableHeader.from(packetId),
                         null
                 );
@@ -235,15 +235,17 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         //组装PubMsg
         int messageId = nextMessageId(ctx);
         pubMsg.setMessageId(messageId);
+        // It MUST set the RETAIN flag to 0 when a PUBLISH Packet is sent to a Client because it matches an established
+        // subscription regardless of how the flag was set in the message it received [MQTT-3.3.1-9].
         MqttPublishMessage mpm = MqttMessageBuilders.publish()
                 .messageId(messageId)
                 .qos(qos)
                 .topicName(topic)
-                .retained(pubMsg.isRetain())
+                .retained(false)
                 .payload(Unpooled.wrappedBuffer(pubMsg.getPayload()))
                 .build();
 
-        //集群消息不做保存，因为传播消息的 broker 已经保存过了
+        //集群消息不做保存，传播消息的 broker 已经保存过了
         if ((qos == MqttQoS.EXACTLY_ONCE || qos == MqttQoS.AT_LEAST_ONCE) && !isInternalMessage) {
             publishMessageService.save(clientId, pubMsg);
         }
@@ -296,6 +298,6 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
             return clientSubList.get(i % clientSubList.size());
         }
 
-        throw new IllegalArgumentException("不可能到达的代码,strategy:" + shareStrategy);
+        throw new IllegalArgumentException("不可能到达的代码, strategy:" + shareStrategy);
     }
 }
