@@ -2,6 +2,7 @@ package com.jun.mqttx.entity;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * 集群消息，用于集群间消息发布
@@ -11,6 +12,7 @@ import lombok.Data;
  */
 @Data
 @AllArgsConstructor
+@NoArgsConstructor
 public class InternalMessage<T> {
     //@formatter:off
 

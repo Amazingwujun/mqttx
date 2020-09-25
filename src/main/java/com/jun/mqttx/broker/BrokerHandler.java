@@ -108,7 +108,7 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
                     .ifPresent(msg -> messageDelegatingHandler.handle(ctx, msg));
 
             ConnectHandler.clientMap.remove(session.getClientId());
-            if (Boolean.FALSE.equals(session.getClearSession())) {
+            if (Boolean.FALSE.equals(session.getCleanSession())) {
                 sessionService.save(session);
             }
         }

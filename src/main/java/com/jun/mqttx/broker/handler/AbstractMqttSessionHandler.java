@@ -47,7 +47,7 @@ public abstract class AbstractMqttSessionHandler implements MqttMessageHandler {
      */
     boolean clearSession(ChannelHandlerContext ctx) {
         Session session = getSession(ctx);
-        return session.getClearSession();
+        return session.getCleanSession();
     }
 
     /**
@@ -78,12 +78,23 @@ public abstract class AbstractMqttSessionHandler implements MqttMessageHandler {
     }
 
     /**
+     * 获取当前会话 clean session 状态
+     *
+     * @param ctx {@link ChannelHandlerContext}
+     * @return true if clearSession = 1
+     */
+    boolean isCleanSession(ChannelHandlerContext ctx) {
+        Session session = (Session) ctx.channel().attr(AttributeKey.valueOf(Session.KEY)).get();
+        return session.getCleanSession();
+    }
+
+    /**
      * 获取客户会话
      *
      * @param ctx {@link ChannelHandlerContext}
      * @return {@link Session}
      */
-    private Session getSession(ChannelHandlerContext ctx) {
+    Session getSession(ChannelHandlerContext ctx) {
         return (Session) ctx.channel().attr(AttributeKey.valueOf(Session.KEY)).get();
     }
 }

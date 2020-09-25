@@ -142,7 +142,11 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                 if (!pubRelMessageService.isDupMsg(clientId(ctx), packetId)) {
                     //发布新的消息并保存 pubRel 标记，用于实现Qos2
                     publish(pubMsg, ctx, false);
-                    pubRelMessageService.save(clientId(ctx), packetId);
+                    if (isCleanSession(ctx)) {
+                        getSession(ctx).savePubRelMsg(packetId);
+                    } else {
+                        pubRelMessageService.save(clientId(ctx), packetId);
+                    }
                 }
                 break;
         }
@@ -247,7 +251,12 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
 
         //集群消息不做保存，传播消息的 broker 已经保存过了
         if ((qos == MqttQoS.EXACTLY_ONCE || qos == MqttQoS.AT_LEAST_ONCE) && !isInternalMessage) {
-            publishMessageService.save(clientId, pubMsg);
+            if (isCleanSession(ctx)) {
+                // 如果 cleanSession = 1，消息直接关联会话，不需要持久化
+                getSession(ctx).savePubMsg(messageId, pubMsg);
+            } else {
+                publishMessageService.save(clientId, pubMsg);
+            }
         }
 
         //将消息推送给集群中的broker

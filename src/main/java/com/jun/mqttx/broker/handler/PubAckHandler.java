@@ -25,6 +25,10 @@ public class PubAckHandler extends AbstractMqttSessionHandler {
     public void process(ChannelHandlerContext ctx, MqttMessage msg) {
         MqttPubAckMessage mqttPubAckMessage = (MqttPubAckMessage) msg;
         int messageId = mqttPubAckMessage.variableHeader().messageId();
-        publishMessageService.remove(clientId(ctx), messageId);
+        if (isCleanSession(ctx)) {
+            getSession(ctx).removePubMsg(messageId);
+        } else {
+            publishMessageService.remove(clientId(ctx), messageId);
+        }
     }
 }
