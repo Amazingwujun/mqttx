@@ -24,7 +24,7 @@
 
 ## 1 介绍
 
-`Mqttx` 基于 [mqtt v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) 协议开发，旨在提供*易于使用*且*兼顾性能*的 **mqtt 服务端**。
+`Mqttx` 基于 [mqtt v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) 协议开发，旨在提供 ***易于使用*** 且 ***性能优越*** 的 **mqtt broker**。
 
 ### 1.1 快速开始
 
@@ -49,7 +49,7 @@
 - 开发模式
     1. 消息会持久化到 `redis`, 默认连接 `localhost:6376` 无密码
 
-所谓**测试模式**、**开发模式**只是方便同学们快速启动项目，方便测试功能测试。熟悉项目后，同学们可通过修改**[6.1 配置项](#61-配置项)**开启或关闭 `mqttx` 提供的各项功能。
+所谓**测试模式**、**开发模式**只是方便同学们快速启动项目，方便测试功能测试。熟悉项目后，同学们可通过修改 ***[6.1 配置项](#61-配置项)*** 开启或关闭 `mqttx` 提供的各项功能。
 
 > `mqttx` 依赖 `redis` 实现消息持久化、集群等功能，使用其它中间件（`mysql`, `mongodb`, `kafka` 等）同样能够实现，而 `springboot` 具备 `spring-boot-starter-***`  等各种可插拔组件，方便大家修改默认的实现
 
@@ -69,7 +69,7 @@
 1. 不支持 ssl
 2. 开启了 websocket, 可通过 http://tools.emqx.io/ 测试，仅需将域名修改为：`119.45.158.51`(端口、地址不变)
 3. 支持共享订阅功能
-4. 部署版本 `v1.0.4.RELEASE`
+4. 部署版本 `v1.0.5.BETA`
 
 ![websocket](https://s1.ax1x.com/2020/09/05/wV578J.png)
 
@@ -130,8 +130,8 @@
 #### 4.2 topicFilter 支持
 
 1. 支持多级通配符 `#`与单级通配符 `+`
-3. 不支持以 `/`结尾的topic，比如 `a/b/`，请改为 `a/b`。
-4. 其它规则见 *[mqtt v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) 4.7 Topic Names and Topic Filters*
+2. 不支持以 `/`结尾的topic，比如 `a/b/`，请改为 `a/b`。
+3. 其它规则见 ***[mqtt v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) 4.7 Topic Names and Topic Filters***
 
 >  **mqttx** 仅对订阅 topicFilter 进行校验，publish 的 topic 是没有做合法性检查的，可通过开启 [4.5 topic 安全支持](#45-topic) 限制客户端可发布的 topic。
 
@@ -163,7 +163,9 @@
 3. `mqttx.ssl.key-store-password`: 证书密码
 4. `mqttx.ssl.key-store-type`: keystore 类别，如 `PKCS12`
 
-> `resources/tls` 目录中的 `mqttx.keystore` 仅供测试使用, 密码: `123456`
+> `resources/tls` 目录中的 `mqttx.keystore` 仅供测试使用, 密码: `123456`.
+>
+> 证书加载工具类：`com/jun/mqttx/utils/SslUtils.java`
 
 #### 4.5 topic 安全支持
 
@@ -304,7 +306,7 @@
 | `mqttx.soBacklog`                        | `512`                           | tcp 连接处理队列                                             |
 | `mqttx.enableTopicSubPubSecure`          | `false`                         | 客户订阅/发布主题安全功能，开启后将限制客户端发布/订阅的主题 |
 | `mqttx.enableInnerCache`                 | `true`                          | 发布消息每次都需要查询 redis 来获取订阅的客户端列表。开启此功能后，将在内存中建立一个主题-客户端关系映射, 应用直接访问内存中的数据即可 |
-| `mqttx.enableTestMode` | `false` | 开启测试模式 |
+| `mqttx.enableTestMode` | `false` | 测试模式开关，开启后系统进入测试模式 |
 | `mqttx.redis.clusterSessionHashKey`      | `mqttx.session.key`             | redis map key；用于集群的会话存储                          |
 | `mqttx.redis.topicPrefix`                | `mqttx:topic:`                  | 主题前缀； topic <--> client 映射关系保存                    |
 | `mqttx.redis.retainMessagePrefix`        | `mqttx:retain:`                 | 保留消息前缀, 保存 retian 消息                               |
@@ -327,7 +329,6 @@
 | `mqttx.sys-topic.enable` | `false` | 系统主题功能开关 |
 | `mqttx.sys-topic.interval` | `60s` | 定时发布间隔 |
 | `mqttx.sys-topic.qos` | `0` | 主题 qos |
-| `mqttx.enableTestMode` | false | 测试模式开关，开启后系统进入测试模式 |
 
 ### 6.2 版本说明
 
