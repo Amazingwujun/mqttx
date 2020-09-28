@@ -75,7 +75,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         this.enableCluster = cluster.getEnable();
         this.enableTopicSubPubSecure = mqttxConfig.getEnableTopicSubPubSecure();
         this.enableShareTopic = shareTopic.getEnable();
-        this.shareStrategy = ShareStrategy.getStrategy(shareTopic.getShareSubStrategy());
+        this.shareStrategy = shareTopic.getShareSubStrategy();
         if (round == shareStrategy) {
             roundMap = new ConcurrentHashMap<>();
         }

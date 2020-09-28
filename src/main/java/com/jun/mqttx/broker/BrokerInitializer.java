@@ -3,6 +3,7 @@ package com.jun.mqttx.broker;
 import com.jun.mqttx.broker.codec.MqttWebsocketCodec;
 import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.exception.GlobalException;
+import com.jun.mqttx.exception.SslException;
 import com.jun.mqttx.utils.SslUtils;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInitializer;
@@ -70,6 +71,9 @@ public class BrokerInitializer {
     /** ssl开关 */
     private Boolean sslEnable;
 
+    /** 客户端证书校验 */
+    private ClientAuth clientAuth;
+
     /**
      * 证书工具
      */
@@ -113,6 +117,7 @@ public class BrokerInitializer {
         this.websocketPath = webSocket.getPath();
         this.wsPort = webSocket.getPort();
         this.enableWebsocket = webSocket.getEnable();
+        this.clientAuth = ssl.getClientAuth();
 
         // 参数校验
         Assert.hasText(host, "host can't be null");
@@ -161,12 +166,20 @@ public class BrokerInitializer {
         }
         if (sslEnable) {
             try {
-                sslContext = SslContextBuilder
-                        .forServer(sslUtils.getKeyManagerFactory())
-                        .clientAuth(ClientAuth.NONE) // 不校验客户端
-                        .build();
+                if (ClientAuth.REQUIRE == clientAuth) {
+                    sslContext = SslContextBuilder
+                            .forServer(sslUtils.getKeyManagerFactory())
+                            .trustManager(sslUtils.getTrustManagerFactory())
+                            .clientAuth(ClientAuth.REQUIRE)
+                            .build();
+                } else {
+                    sslContext = SslContextBuilder
+                            .forServer(sslUtils.getKeyManagerFactory())
+                            .clientAuth(ClientAuth.NONE)
+                            .build();
+                }
             } catch (SSLException e) {
-                log.error(e.getMessage(), e);
+                throw new SslException(e.getMessage(), e);
             }
         }
 

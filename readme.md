@@ -159,9 +159,10 @@
 开启 ssl 你首先应该有了 *ca*(自签名或购买)，然后修改 `application.yml` 文件中几个配置：
 
 1. `mqttx.ssl.enable`：功能开关，默认 `false`，同时控制 `websocket` 与 `socket`
-2. `mqttx.ssl.key-store-location`: 证书地址，基于 `classpath`
-3. `mqttx.ssl.key-store-password`: 证书密码
-4. `mqttx.ssl.key-store-type`: keystore 类别，如 `PKCS12`
+2. `mqttx.ssl.key-store-location`：证书地址，基于 `classpath`
+3. `mqttx.ssl.key-store-password`：证书密码
+4. `mqttx.ssl.key-store-type`：keystore 类别，如 `PKCS12`
+5. `mqttx.ssl.client-auth`：服务端是否需要校验客户端证书，默认 `false`
 
 > `resources/tls` 目录中的 `mqttx.keystore` 仅供测试使用, 密码: `123456`.
 >
@@ -262,7 +263,7 @@
 
 1. 集群态考虑整合服务注册的功能，便于管理集群状态，可能会使用 `consul`，做不做看我后面的想法吧
 
-   >  其实我想引入 `SpringCloud` ，但又觉得 `springcloud` 有点太重了，可能会开一个分支实现给同学们学习吧。
+   >  其实我想引入 `SpringCloud` ，但又觉得 `springcloud` 有点重了，可能会开一个分支去实现。
 
 1. bug fix and optimization，这个会一直继续的，不过主要靠使用和学习 `mqttx` 的同学反馈问题给我（没反馈我就当没有呗~摊手.jpg）
 
@@ -274,7 +275,7 @@
 
 4. `mqttx` 还没压测过，算了，看心情吧~ （有同学帮忙不？） 
 
-   > 开发者说：说白了，就是懒。
+   > 说白了，就是懒。
 
 5. `netty 4.1.52.Final 支持了 mqtt5`，em...
 
@@ -316,6 +317,7 @@
 | `mqttx.cluster.enable`                   | `false`                         | 集群开关                                                     |
 | `mqttx.cluster.innerCacheConsistancyKey` | `mqttx:cache_consistence`       | 应用启动后，先查询 redis 中无此 key 值，然后在检查一致性     |
 | `mqttx.ssl.enable`                       | `false`                         | ssl 开关                                                     |
+| `mqttx.ssl.client-auth` | false | 客户端证书校验 |
 | `mqttx.ssl.keyStoreLocation`             | `classpath: tls/mqttx.keystore` | keyStore 位置                                                |
 | `mqttx.ssl.keyStorePassword`             | `用户手动配置`                  | keyStore 密码                                                |
 | `mqttx.ssl.keyStoreType`                 | `pkcs12`                        | keyStore 类别                                                |

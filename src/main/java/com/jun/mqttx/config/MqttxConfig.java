@@ -1,6 +1,7 @@
 package com.jun.mqttx.config;
 
 import com.jun.mqttx.constants.ShareStrategy;
+import io.netty.handler.ssl.ClientAuth;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
@@ -128,10 +129,11 @@ public class MqttxConfig {
         /** keyStore 密码 */
         private String keyStorePassword;
 
-        /**
-         * keyStore 类别,i.e pkcs12 jks
-         */
+        /** keyStore 类别 */
         private String keyStoreType = "pkcs12";
+
+        /** 客户端认证 */
+        private ClientAuth clientAuth = ClientAuth.NONE;
     }
 
     /**
@@ -184,7 +186,7 @@ public class MqttxConfig {
          * </ul>
          * @see ShareStrategy
          */
-        private String shareSubStrategy = ShareStrategy.round.name();
+        private ShareStrategy shareSubStrategy = ShareStrategy.round;
     }
 
     /**
