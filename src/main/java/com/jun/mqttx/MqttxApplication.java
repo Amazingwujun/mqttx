@@ -23,7 +23,7 @@ public class MqttxApplication {
         // preCheck
         preCheck(ctx);
 
-        //启动mqtt
+        // 启动mqtt
         ctx.getBean(BrokerInitializer.class).start();
     }
 

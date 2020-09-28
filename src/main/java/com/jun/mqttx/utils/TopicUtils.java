@@ -133,7 +133,7 @@ public class TopicUtils {
             }
         }
 
-        //共享主题
+        // 共享主题
         return true;
     }
 
@@ -153,10 +153,10 @@ public class TopicUtils {
             return false;
         }
 
-        //1 不允许 "/" 连续出现, 如 "//";
-        //2 不允许 " " 空字符出现
-        //3 "#" 只能出现在末位
-        //4 "/" 不允许出现在末位
+        // 1 不允许 "/" 连续出现, 如 "//";
+        // 2 不允许 " " 空字符出现
+        // 3 "#" 只能出现在末位
+        // 4 "/" 不允许出现在末位
         char[] allChar = subTopic.toCharArray();
         int len = allChar.length;
         for (int i = 0, j = Integer.MIN_VALUE; i < len; i++) {
@@ -178,7 +178,7 @@ public class TopicUtils {
             }
         }
 
-        //5 不允许 a/b+/c，a/b# 等非法 topicFilter
+        // 5 不允许 a/b+/c，a/b# 等非法 topicFilter
         String[] split = subTopic.split("/");
         boolean isStartWithShare = false;
         for (int i = 0; i < split.length; i++) {
@@ -189,7 +189,7 @@ public class TopicUtils {
                 }
             }
 
-            //增加共享订阅主题合法性判断
+            // 增加共享订阅主题合法性判断
             if (i == 0 && SHARE_TOPIC.equalsIgnoreCase(fragment)) {
                 isStartWithShare = true;
             }
@@ -222,7 +222,7 @@ public class TopicUtils {
         int pubsLen = pubs.length;
         int subsLen = subs.length;
         if (pubsLen >= subsLen) {
-            //发布主题层级高于订阅层级
+            // 发布主题层级高于订阅层级
             for (int i = 0; i < pubsLen; i++) {
                 String pubStr = pubs[i];
                 String subStr = subs[i];
@@ -244,7 +244,7 @@ public class TopicUtils {
                     break;
                 }
 
-                //有效长度匹配完成，后续无法匹配
+                // 有效长度匹配完成，后续无法匹配
                 if (i == subsLen - 1) {
                     if (pubsLen != subsLen) {
                         result = false;
@@ -254,7 +254,7 @@ public class TopicUtils {
             }
         } else {
             if (sub.endsWith("#") && subsLen == pubsLen + 1) {
-                //这里只需要比较 pubsLen 的字符即可
+                // 这里只需要比较 pubsLen 的字符即可
                 for (int i = 0; i < pubsLen; i++) {
                     String pubStr = pubs[i];
                     String subStr = subs[i];

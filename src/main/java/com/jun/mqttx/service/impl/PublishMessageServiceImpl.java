@@ -92,7 +92,7 @@ public class PublishMessageServiceImpl implements IPublishMessageService {
 
         List<Object> values = stringRedisTemplate.opsForHash().values(key(clientId));
         if (CollectionUtils.isEmpty(values)) {
-            //noinspection unchecked
+            // noinspection unchecked
             return Collections.EMPTY_LIST;
         }
 

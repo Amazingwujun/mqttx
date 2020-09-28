@@ -97,12 +97,12 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         super.channelInactive(ctx);
-        //获取当前会话
+        // 获取当前会话
         Session session = (Session) ctx.channel().attr(AttributeKey.valueOf(Session.KEY)).get();
 
-        //会话状态处理
+        // 会话状态处理
         if (session != null) {
-            //发布遗嘱消息
+            // 发布遗嘱消息
             Optional.of(session)
                     .map(Session::getWillMessage)
                     .ifPresent(msg -> messageDelegatingHandler.handle(ctx, msg));
@@ -146,13 +146,13 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
      */
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, MqttMessage mqttMessage) {
-        //异常处理
+        // 异常处理
         if (mqttMessage.decoderResult().isFailure()) {
             exceptionCaught(ctx, mqttMessage.decoderResult().cause());
             return;
         }
 
-        //消息处理
+        // 消息处理
         messageDelegatingHandler.handle(ctx, mqttMessage);
     }
 
@@ -164,7 +164,7 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
      */
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        //主要处理 connect 消息相关异常
+        // 主要处理 connect 消息相关异常
         MqttConnAckMessage mqttConnAckMessage = null;
         if (cause instanceof MqttIdentifierRejectedException) {
             mqttConnAckMessage = MqttMessageBuilders.connAck()
@@ -189,7 +189,7 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
 
             log.info("client 权限异常:{}", cause.getMessage());
         } else if (cause instanceof IOException) {
-            //连接被强制断开
+            // 连接被强制断开
             Session session = (Session) ctx.channel().attr(AttributeKey.valueOf(Session.KEY)).get();
             if (session != null) {
                 log.error("client:{} 连接出现异常", session.getClientId());
@@ -215,7 +215,7 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
         if (evt instanceof IdleStateEvent) {
             if (IdleState.ALL_IDLE.equals(((IdleStateEvent) evt).state())) {
-                //关闭连接
+                // 关闭连接
                 ctx.close();
             }
         } else if (evt instanceof SslHandshakeCompletionEvent) {

@@ -45,7 +45,7 @@ public class MessageDelegatingHandler {
     public MessageDelegatingHandler(List<MqttMessageHandler> mqttMessageHandlers) {
         Assert.notEmpty(mqttMessageHandlers, "messageHandlers can't be empty");
 
-        //置入处理器
+        // 置入处理器
         mqttMessageHandlers.forEach(mqttMessageHandler -> {
             Handler annotation = mqttMessageHandler.getClass().getAnnotation(Handler.class);
             Optional.ofNullable(annotation)
@@ -53,7 +53,7 @@ public class MessageDelegatingHandler {
                     .ifPresent(mqttMessageType -> handlerMap.put(mqttMessageType, mqttMessageHandler));
         });
 
-        //保证初始化处理数量正常
+        // 保证初始化处理数量正常
         Assert.isTrue(handlerMap.size() == 10, "broker 消息处理器数量异常:" + handlerMap.size());
     }
 

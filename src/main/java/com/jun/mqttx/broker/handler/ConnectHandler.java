@@ -111,37 +111,37 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
      */
     @Override
     public void process(ChannelHandlerContext ctx, MqttMessage msg) {
-        //获取identifier,password
+        // 获取identifier,password
         MqttConnectMessage mcm = (MqttConnectMessage) msg;
         MqttConnectVariableHeader variableHeader = mcm.variableHeader();
         MqttConnectPayload payload = mcm.payload();
 
-        //用户名及密码校验
+        // 用户名及密码校验
         Authentication auth = null;
         if (variableHeader.hasPassword() && variableHeader.hasUserName()) {
             auth = authenticationService.authenticate(payload.userName(), payload.passwordInBytes());
         }
 
-        //获取clientId
+        // 获取clientId
         String clientId = mcm.payload().clientIdentifier();
         if (StringUtils.isEmpty(clientId)) {
-            //[MQTT-3.1.3-8] If the Client supplies a zero-byte ClientId with CleanSession set to 0, the Server MUST
+            // [MQTT-3.1.3-8] If the Client supplies a zero-byte ClientId with CleanSession set to 0, the Server MUST
             // respond to the CONNECT Packet with a CONNACK return code 0x02 (Identifier rejected) and then close the
             // Network Connection.
             if (!variableHeader.isCleanSession()) {
                 throw new MqttIdentifierRejectedException("Violation: zero-byte ClientId with CleanSession set to 0");
             }
 
-            //broker  生成一个唯一ID
-            //[MQTT-3.1.3-6] A Server MAY allow a Client to supply a ClientId that has a length of zero bytes,
-            //however if it does so the Server MUST treat this as a special case and assign a unique ClientId to that Client.
-            //It MUST then process the CONNECT packet as if the Client had provided that unique ClientId
+            // broker  生成一个唯一ID
+            // [MQTT-3.1.3-6] A Server MAY allow a Client to supply a ClientId that has a length of zero bytes,
+            // however if it does so the Server MUST treat this as a special case and assign a unique ClientId to that Client.
+            // It MUST then process the CONNECT packet as if the Client had provided that unique ClientId
             clientId = genClientId();
         }
 
-        //关闭之前可能存在的tcp链接
-        //[MQTT-3.1.4-2] If the ClientId represents a Client already connected to the Server then the Server MUST
-        //disconnect the existing Client
+        // 关闭之前可能存在的tcp链接
+        // [MQTT-3.1.4-2] If the ClientId represents a Client already connected to the Server then the Server MUST
+        // disconnect the existing Client
         if (enableCluster) {
             internalMessagePublishService.publish(
                     new InternalMessage<>(clientId, System.currentTimeMillis(), brokerId),
@@ -153,17 +153,17 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
                 .filter(channel -> !Objects.equals(channel, ctx.channel()))
                 .ifPresent(ChannelOutboundInvoker::close);
 
-        //会话状态的处理
-        //[MQTT-3.1.3-7] If the Client supplies a zero-byte ClientId, the Client MUST also set CleanSession to 1. -
-        //这部分是 client 遵守的规则
-        //[MQTT-3.1.2-6] State data associated with this Session MUST NOT be reused in any subsequent Session - 针对
-        //clearSession == 1 的情况，需要清理之前保存的会话状态
+        // 会话状态的处理
+        // [MQTT-3.1.3-7] If the Client supplies a zero-byte ClientId, the Client MUST also set CleanSession to 1. -
+        // 这部分是 client 遵守的规则
+        // [MQTT-3.1.2-6] State data associated with this Session MUST NOT be reused in any subsequent Session - 针对
+        // clearSession == 1 的情况，需要清理之前保存的会话状态
         boolean clearSession = variableHeader.isCleanSession();
         if (clearSession) {
             actionOnCleanSession(clientId);
         }
 
-        //新建会话并保存会话，同时判断sessionPresent
+        // 新建会话并保存会话，同时判断sessionPresent
         Session session;
         boolean sessionPresent;
         if (clearSession) {
@@ -184,8 +184,8 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
             saveAuthorizedTopics(ctx, auth);
         }
 
-        //处理遗嘱消息
-        //[MQTT-3.1.2-8] If the Will Flag is set to 1 this indicates that, if the Connect request is accepted, a Will
+        // 处理遗嘱消息
+        // [MQTT-3.1.2-8] If the Will Flag is set to 1 this indicates that, if the Connect request is accepted, a Will
         // Message MUST be stored on the Server and associated with the Network Connection. The Will Message MUST be
         // published when the Network Connection is subsequently closed unless the Will Message has been deleted by the
         // Server on receipt of a DISCONNECT Packet.
@@ -201,30 +201,30 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
             session.setWillMessage(mqttPublishMessage);
         }
 
-        //返回连接响应
+        // 返回连接响应
         MqttConnAckMessage acceptAck = MqttMessageBuilders.connAck()
                 .sessionPresent(sessionPresent)
                 .returnCode(MqttConnectReturnCode.CONNECTION_ACCEPTED)
                 .build();
         ctx.writeAndFlush(acceptAck);
 
-        //心跳超时设置
-        //[MQTT-3.1.2-24] If the Keep Alive value is non-zero and the Server does not receive a Control Packet from
-        //the Client within one and a half times the Keep Alive time period, it MUST disconnect the Network Connection
-        //to the Client as if the network had failed
+        // 心跳超时设置
+        // [MQTT-3.1.2-24] If the Keep Alive value is non-zero and the Server does not receive a Control Packet from
+        // the Client within one and a half times the Keep Alive time period, it MUST disconnect the Network Connection
+        // to the Client as if the network had failed
         double heartbeat = variableHeader.keepAliveTimeSeconds() * 1.5;
         if (heartbeat > 0) {
-            //替换掉 NioChannelSocket 初始化时加入的 idleHandler
+            // 替换掉 NioChannelSocket 初始化时加入的 idleHandler
             ctx.pipeline().replace(IdleStateHandler.class, "idleHandler", new IdleStateHandler(
                     0, 0, (int) heartbeat));
         }
 
-        //根据协议补发 qos1,与 qos2 的消息
+        // 根据协议补发 qos1,与 qos2 的消息
         if (!clearSession) {
             List<PubMsg> pubMsgList = publishMessageService.search(clientId);
             pubMsgList.forEach(pubMsg -> {
                 String topic = pubMsg.getTopic();
-                //订阅权限判定
+                // 订阅权限判定
                 if (enableTopicSubPubSecure && !hasAuthToSubTopic(ctx, topic)) {
                     return;
                 }
@@ -232,12 +232,12 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
                 MqttMessage mqttMessage = MqttMessageFactory.newMessage(
                         new MqttFixedHeader(MqttMessageType.PUBLISH, true, MqttQoS.valueOf(pubMsg.getQoS()), false, 0),
                         new MqttPublishVariableHeader(topic, pubMsg.getMessageId()),
-                        //这是一个浅拷贝，任何对pubMsg中payload的修改都会反馈到wrappedBuffer
+                        // 这是一个浅拷贝，任何对pubMsg中payload的修改都会反馈到wrappedBuffer
                         Unpooled.wrappedBuffer(pubMsg.getPayload())
                 );
 
                 if (enableCluster) {
-                    //集群消息发布
+                    // 集群消息发布
                     internalMessagePublishService.publish(
                             new InternalMessage<>(pubMsg, System.currentTimeMillis(), brokerId),
                             InternalMessageEnum.PUB.getChannel()
@@ -250,7 +250,7 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
             List<Integer> pubRelList = pubRelMessageService.search(clientId);
             pubRelList.forEach(messageId -> {
                 MqttMessage mqttMessage = MqttMessageFactory.newMessage(
-                        //pubRel 的fixHeader 是固定死了的 [0,1,1,0,0,0,1,0]
+                        // pubRel 的fixHeader 是固定死了的 [0,1,1,0,0,0,1,0]
                         new MqttFixedHeader(MqttMessageType.PUBREL, false, MqttQoS.AT_MOST_ONCE, false, 0),
                         MqttMessageIdVariableHeader.from(messageId),
                         null

@@ -9,6 +9,9 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.epoll.Epoll;
+import io.netty.channel.epoll.EpollEventLoopGroup;
+import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -111,7 +114,7 @@ public class BrokerInitializer {
         this.wsPort = webSocket.getPort();
         this.enableWebsocket = webSocket.getEnable();
 
-        //参数校验
+        // 参数校验
         Assert.hasText(host, "host can't be null");
         Assert.notNull(port, "port can't be null");
         Assert.notNull(heartbeat, "heartbeat can't be null");
@@ -122,21 +125,47 @@ public class BrokerInitializer {
         if (!enableSocket && !enableWebsocket) {
             throw new GlobalException("socket 或 websocket 服务最少存在一个");
         }
+
+        if (Epoll.isAvailable()) {
+            log.info("Epoll 可用，启用 {}", EpollEventLoopGroup.class.getName());
+        } else {
+            log.info("Epoll 不可用，启用 {}", NioEventLoopGroup.class.getName());
+        }
     }
 
+
+    /**
+     * 启动服务.
+     * <p>
+     * 为优化性能，当 {@link Epoll#isAvailable()} = true , 启用 Native Epoll.
+     * 参考 <a href="https:// netty.io/wiki/native-transports.html">https:// netty.io/wiki/native-transports.html</a>
+     * <p>
+     * <pre>
+     * Netty provides the following platform specific JNI transports:
+     *    Linux (since 4.0.16)
+     *    MacOS/BSD (since 4.1.11)
+     * These JNI transports add features specific to a particular platform, generate less garbage,
+     * and generally improve performance when compared to the NIO based transport.
+     * </pre>
+     * 普遍的服务器都是 x86 架构 64bit 的 linux 系统, 所以 pom 中引入 <classifier>linux-x86_64</classifier> 的依赖
+     */
     public void start() throws InterruptedException {
         if (boss == null || work == null) {
-            boss = new NioEventLoopGroup(1);
-            work = new NioEventLoopGroup();
+            if (Epoll.isAvailable()) {
+                boss = new EpollEventLoopGroup(1);
+                work = new EpollEventLoopGroup();
+            } else {
+                boss = new NioEventLoopGroup(1);
+                work = new NioEventLoopGroup();
+            }
         }
         if (sslEnable) {
             try {
                 sslContext = SslContextBuilder
                         .forServer(sslUtils.getKeyManagerFactory())
-                        .clientAuth(ClientAuth.NONE) //不校验客户端
+                        .clientAuth(ClientAuth.NONE) // 不校验客户端
                         .build();
             } catch (SSLException e) {
-                //do nothing
                 log.error(e.getMessage(), e);
             }
         }
@@ -156,9 +185,14 @@ public class BrokerInitializer {
     private void socket() throws InterruptedException {
         ServerBootstrap b = new ServerBootstrap();
 
+        if (Epoll.isAvailable()) {
+            b.channel(EpollServerSocketChannel.class);
+        } else {
+            b.channel(NioServerSocketChannel.class);
+        }
+
         b
                 .group(boss, work)
-                .channel(NioServerSocketChannel.class)
                 .handler(new LoggingHandler(LogLevel.INFO))
                 .option(ChannelOption.SO_BACKLOG, soBacklog)
                 .childHandler(new ChannelInitializer<SocketChannel>() {
@@ -169,7 +203,6 @@ public class BrokerInitializer {
                         if (sslEnable) {
                             pipeline.addLast(sslContext.newHandler(socketChannel.alloc()));
                         }
-                        //心跳检测
                         pipeline.addLast(new IdleStateHandler(0, 0,
                                 (int) heartbeat.getSeconds()));
                         pipeline.addLast(MqttEncoder.INSTANCE);
@@ -182,12 +215,33 @@ public class BrokerInitializer {
 
     /**
      * websocket 服务
+     * <pre>
+     *    If MQTT is transported over a WebSocket [RFC6455] connection, the following conditions apply:
+     * · MQTT Control Packets MUST be sent in WebSocket binary data frames. If any other type of data frame is received the recipient MUST close the Network Connection [MQTT-6.0.0-1].
+     * · A single WebSocket data frame can contain multiple or partial MQTT Control Packets. The receiver MUST NOT assume that MQTT Control Packets are aligned on WebSocket frame boundaries [MQTT-6.0.0-2].
+     * · The client MUST include “mqtt” in the list of WebSocket Sub Protocols it offers [MQTT-6.0.0-3].
+     * · The WebSocket Sub Protocol name selected and returned by the server MUST be “mqtt” [MQTT-6.0.0-4].
+     * · The WebSocket URI used to connect the client and server has no impact on the MQTT protocol.
+     * </pre>
+     * 总结一下就是：
+     * <ol>
+     *     <li>必须使用字节流（webSocket binary data frames）, 其它一律关闭连接</li>
+     *     <li>一个 websocket 可以包含多个 mqtt 控制包, 实现协议时不能假设一个 websocket 包就是一个 mqtt 控制包</li>
+     *     <li>客户端要申明自己的自协议是 "mqtt"</li>
+     *     <li>服务端当然得支持子协议(subProtocol) "mqtt" 啦</li>
+     * </ol>
      */
     private void websocket() throws InterruptedException {
         ServerBootstrap b = new ServerBootstrap();
+
+        if (Epoll.isAvailable()) {
+            b.channel(EpollServerSocketChannel.class);
+        } else {
+            b.channel(NioServerSocketChannel.class);
+        }
+
         b
                 .group(boss, work)
-                .channel(NioServerSocketChannel.class)
                 .handler(new LoggingHandler(LogLevel.INFO))
                 .childHandler(new ChannelInitializer<SocketChannel>() {
 
@@ -201,7 +255,6 @@ public class BrokerInitializer {
                         pipeline.addLast(new HttpServerCodec());
                         pipeline.addLast(new HttpObjectAggregator(65536));
                         pipeline.addLast(new WebSocketServerCompressionHandler());
-                        // 请求头中 Sec-WebSocket-Protocol: mqtt, 故 subprotocols 应该支持 mqtt
                         pipeline.addLast(new WebSocketServerProtocolHandler(websocketPath, "mqtt", true));
                         pipeline.addLast(new MqttWebsocketCodec());
                         pipeline.addLast(MqttEncoder.INSTANCE);

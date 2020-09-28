@@ -17,7 +17,7 @@ public class AuthenticationServiceImpl implements IAuthenticationService {
 
     @Override
     public Authentication authenticate(String username, byte[] password) throws AuthenticationException, AuthorizationException {
-        //do nothing
+        // do-nothing
 
         return null;
     }

@@ -100,7 +100,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         MqttPublishVariableHeader mqttPublishVariableHeader = mpm.variableHeader();
         ByteBuf payload = mpm.payload();
 
-        //获取qos、topic、packetId、retain、payload
+        // 获取qos、topic、packetId、retain、payload
         int mqttQoS = mqttFixedHeader.qosLevel().value();
         String topic = mqttPublishVariableHeader.topicName();
         int packetId = mqttPublishVariableHeader.packetId();
@@ -108,20 +108,20 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         byte[] data = new byte[payload.readableBytes()];
         payload.readBytes(data);
 
-        //发布权限判定
+        // 发布权限判定
         if (enableTopicSubPubSecure && !hasAuthToPubTopic(ctx, topic)) {
             throw new AuthorizationException("无对应 topic 发布权限");
         }
 
-        //组装消息
+        // 组装消息
         PubMsg pubMsg = new PubMsg(mqttQoS, packetId, topic, retain, data);
 
-        //响应
+        // 响应
         switch (mqttQoS) {
-            case 0: //at most once
+            case 0: // at most once
                 publish(pubMsg, ctx, false);
                 break;
-            case 1: //at least once
+            case 1: // at least once
                 publish(pubMsg, ctx, false);
                 MqttMessage pubAck = MqttMessageFactory.newMessage(
                         new MqttFixedHeader(MqttMessageType.PUBACK, false, MqttQoS.valueOf(mqttQoS), false, 0),
@@ -130,7 +130,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                 );
                 ctx.writeAndFlush(pubAck);
                 break;
-            case 2: //exactly once
+            case 2: // exactly once
                 MqttMessage pubRec = MqttMessageFactory.newMessage(
                         new MqttFixedHeader(MqttMessageType.PUBREC, false, MqttQoS.valueOf(mqttQoS), false, 0),
                         MqttMessageIdVariableHeader.from(packetId),
@@ -138,9 +138,9 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                 );
                 ctx.writeAndFlush(pubRec);
 
-                //判断消息是否重复
+                // 判断消息是否重复
                 if (!pubRelMessageService.isDupMsg(clientId(ctx), packetId)) {
-                    //发布新的消息并保存 pubRel 标记，用于实现Qos2
+                    // 发布新的消息并保存 pubRel 标记，用于实现Qos2
                     publish(pubMsg, ctx, false);
                     if (isCleanSession(ctx)) {
                         getSession(ctx).savePubRelMsg(packetId);
@@ -151,7 +151,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                 break;
         }
 
-        //retain 消息处理
+        // retain 消息处理
         if (mqttFixedHeader.isRetain()) {
             handleRetainMsg(pubMsg);
         }
@@ -175,21 +175,21 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
      * @param isInternalMessage 标志消息源是集群还是客户端
      */
     private void publish(final PubMsg pubMsg, ChannelHandlerContext ctx, boolean isInternalMessage) {
-        //获取 topic 订阅者 id 列表
+        // 获取 topic 订阅者 id 列表
         String topic = pubMsg.getTopic();
         List<ClientSub> clientList = subscriptionService.searchSubscribeClientList(topic);
         if (CollectionUtils.isEmpty(clientList)) {
             return;
         }
 
-        //共享订阅
+        // 共享订阅
         if (enableShareTopic && TopicUtils.isShare(topic)) {
             ClientSub hashClient = chooseClient(clientList, clientId(ctx), topic);
             publish0(ctx, hashClient, pubMsg, isInternalMessage);
             return;
         }
 
-        //遍历发送
+        // 遍历发送
         clientList.forEach(clientSub -> publish0(ctx, clientSub, pubMsg, isInternalMessage));
     }
 
@@ -204,13 +204,13 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         String topic = pubMsg.getTopic();
         int qos = pubMsg.getQoS();
 
-        //如果 retain = 1 且 payload bytes.size = 0
+        // 如果 retain = 1 且 payload bytes.size = 0
         if (payload == null || payload.length == 0) {
             subscriptionService.removeTopic(topic);
             return;
         }
 
-        //如果 qos = 0 且  retain = 1
+        // 如果 qos = 0 且  retain = 1
         if (MqttQoS.AT_MOST_ONCE.value() == qos) {
             retainMessageService.remove(topic);
             return;
@@ -231,12 +231,12 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         final String clientId = clientSub.getClientId();
         String topic = pubMsg.getTopic();
 
-        //计算Qos
+        // 计算Qos
         int pubQos = pubMsg.getQoS();
         int subQos = clientSub.getQos();
         MqttQoS qos = subQos >= pubQos ? MqttQoS.valueOf(pubQos) : MqttQoS.valueOf(subQos);
 
-        //组装PubMsg
+        // 组装PubMsg
         int messageId = nextMessageId(ctx);
         pubMsg.setMessageId(messageId);
         // It MUST set the RETAIN flag to 0 when a PUBLISH Packet is sent to a Client because it matches an established
@@ -249,7 +249,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                 .payload(Unpooled.wrappedBuffer(pubMsg.getPayload()))
                 .build();
 
-        //集群消息不做保存，传播消息的 broker 已经保存过了
+        // 集群消息不做保存，传播消息的 broker 已经保存过了
         if ((qos == MqttQoS.EXACTLY_ONCE || qos == MqttQoS.AT_LEAST_ONCE) && !isInternalMessage) {
             if (isCleanSession(ctx)) {
                 // 如果 cleanSession = 1，消息直接关联会话，不需要持久化
@@ -259,12 +259,12 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
             }
         }
 
-        //将消息推送给集群中的broker
+        // 将消息推送给集群中的broker
         if (enableCluster) {
             internalMessagePublish(pubMsg);
         }
 
-        //发送
+        // 发送
         Optional.of(clientId)
                 .map(ConnectHandler.clientMap::get)
                 .map(BrokerHandler.CHANNELS::find)
@@ -294,7 +294,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
      * @return 按规则选择的客户端
      */
     private ClientSub chooseClient(List<ClientSub> clientSubList, String clientId, String topic) {
-        //集合排序
+        // 集合排序
         clientSubList.sort(ClientSub::compareTo);
 
         if (hash == shareStrategy) {

@@ -20,6 +20,7 @@
 - [5 路线图](#5-路线图)
 - [6 附表](#6-附表)
     - [6.1 配置项](#61-配置项)
+    - [6.2 版本说明](#62-版本说明)
 
 ## 1 介绍
 
@@ -48,7 +49,7 @@
 - 开发模式
     1. 消息会持久化到 `redis`, 默认连接 `localhost:6376` 无密码
 
-所谓的**测试模式**、**开发模式**只是方便同学们快速启动项目，方便测试功能测试。熟悉项目后，同学们可通过修改***[6.1 配置项](#61-配置项)*** 开启或关闭 `mqttx` 提供的各项功能。
+所谓**测试模式**、**开发模式**只是方便同学们快速启动项目，方便测试功能测试。熟悉项目后，同学们可通过修改**[6.1 配置项](#61-配置项)**开启或关闭 `mqttx` 提供的各项功能。
 
 > `mqttx` 依赖 `redis` 实现消息持久化、集群等功能，使用其它中间件（`mysql`, `mongodb`, `kafka` 等）同样能够实现，而 `springboot` 具备 `spring-boot-starter-***`  等各种可插拔组件，方便大家修改默认的实现
 
@@ -67,7 +68,7 @@
 云端部署了一个 `mqttx` 单例服务，可供功能测试：
 1. 不支持 ssl
 2. 开启了 websocket, 可通过 http://tools.emqx.io/ 测试，仅需将域名修改为：`119.45.158.51`(端口、地址不变)
-3. 支持 共享订阅功能
+3. 支持共享订阅功能
 4. 部署版本 `v1.0.4.RELEASE`
 
 ![websocket](https://s1.ax1x.com/2020/09/05/wV578J.png)
@@ -91,19 +92,19 @@
 │  └─com
 │      └─jun
 │          └─mqttx
-│              ├─broker         mqtt 协议实现及处理包
-│              │  ├─codec       编解码
-│              │  └─handler     消息处理器（pub, sub, connn, etc）
-│              ├─config         配置，主要是 bean 声明
-│              ├─constants      常量
-│              ├─consumer       集群消息消费者
-│              ├─entity         实体类
-│              ├─exception      异常类
-│              ├─service        业务服务（用户认证, 消息存储等）接口
-│              │  └─impl        默认实现
-│              └─utils          工具类
-└─resources                     资源文件（application.yml 在此文件夹）
-    └─tls                       ca 存放地址
+│              ├─broker         # mqtt 协议实现及处理包
+│              │  ├─codec       # 编解码
+│              │  └─handler     # 消息处理器（pub, sub, connn, etc）
+│              ├─config         # 配置，主要是 bean 声明
+│              ├─constants      # 常量
+│              ├─consumer       # 集群消息消费者
+│              ├─entity         # 实体类
+│              ├─exception      # 异常类
+│              ├─service        # 业务服务（用户认证, 消息存储等）接口
+│              │  └─impl        # 默认实现
+│              └─utils          # 工具类
+└─resources                     # 资源文件（application.yml 在此文件夹）
+    └─tls                       # ca 存放地址
 ```
 ## 3 容器化部署
 
@@ -120,21 +121,19 @@
 
 #### 4.1 qos 支持
 
-- [x] qos0
-- [x] qos1
-- [x] qos2
+| qos0 | qos1 | qos2 |
+| ---- | ---- | ---- |
+| 支持 | 支持 | 支持 |
 
 为支持 qos1、qos2，引入 `redis` 作为持久层，这部分已经封装成接口，可自行替换实现（比如采用 `mysql`）。
 
 #### 4.2 topicFilter 支持
 
-1. 支持多级通配符 `#`与单级通配符 `+`，不支持通配符 `$`
-3. 不支持以 `/`结尾的topic，比如 a/b/，请改为 a/b。
-4. 其它规则见 [mqtt v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) 4.7 Topic Names and Topic Filters
+1. 支持多级通配符 `#`与单级通配符 `+`
+3. 不支持以 `/`结尾的topic，比如 `a/b/`，请改为 `a/b`。
+4. 其它规则见 *[mqtt v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) 4.7 Topic Names and Topic Filters*
 
->  **mqttx** 仅对订阅 topicFilter 进行校验，publish 的 topic 是没有做合法性检查的。如果 [4.5 topic 安全支持](#45-topic) 功能开启
->
-> ，客户端只允许发布消息到被授权的主题。
+>  **mqttx** 仅对订阅 topicFilter 进行校验，publish 的 topic 是没有做合法性检查的，可通过开启 [4.5 topic 安全支持](#45-topic) 限制客户端可发布的 topic。
 
 举例：
 
@@ -257,18 +256,31 @@
 
 
 
-## 5 路线图
-
-基于我个人的认知，`mqttx` 接下来可能的开发计划：
+## 5 开发计划
 
 1. 集群态考虑整合服务注册的功能，便于管理集群状态，可能会使用 `consul`，做不做看我后面的想法吧
-3. bug fix and optimization，这个会一直继续的，不过主要靠使用和学习 `mqttx` 的同学反馈问题给我（没反馈我就当没有呗~摊手.jpg）
-4. 目前正在开发基于 `vue2.0`, `element-ui` 的 [mqttx-admin](https://github.com/Amazingwujun/mqttx-admin) 管理平台，`mqttx` 的功能更新会暂停一段时间~~(最近在看 [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html))~~。
-项目开发过程中发现需要对 `mqttx` 做一些改动，但这些改动不应该 push 给 mqttx master（比如 topic 安全认证这个功能需要配合 `mqttx-platform`，我可能会引入 [Retrofit](https://square.github.io/retrofit/) 处理接口调用，其实可以用 `feign`，我觉的这两个都差不多），我应该会开一个业务 branch 处理这个事情。话说 `javascript` 写项目可太爽了，以前怎么不觉得?
-5. `mqttx` 还没压测过，算了，看心情吧~ （有同学帮忙不？） 
+
+   >  其实我想引入 `SpringCloud` ，但又觉得 `springcloud` 有点太重了，可能会开一个分支实现给同学们学习吧。
+
+1. bug fix and optimization，这个会一直继续的，不过主要靠使用和学习 `mqttx` 的同学反馈问题给我（没反馈我就当没有呗~摊手.jpg）
+
+   >  这个其实非常重要的，但截至到目前也少有同学找我反馈问题，我一个人终究力量有限。
+
+3. 目前正在开发基于 `vue2.0`, `element-ui` 的 [mqttx-admin](https://github.com/Amazingwujun/mqttx-admin) 管理平台，`mqttx` 的功能更新会暂停一段时间~~(最近在看 [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html))~~。项目开发过程中发现需要对 `mqttx` 做一些改动，但这些改动不应该 push 给 mqttx master（比如 topic 安全认证这个功能需要配合 `mqttx-platform`，我可能会引入 [Retrofit](https://square.github.io/retrofit/) 处理接口调用，其实可以用 `feign`，我觉的这两个都差不多），我应该会开一个业务 branch 处理这个事情。话说 `javascript` 写项目可太爽了，以前怎么不觉得?
+
+   > 本来说要放一部分精力到 `mqttx-admin` 这个衍生项目的，但后来发现 `mqttx` 还有太多事情需要做，只能变更计划了。
+
+4. `mqttx` 还没压测过，算了，看心情吧~ （有同学帮忙不？） 
+
+   > 开发者说：说白了，就是懒。
+
 5. `netty 4.1.52.Final 支持了 mqtt5`，em...
 
-任何问题，请联系我。邮箱：85998282@qq.com.
+   > `v1.0.5.RELEASE` 后，我会考虑支持 `mqtt5` 协议的，又是一个大工程啊。
+
+
+
+邮箱：85998282@qq.com，项目相关问题可以联系我。
 
 ## 6 附表
 
@@ -317,5 +329,26 @@
 | `mqttx.sys-topic.qos` | `0` | 主题 qos |
 | `mqttx.enableTestMode` | false | 测试模式开关，开启后系统进入测试模式 |
 
+### 6.2 版本说明
 
-
+- **v1.0.5.RELEASE(开发中)**
+  - [x] 测试模式支持
+  - [x] `epoll` 支持，见 [https://netty.io/wiki/native-transports.html](https://netty.io/wiki/native-transports.html)
+  - [x] 优化 `cleanSession` 消息处理机制
+  - [x] bug 修复及优化
+- **v1.0.4.RELEASE**
+  - [x] websocket 支持
+  - [x] 集群状态自检
+  - [x] bug 修复及优化
+- **v1.0.3.RELEASE**
+  - [x] bug 修复
+- **v1.0.2.RELEASE**
+  - [x]  共享主题加入轮询策略
+  - [x] bug 修复及优化
+- **v1.0.1.RELEASE**
+  - [x] 基于 `redis` 的集群功能支持
+  - [x] 共享主题支持
+  - [x] 主题权限功能
+  - [x] bug 修复及优化
+- **v1.0.0.RELEASE**
+  - [x] `mqttv3.1.1` 完整协议实现

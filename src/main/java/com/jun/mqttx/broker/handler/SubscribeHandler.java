@@ -77,7 +77,7 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
      */
     @Override
     public void process(final ChannelHandlerContext ctx, MqttMessage msg) {
-        //获取订阅的topic、clientId
+        // 获取订阅的topic、clientId
         MqttSubscribeMessage mqttSubscribeMessage = (MqttSubscribeMessage) msg;
         int messageId = mqttSubscribeMessage.variableHeader().messageId();
         List<MqttTopicSubscription> mqttTopicSubscriptions = mqttSubscribeMessage.payload().topicSubscriptions();
@@ -93,11 +93,11 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
             int qos = mqttTopicSubscription.qualityOfService().value();
 
             if (!TopicUtils.isValid(topic)) {
-                //Failure
+                // Failure
                 qos = 0x80;
             } else {
                 if (enableTopicPubSubSecure && !hasAuthToSubTopic(ctx, topic)) {
-                    //client 不允许订阅此 topic
+                    // client 不允许订阅此 topic
                     qos = 0x80;
                 } else {
                     // 系统主题消息订阅, 则定时发布订阅的主题给客户端
@@ -214,7 +214,7 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
                 break;
             }
             default:
-                //unreachable code
+                // unreachable code
         }
     }
 

@@ -98,17 +98,17 @@ public class SubscriptionServiceImpl implements ISubscriptionService, Watcher<Cl
         if (enableTestMode) {
             subscribeWithCache(clientSub);
         } else {
-            //保存topic <---> client 映射
+            // 保存topic <---> client 映射
             stringRedisTemplate.opsForHash()
                     .put(topicPrefix + topic, clientId, String.valueOf(qos));
 
-            //将topic保存到redis set集合中
+            // 将topic保存到redis set集合中
             stringRedisTemplate.opsForSet().add(topicSetKey, topic);
 
             if (enableInnerCache) {
                 subscribeWithCache(clientSub);
 
-                //发布集群广播
+                // 发布集群广播
                 if (enableCluster) {
                     InternalMessage<ClientSub> im = new InternalMessage<>(clientSub, System.currentTimeMillis(), brokerId);
                     internalMessagePublishService.publish(im, InternalMessageEnum.SUB_UNSUB.getChannel());
@@ -134,11 +134,11 @@ public class SubscriptionServiceImpl implements ISubscriptionService, Watcher<Cl
         } else {
             topics.forEach(topic -> stringRedisTemplate.opsForHash().delete(topicPrefix + topic, clientId));
 
-            //启用内部缓存机制
+            // 启用内部缓存机制
             if (enableInnerCache) {
                 unsubscribeWithCache(clientId, topics);
 
-                //集群广播
+                // 集群广播
                 if (enableCluster) {
                     ClientSubOrUnsubMsg clientSubOrUnsubMsg = new ClientSubOrUnsubMsg(clientId, 0, null, topics, UN_SUB);
                     InternalMessage<ClientSubOrUnsubMsg> im = new InternalMessage<>(clientSubOrUnsubMsg, System.currentTimeMillis(), brokerId);
@@ -159,12 +159,12 @@ public class SubscriptionServiceImpl implements ISubscriptionService, Watcher<Cl
     @SuppressWarnings("unchecked")
     @Override
     public List<ClientSub> searchSubscribeClientList(String topic) {
-        //启用内部缓存机制
+        // 启用内部缓存机制
         if (enableInnerCache || enableTestMode) {
             return searchSubscribeClientListByCache(topic);
         }
 
-        //未启用内部缓存机制，直接通过 redis 抓取
+        // 未启用内部缓存机制，直接通过 redis 抓取
         Set<String> allTopic = stringRedisTemplate.opsForSet().members(topicSetKey);
         if (CollectionUtils.isEmpty(allTopic)) {
             return Collections.EMPTY_LIST;
@@ -209,7 +209,7 @@ public class SubscriptionServiceImpl implements ISubscriptionService, Watcher<Cl
         if (enableInnerCache) {
             removeTopicWithCache(topic);
 
-            //集群广播
+            // 集群广播
             if (enableCluster) {
                 ClientSubOrUnsubMsg clientSubOrUnsubMsg = new ClientSubOrUnsubMsg(null, 0, topic, null, DEL_TOPIC);
                 InternalMessage<ClientSubOrUnsubMsg> im = new InternalMessage<>(clientSubOrUnsubMsg, System.currentTimeMillis(), brokerId);
@@ -293,7 +293,7 @@ public class SubscriptionServiceImpl implements ISubscriptionService, Watcher<Cl
      * @return 客户端订阅列表
      */
     private List<ClientSub> searchSubscribeClientListByCache(String topic) {
-        //result
+        // result
         List<ClientSub> clientSubList = new ArrayList<>();
 
         for (String t : allTopics) {
@@ -342,7 +342,7 @@ public class SubscriptionServiceImpl implements ISubscriptionService, Watcher<Cl
 
         allTopics.add(topic);
 
-        //保存客户端订阅内容
+        // 保存客户端订阅内容
         ConcurrentHashMap.KeySetView<ClientSub, Boolean> subMap = topicClientMap.computeIfAbsent(topic, k -> ConcurrentHashMap.newKeySet());
         subMap.add(clientSub);
     }

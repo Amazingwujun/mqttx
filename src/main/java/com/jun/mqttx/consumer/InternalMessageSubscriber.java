@@ -47,7 +47,7 @@ public class InternalMessageSubscriber {
      */
     @SuppressWarnings("unchecked")
     public void handleMessage(String message, String channel) {
-        //同 broker 消息屏蔽
+        // 同 broker 消息屏蔽
         InternalMessage internalMessage = JSON.parseObject(message, InternalMessage.class);
         if (brokerId == internalMessage.getBrokerId()) {
             return;
@@ -56,7 +56,7 @@ public class InternalMessageSubscriber {
         for (Watcher watcher : watchers) {
             if (watcher.support(channel)) {
                 watcher.action(JSON.parseObject(message, InternalMessage.class));
-                //一个消息只能由一个观察者消费
+                // 一个消息只能由一个观察者消费
                 break;
             }
         }
