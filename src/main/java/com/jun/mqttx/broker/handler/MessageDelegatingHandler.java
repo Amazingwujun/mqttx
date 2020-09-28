@@ -1,8 +1,11 @@
 package com.jun.mqttx.broker.handler;
 
+import com.jun.mqttx.entity.Session;
+import com.jun.mqttx.exception.AuthorizationException;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttMessageType;
+import io.netty.util.AttributeKey;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
@@ -65,7 +68,14 @@ public class MessageDelegatingHandler {
      */
     public void handle(ChannelHandlerContext ctx, MqttMessage mqttMessage) {
         MqttMessageType mqttMessageType = mqttMessage.fixedHeader().messageType();
-        Optional.ofNullable(handlerMap.get(mqttMessageType))
-                .ifPresent(mqttMessageHandler -> mqttMessageHandler.process(ctx, mqttMessage));
+
+        // 连接校验
+        if (mqttMessageType != MqttMessageType.CONNECT &&
+                ctx.channel().attr(AttributeKey.valueOf(Session.KEY)).get() == null) {
+            throw new AuthorizationException("access denied");
+        }
+
+        Optional.of(handlerMap.get(mqttMessageType))
+                .ifPresent(messageHandler -> messageHandler.process(ctx, mqttMessage));
     }
 }
