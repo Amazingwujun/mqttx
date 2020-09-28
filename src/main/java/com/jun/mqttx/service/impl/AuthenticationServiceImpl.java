@@ -27,7 +27,6 @@ public class AuthenticationServiceImpl implements IAuthenticationService {
 
     @Override
     public void asyncAuthenticate(ClientAuthDTO authDTO, Consumer<Authentication> onResponse, Consumer<Throwable> onFailure) {
-        // do-it-yourself
-
+        onResponse.accept(null);
     }
 }
