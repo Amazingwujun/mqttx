@@ -3,10 +3,8 @@ package com.jun.mqttx.broker.handler;
 import com.jun.mqttx.broker.BrokerHandler;
 import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.constants.InternalMessageEnum;
-import com.jun.mqttx.entity.Authentication;
-import com.jun.mqttx.entity.InternalMessage;
-import com.jun.mqttx.entity.PubMsg;
-import com.jun.mqttx.entity.Session;
+import com.jun.mqttx.entity.*;
+import com.jun.mqttx.exception.AuthenticationException;
 import com.jun.mqttx.service.*;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -14,6 +12,7 @@ import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelOutboundInvoker;
 import io.netty.handler.codec.mqtt.*;
 import io.netty.handler.timeout.IdleStateHandler;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
@@ -31,6 +30,7 @@ import static io.netty.handler.codec.mqtt.MqttMessageType.CONNECT;
  * @author Jun
  * @since 1.0.4
  */
+@Slf4j
 @Handler(type = CONNECT)
 public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
 
@@ -97,14 +97,7 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
     }
 
     /**
-     * 客户端连接请求处理，流程如下：
-     * <ol>
-     *     <li>连接校验</li>
-     *     <li>处理 clientId 关联的连接 </li>
-     *     <li>返回响应报文</li>
-     *     <li>心跳检测</li>
-     *     <li>Qos1\Qos2 消息处理</li>
-     * </ol>
+     * 客户端连接请求处理
      *
      * @param ctx 见 {@link ChannelHandlerContext}
      * @param msg 解包后的数据
@@ -115,12 +108,39 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         MqttConnectMessage mcm = (MqttConnectMessage) msg;
         MqttConnectVariableHeader variableHeader = mcm.variableHeader();
         MqttConnectPayload payload = mcm.payload();
+        final String username = payload.userName();
+        final byte[] password = payload.passwordInBytes();
 
         // 用户名及密码校验
-        Authentication auth = null;
         if (variableHeader.hasPassword() && variableHeader.hasUserName()) {
-            auth = authenticationService.authenticate(payload.userName(), payload.passwordInBytes());
+            authenticationService.asyncAuthenticate(
+                    ClientAuthDTO.of(username, password),
+                    authentication -> proccess0(ctx, msg, authentication),
+                    throwable -> {
+                        throw new AuthenticationException("登入失败", throwable);
+                    });
+        } else {
+            proccess0(ctx, msg, null);
         }
+    }
+
+    /**
+     * 客户端连接请求处理，流程如下：
+     * <ol>
+     *     <li>处理 clientId 关联的连接 </li>
+     *     <li>返回响应报文</li>
+     *     <li>心跳检测</li>
+     *     <li>Qos1\Qos2 消息处理</li>
+     * </ol>
+     *
+     * @param ctx  见 {@link ChannelHandlerContext}
+     * @param msg  解包后的数据
+     * @param auth 认证对象，见 {@link Authentication}
+     */
+    private void proccess0(ChannelHandlerContext ctx, MqttMessage msg, Authentication auth) {
+        MqttConnectMessage mcm = (MqttConnectMessage) msg;
+        MqttConnectVariableHeader variableHeader = mcm.variableHeader();
+        MqttConnectPayload payload = mcm.payload();
 
         // 获取clientId
         String clientId = mcm.payload().clientIdentifier();
@@ -250,7 +270,7 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
             List<Integer> pubRelList = pubRelMessageService.search(clientId);
             pubRelList.forEach(messageId -> {
                 MqttMessage mqttMessage = MqttMessageFactory.newMessage(
-                        // pubRel 的fixHeader 是固定死了的 [0,1,1,0,0,0,1,0]
+                        // pubRel 的 fixHeader 是固定死了的 [0,1,1,0,0,0,1,0]
                         new MqttFixedHeader(MqttMessageType.PUBREL, false, MqttQoS.AT_MOST_ONCE, false, 0),
                         MqttMessageIdVariableHeader.from(messageId),
                         null
