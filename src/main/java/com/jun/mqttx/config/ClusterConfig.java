@@ -63,7 +63,7 @@ public class ClusterConfig {
      * @param messageListener        {@link MessageListener}
      */
     @Bean
-    @ConditionalOnProperty(name = "mqttx.cluster.type", havingValue = "redis")
+    @ConditionalOnProperty(name = "mqttx.cluster.type", havingValue = "redis", matchIfMissing = true)
     public RedisMessageListenerContainer redisMessageListenerContainer(RedisConnectionFactory redisConnectionFactory,
                                                                        MessageListener messageListener) {
         RedisMessageListenerContainer redisMessageListenerContainer = new RedisMessageListenerContainer();

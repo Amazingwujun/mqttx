@@ -9,6 +9,9 @@ mqttx:
     enable: true
   sys-topic:
     enable: true
+  cluster:
+    enable: false
+    type: redis
 
 # 1 开启 ssl 配置示例
 #spring:

@@ -57,6 +57,14 @@
           "description": "校验客户端证书."
         }
       ]
+    },
+    {
+      "name": "mqttx.cluster.type",
+      "values": [
+        {
+          "value": "redis"
+        }
+      ]
     }
   ]
 }
