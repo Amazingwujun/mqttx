@@ -28,7 +28,7 @@ import static com.jun.mqttx.constants.InternalMessageEnum.*;
  * @since 1.0.4
  */
 @Configuration
-@ConditionalOnExpression("${mqttx.cluster.enable:true} and ${mqttx.enableTestMode:false}")
+@ConditionalOnExpression("${mqttx.cluster.enable:false} && !${mqttx.enable-test-mode:false}")
 public class ClusterConfig {
 
     @SuppressWarnings("rawtypes")
