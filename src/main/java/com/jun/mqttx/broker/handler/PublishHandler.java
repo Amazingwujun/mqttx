@@ -15,6 +15,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
@@ -22,6 +23,7 @@ import org.springframework.util.CollectionUtils;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -52,13 +54,21 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
     private ShareStrategy shareStrategy;
 
     /**
+     * 消息桥接开关
+     */
+    private Boolean enableMessageBridge;
+    private Set<String> bridgeTopics;
+    private KafkaTemplate<String, byte[]> kafkaTemplate;
+
+    /**
      * 共享订阅轮询，存储轮询参数
      */
     private Map<String, AtomicInteger> roundMap;
 
     public PublishHandler(IPublishMessageService publishMessageService, IRetainMessageService retainMessageService,
                           ISubscriptionService subscriptionService, IPubRelMessageService pubRelMessageService,
-                          @Nullable IInternalMessagePublishService internalMessagePublishService, MqttxConfig mqttxConfig) {
+                          @Nullable IInternalMessagePublishService internalMessagePublishService, MqttxConfig mqttxConfig,
+                          KafkaTemplate<String, byte[]> kafkaTemplate) {
         Assert.notNull(publishMessageService, "publishMessageService can't be null");
         Assert.notNull(retainMessageService, "retainMessageService can't be null");
         Assert.notNull(subscriptionService, "publishMessageService can't be null");
@@ -67,6 +77,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
 
         MqttxConfig.Cluster cluster = mqttxConfig.getCluster();
         MqttxConfig.ShareTopic shareTopic = mqttxConfig.getShareTopic();
+        MqttxConfig.MessageBridge messageBridge = mqttxConfig.getMessageBridge();
         this.publishMessageService = publishMessageService;
         this.retainMessageService = retainMessageService;
         this.subscriptionService = subscriptionService;
@@ -78,6 +89,13 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         this.shareStrategy = shareTopic.getShareSubStrategy();
         if (round == shareStrategy) {
             roundMap = new ConcurrentHashMap<>();
+        }
+        this.enableMessageBridge = messageBridge.getEnable();
+        if (enableMessageBridge) {
+            this.bridgeTopics = messageBridge.getTopics();
+            this.kafkaTemplate = kafkaTemplate;
+
+            Assert.notEmpty(bridgeTopics, "消息桥接主题列表不能为空!!!");
         }
 
         if (enableCluster) {
@@ -111,6 +129,12 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         // 发布权限判定
         if (enableTopicSubPubSecure && !hasAuthToPubTopic(ctx, topic)) {
             throw new AuthorizationException("无对应 topic 发布权限");
+        }
+
+        // 消息桥接功能，便于对接各类 MQ(kafka, RocketMQ).
+        // 这里提供 kafka 的实现，需要对接其它 MQ 的同学可自行修改.
+        if (enableMessageBridge && bridgeTopics.contains(topic)) {
+            kafkaTemplate.send(topic, data);
         }
 
         // 组装消息
@@ -235,6 +259,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         int pubQos = pubMsg.getQoS();
         int subQos = clientSub.getQos();
         MqttQoS qos = subQos >= pubQos ? MqttQoS.valueOf(pubQos) : MqttQoS.valueOf(subQos);
+        byte[] payload = pubMsg.getPayload();
 
         // 组装PubMsg
         int messageId = nextMessageId(ctx);
@@ -246,7 +271,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                 .qos(qos)
                 .topicName(topic)
                 .retained(false)
-                .payload(Unpooled.wrappedBuffer(pubMsg.getPayload()))
+                .payload(Unpooled.wrappedBuffer(payload))
                 .build();
 
         // 集群消息不做保存，传播消息的 broker 已经保存过了

@@ -7,6 +7,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
+import java.util.Set;
 
 /**
  * 业务配置
@@ -55,6 +56,11 @@ public class MqttxConfig {
      */
     private Boolean enableTestMode = false;
 
+    /**
+     * 启用消息桥接功能
+     */
+    private Boolean enableMessageBridge;
+
     /*--------------------------------------------
     |                 模块配置项                   |
     ============================================*/
@@ -72,6 +78,8 @@ public class MqttxConfig {
     private ShareTopic shareTopic = new ShareTopic();
 
     private SysTopic sysTopic = new SysTopic();
+
+    private MessageBridge messageBridge = new MessageBridge();
 
     /**
      * redis 配置
@@ -107,11 +115,20 @@ public class MqttxConfig {
     @Data
     public static class Cluster{
 
-        /** 用于集群内部缓存开启状态一致性检查 */
+        /**
+         * 用于集群内部缓存开启状态一致性检查
+         */
         private String innerCacheConsistencyKey = "mqttx:cache_consistence";
 
-        /** 集群开关 */
+        /**
+         * 集群开关
+         */
         private Boolean enable = false;
+
+        /**
+         * 处理集群消息的中间件类型
+         */
+        private String type = "redis";
     }
 
     /**
@@ -209,5 +226,19 @@ public class MqttxConfig {
 
         /** 系统主题qos, 默认qos0; 参数适用所有的系统主题. ps: 除开特殊需求，qos0 应该是比较合适的*/
         private Integer qos = 0;
+    }
+
+    /**
+     * 消息桥接配置
+     *
+     */
+    @Data
+    public static class MessageBridge{
+
+        /** 开关 */
+        private Boolean enable = false;
+
+        /** 需要桥接消息的主题, 不允许通配符 */
+        private Set<String> topics = null;
     }
 }

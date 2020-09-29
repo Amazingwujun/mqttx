@@ -132,9 +132,9 @@ public class BrokerInitializer {
         }
 
         if (Epoll.isAvailable()) {
-            log.info("Epoll 可用，启用 {}", EpollEventLoopGroup.class.getName());
+            log.info("Epoll 可用，启用: {}", EpollEventLoopGroup.class.getName());
         } else {
-            log.info("Epoll 不可用，启用 {}", NioEventLoopGroup.class.getName());
+            log.info("Epoll 不可用，启用: {}", NioEventLoopGroup.class.getName());
         }
     }
 

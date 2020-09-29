@@ -5,6 +5,7 @@ import com.jun.mqttx.consumer.Watcher;
 import com.jun.mqttx.service.IInternalMessagePublishService;
 import com.jun.mqttx.service.impl.InternalMessagePublishServiceImpl;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.MessageListener;
@@ -62,6 +63,7 @@ public class ClusterConfig {
      * @param messageListener        {@link MessageListener}
      */
     @Bean
+    @ConditionalOnProperty(name = "mqttx.cluster.type", havingValue = "redis")
     public RedisMessageListenerContainer redisMessageListenerContainer(RedisConnectionFactory redisConnectionFactory,
                                                                        MessageListener messageListener) {
         RedisMessageListenerContainer redisMessageListenerContainer = new RedisMessageListenerContainer();

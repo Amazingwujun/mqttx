@@ -162,7 +162,6 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
      *     <li>当 repeat = true : 订阅一次，发布一次.</li>
      * </ul>
      *
-     *
      * @param topic 系统主题
      * @param ctx   {@link ChannelHandlerContext}
      */

@@ -63,10 +63,10 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
 
     private ISubscriptionService subscriptionService;
 
-    public BrokerHandler(MessageDelegatingHandler messageDelegatingHandler, ISessionService sessionService,ISubscriptionService subscriptionService) {
+    public BrokerHandler(MessageDelegatingHandler messageDelegatingHandler, ISessionService sessionService, ISubscriptionService subscriptionService) {
         Assert.notNull(messageDelegatingHandler, "messageDelegatingHandler can't be null");
         Assert.notNull(sessionService, "sessionService can't be null");
-        Assert.notNull(subscriptionService,"subscriptionService can't be null");
+        Assert.notNull(subscriptionService, "subscriptionService can't be null");
 
         this.messageDelegatingHandler = messageDelegatingHandler;
         this.sessionService = sessionService;

@@ -4,7 +4,8 @@
 
 - [1 介绍](#1-介绍)
     - [1.1 快速开始](#11-快速开始)
-    - [1.2 线上实例](#12-线上实例)
+    - [1.2 项目依赖](#12-项目依赖)
+    - [1.3 线上实例](#13-线上实例)
 - [2 架构](#2-架构)
     - [2.1 目录结构](#21-目录结构)
 - [3 容器化部署](#3-容器化部署)
@@ -17,6 +18,7 @@
     - [4.6 共享主题支持](#46-共享主题支持)
     - [4.7 websocket 支持](#47-websocket-支持)
     - [4.8 系统主题](#48-系统主题)
+    - [4.9 消息桥接支持](#49-消息桥接支持)
 - [5 路线图](#5-路线图)
 - [6 附表](#6-附表)
     - [6.1 配置项](#61-配置项)
@@ -38,7 +40,7 @@
    
    1. 运行命令：`java -jar mqttx-1.0.5.BETA.jar`
 
-***快速开始-测试模式***图例：
+*快速开始-测试模式* 图例：
 
 <img src="https://s1.ax1x.com/2020/09/27/0kJp3F.gif" alt="快速开始" style="zoom: 80%;" />
 
@@ -53,9 +55,10 @@
 
 > `mqttx` 依赖 `redis` 实现消息持久化、集群等功能，使用其它中间件（`mysql`, `mongodb`, `kafka` 等）同样能够实现，而 `springboot` 具备 `spring-boot-starter-***`  等各种可插拔组件，方便大家修改默认的实现
 
-项目依赖中间件（非测试模式）：
+### 1.2 项目依赖
 
-- [x] redis
+- [x] redis： 集群消息、消息持久化
+- [x] kafka：桥接消息支持
 
 其它说明：
 1. 项目使用了 lombok，使用 ide 请安装对应的插件
@@ -63,7 +66,7 @@
 > 
 > 举例：`idea` 需要安装插件 `Lombok`, `settings > Build,Execution,Deployment > Compiler > Annotation Processor` 开启 `Enable annotation processing`
 
-### 1.2 线上实例
+### 1.3 线上实例
 
 云端部署了一个 `mqttx` 单例服务，可供功能测试：
 1. 不支持 ssl
@@ -257,7 +260,20 @@
 | `timestamp`          | 时间戳；(`yyyy-MM-dd HH:mm:ss`) |
 | `version`            | `mqttx` 版本                    |
 
+#### 4.9 消息桥接支持
 
+支持消息中间件：
+
+- [x] kafka
+
+消息桥接功能可方便的对接消息队列中间。
+
+1. `mqttx.message-bridge.enable`：开启消息桥接功能
+2. `mqttx.bridge-topics`：需要桥接消息的主题
+
+`mqttx` 收到客户端 ***发布*** 的消息后，先判断桥接功能是否开启，然后再判断主题是否是需要桥接消息的主题，最后发布消息到 ***MQ***。
+
+**仅支持单向桥接：device(client) => mqttx => MQ**
 
 ## 5 开发计划
 
@@ -331,6 +347,8 @@
 | `mqttx.sys-topic.enable` | `false` | 系统主题功能开关 |
 | `mqttx.sys-topic.interval` | `60s` | 定时发布间隔 |
 | `mqttx.sys-topic.qos` | `0` | 主题 qos |
+| `mqttx.message-bridge.enable` | `false` | 消息桥接功能开关 |
+| `mqttx.message-bridge.topics` | `null` | 需要桥接消息的主题列表 |
 
 ### 6.2 版本说明
 
@@ -338,6 +356,7 @@
   - [x] 测试模式支持
   - [x] `epoll` 支持，见 [https://netty.io/wiki/native-transports.html](https://netty.io/wiki/native-transports.html)
   - [x] 优化 `cleanSession` 消息处理机制
+  - [x] 消息桥接
   - [x] bug 修复及优化
 - **v1.0.4.RELEASE**
   - [x] websocket 支持

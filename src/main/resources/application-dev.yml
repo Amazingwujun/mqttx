@@ -10,38 +10,34 @@ mqttx:
   sys-topic:
     enable: true
 
-#下方是配置示例，提供参考。如果你手动配置了，那么你的配置将被采用。
-#默认配置值可查看 com.jun.mqttx.config.MqttxConfig 配置类
-#mqttx:
-#  heartbeat: 50s
-#  host: "0.0.0.0"
-#  so-backlog: 512
-#  enable-topic-sub-pub-secure: false
-#  enable-inner-cache: true
+# 1 开启 ssl 配置示例
+#spring:
 #  redis:
-#    cluster-session-hash-key: "Session:key"
-#    message-id-prefix: "MQTT:MESSAGEID:"
-#    retain-message-prefix: "MQTT:RETAIN:"
-#    topic-prefix: "MQTT:TOPIC:"
-#    pub-msg-set-prefix: "MQTT:CLIENT:PUBMSG:"
-#    pub-rel-msg-set-prefix: "MQTT:CLIENT:PUBRELMSG:"
-#    topic-set-key: "MQTT:ALLTOPIC"
+#    host: localhost
+#
+#mqttx:
 #  ssl:
-#    enable: false
-#    key-store-location: "classpath:tls/mqttx.keystore"
-#    key-store-password: "123456"
-#    key-store-type: "PKCS12"
-#  socket:
-#    port: 1883
+#    key-store-password: 123456
+#    key-store-location: classpath:tls/mqttx.keystore
 #    enable: true
-#  web-socket:
-#    path: "/mqtt"
-#    port: 8083
-#    enable: true
-#  cluster:
-#    broker-id: 1
-#    enable: true
-#    inner-cache-consistency-key: "mqttx:cache_consistence"
-#  share-topic:
-#    share-sub-strategy: "round"
+#    client-auth: NONE
+#    key-store-type: pkcs12
+
+# 2 桥接消息配置示例
+#spring:
+#  redis:
+#    host: localhost
+#  kafka:
+#    bootstrap-servers:
+#      - localhost:9092
+#    producer:
+#      acks: 1
+#      key-serializer: org.apache.kafka.common.serialization.StringDeserializer
+#      value-serializer: org.apache.kafka.common.serialization.ByteArraySerializer
+#
+#mqttx:
+#  message-bridge:
+#    bridge-topics:
+#      - "/bridge/topic"
+#      - "mqttx/love"
 #    enable: true
