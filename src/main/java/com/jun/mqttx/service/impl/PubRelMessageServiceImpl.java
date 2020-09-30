@@ -2,10 +2,12 @@ package com.jun.mqttx.service.impl;
 
 import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.service.IPubRelMessageService;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
+import reactor.core.publisher.Mono;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -20,6 +22,7 @@ import java.util.stream.Collectors;
 @Component
 public class PubRelMessageServiceImpl implements IPubRelMessageService {
 
+    private ReactiveStringRedisTemplate reactiveStringRedisTemplate;
     private StringRedisTemplate stringRedisTemplate;
 
     private String pubRelMsgSetPrefix;
@@ -27,8 +30,11 @@ public class PubRelMessageServiceImpl implements IPubRelMessageService {
     private Boolean enableTestMode;
     private Map<String, Set<Integer>> clientMsgStore;
 
-    public PubRelMessageServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig) {
+    public PubRelMessageServiceImpl(StringRedisTemplate stringRedisTemplate,
+                                    ReactiveStringRedisTemplate reactiveStringRedisTemplate,
+                                    MqttxConfig mqttxConfig) {
         this.stringRedisTemplate = stringRedisTemplate;
+        this.reactiveStringRedisTemplate = reactiveStringRedisTemplate;
 
         this.pubRelMsgSetPrefix = mqttxConfig.getRedis().getPubRelMsgSetPrefix();
         this.enableTestMode = mqttxConfig.getEnableTestMode();
@@ -50,16 +56,26 @@ public class PubRelMessageServiceImpl implements IPubRelMessageService {
     }
 
     @Override
-    public boolean isDupMsg(String clientId, int messageId) {
+    public Mono<Long> asyncSave(String clientId, int messageId) {
         if (enableTestMode) {
-            return clientMsgStore
-                    .computeIfAbsent(clientId, s -> ConcurrentHashMap.newKeySet())
-                    .contains(messageId);
+            clientMsgStore.computeIfAbsent(clientId, s -> ConcurrentHashMap.newKeySet()).add(messageId);
+            return Mono.just(Long.MIN_VALUE);
         }
 
-        Boolean member = stringRedisTemplate.opsForSet()
-                .isMember(key(clientId), String.valueOf(messageId));
-        return Boolean.TRUE.equals(member);
+        return reactiveStringRedisTemplate.opsForSet()
+                .add(pubRelMsgSetPrefix + clientId, String.valueOf(messageId));
+    }
+
+    @Override
+    public Mono<Boolean> isDupMsg(String clientId, int messageId) {
+        if (enableTestMode) {
+            boolean result = clientMsgStore
+                    .computeIfAbsent(clientId, s -> ConcurrentHashMap.newKeySet())
+                    .contains(messageId);
+            return Mono.just(result);
+        }
+
+        return reactiveStringRedisTemplate.opsForSet().isMember(key(clientId), String.valueOf(messageId));
     }
 
     @Override
@@ -70,6 +86,17 @@ public class PubRelMessageServiceImpl implements IPubRelMessageService {
         }
 
         stringRedisTemplate.opsForSet()
+                .remove(pubRelMsgSetPrefix + clientId, String.valueOf(messageId));
+    }
+
+    @Override
+    public Mono<Long> asyncRemove(String clientId, int messageId) {
+        if (enableTestMode) {
+            clientMsgStore.computeIfAbsent(clientId, s -> ConcurrentHashMap.newKeySet()).remove(messageId);
+            return Mono.just(Long.MIN_VALUE);
+        }
+
+        return reactiveStringRedisTemplate.opsForSet()
                 .remove(pubRelMsgSetPrefix + clientId, String.valueOf(messageId));
     }
 

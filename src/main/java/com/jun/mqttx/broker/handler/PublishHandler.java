@@ -145,10 +145,13 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
 
         // 响应
         switch (mqttQoS) {
-            case 0: // at most once
+            case 0: {
+                // at most once
                 publish(pubMsg, ctx, false);
                 break;
-            case 1: // at least once
+            }
+            case 1: {
+                // at least once
                 publish(pubMsg, ctx, false);
                 MqttMessage pubAck = MqttMessageFactory.newMessage(
                         new MqttFixedHeader(MqttMessageType.PUBACK, false, MqttQoS.valueOf(mqttQoS), false, 0),
@@ -157,7 +160,9 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                 );
                 ctx.writeAndFlush(pubAck);
                 break;
-            case 2: // exactly once
+            }
+            case 2: {
+                // exactly once
                 MqttMessage pubRec = MqttMessageFactory.newMessage(
                         new MqttFixedHeader(MqttMessageType.PUBREC, false, MqttQoS.valueOf(mqttQoS), false, 0),
                         MqttMessageIdVariableHeader.from(packetId),
@@ -166,16 +171,21 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                 ctx.writeAndFlush(pubRec);
 
                 // 判断消息是否重复
-                if (!pubRelMessageService.isDupMsg(clientId(ctx), packetId)) {
-                    // 发布新的消息并保存 pubRel 标记，用于实现Qos2
-                    publish(pubMsg, ctx, false);
-                    if (isCleanSession(ctx)) {
-                        getSession(ctx).savePubRelMsg(packetId);
-                    } else {
-                        pubRelMessageService.save(clientId(ctx), packetId);
-                    }
-                }
+                pubRelMessageService.isDupMsg(clientId(ctx), packetId)
+                        .subscribe(e -> {
+                            if (!e) {
+                                // 发布新的消息并保存 pubRel 标记，用于实现Qos2
+                                publish(pubMsg, ctx, false);
+                                if (isCleanSession(ctx)) {
+                                    getSession(ctx).savePubRelMsg(packetId);
+                                } else {
+                                    pubRelMessageService.asyncSave(clientId(ctx), packetId)
+                                            .subscribe();
+                                }
+                            }
+                        });
                 break;
+            }
         }
 
         // retain 消息处理
@@ -285,7 +295,22 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                 // 如果 cleanSession = 1，消息直接关联会话，不需要持久化
                 getSession(ctx).savePubMsg(messageId, pubMsg);
             } else {
-                publishMessageService.save(clientId, pubMsg);
+                publishMessageService
+                        .asyncSave(clientId, pubMsg)
+                        .subscribe(result -> {
+
+                            // 将消息推送给集群中的broker
+                            if (enableCluster) {
+                                internalMessagePublish(pubMsg);
+                            }
+
+                            // 发送
+                            Optional.of(clientId)
+                                    .map(ConnectHandler.CLIENT_MAP::get)
+                                    .map(BrokerHandler.CHANNELS::find)
+                                    .ifPresent(channel -> channel.writeAndFlush(mpm));
+                        });
+                return;
             }
         }
 
@@ -308,7 +333,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
      */
     private void internalMessagePublish(PubMsg pubMsg) {
         InternalMessage<PubMsg> im = new InternalMessage<>(pubMsg, System.currentTimeMillis(), brokerId);
-        internalMessagePublishService.publish(im, InternalMessageEnum.PUB.getChannel());
+        internalMessagePublishService.asyncPublish(im, InternalMessageEnum.PUB.getChannel()).subscribe();
     }
 
     /**

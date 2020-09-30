@@ -29,7 +29,16 @@ public class PubRelHandler extends AbstractMqttSessionHandler {
         if (isCleanSession(ctx)) {
             getSession(ctx).removePubRelMsg(messageId);
         } else {
-            pubRelMessageService.remove(clientId(ctx), messageId);
+            pubRelMessageService.asyncRemove(clientId(ctx), messageId)
+                    .subscribe(e -> {
+                        MqttMessage mqttMessage = MqttMessageFactory.newMessage(
+                                new MqttFixedHeader(MqttMessageType.PUBCOMP, false, MqttQoS.AT_MOST_ONCE, false, 0),
+                                MqttMessageIdVariableHeader.from(messageId),
+                                null
+                        );
+                        ctx.writeAndFlush(mqttMessage);
+                    });
+            return;
         }
 
         MqttMessage mqttMessage = MqttMessageFactory.newMessage(

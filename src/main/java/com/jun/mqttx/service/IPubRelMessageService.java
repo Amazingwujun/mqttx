@@ -1,5 +1,7 @@
 package com.jun.mqttx.service;
 
+import reactor.core.publisher.Mono;
+
 import java.util.List;
 
 /**
@@ -19,13 +21,18 @@ public interface IPubRelMessageService {
     void save(String clientId, int messageId);
 
     /**
+     * @see #save(String, int)
+     */
+    Mono<Long> asyncSave(String clientId, int messageId);
+
+    /**
      * 校验消息是否已存在
      *
      * @param clientId  客户端ID
      * @param messageId 消息ID
-     * @return
+     * @return true if msg exist
      */
-    boolean isDupMsg(String clientId, int messageId);
+    Mono<Boolean> isDupMsg(String clientId, int messageId);
 
     /**
      * 移除 pubRel 标志
@@ -34,6 +41,11 @@ public interface IPubRelMessageService {
      * @param clientId  客户端ID
      */
     void remove(String clientId, int messageId);
+
+    /**
+     * @see #remove(String, int)
+     */
+    Mono<Long> asyncRemove(String clientId, int messageId);
 
     /**
      * 获取客户端未完成的 pubRel 消息
