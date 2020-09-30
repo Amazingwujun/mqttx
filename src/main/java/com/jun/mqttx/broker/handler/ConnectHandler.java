@@ -3,7 +3,10 @@ package com.jun.mqttx.broker.handler;
 import com.jun.mqttx.broker.BrokerHandler;
 import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.constants.InternalMessageEnum;
-import com.jun.mqttx.entity.*;
+import com.jun.mqttx.entity.Authentication;
+import com.jun.mqttx.entity.ClientAuthDTO;
+import com.jun.mqttx.entity.InternalMessage;
+import com.jun.mqttx.entity.Session;
 import com.jun.mqttx.exception.AuthenticationException;
 import com.jun.mqttx.service.*;
 import io.netty.buffer.Unpooled;
@@ -241,31 +244,31 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
 
         // 根据协议补发 qos1,与 qos2 的消息
         if (!clearSession) {
-            List<PubMsg> pubMsgList = publishMessageService.search(clientId);
-            pubMsgList.forEach(pubMsg -> {
-                String topic = pubMsg.getTopic();
-                // 订阅权限判定
-                if (enableTopicSubPubSecure && !hasAuthToSubTopic(ctx, topic)) {
-                    return;
-                }
+            publishMessageService.asyncSearch(clientId)
+                    .subscribe(pubMsg -> {
+                        String topic = pubMsg.getTopic();
+                        // 订阅权限判定
+                        if (enableTopicSubPubSecure && !hasAuthToSubTopic(ctx, topic)) {
+                            return;
+                        }
 
-                MqttMessage mqttMessage = MqttMessageFactory.newMessage(
-                        new MqttFixedHeader(MqttMessageType.PUBLISH, true, MqttQoS.valueOf(pubMsg.getQoS()), false, 0),
-                        new MqttPublishVariableHeader(topic, pubMsg.getMessageId()),
-                        // 这是一个浅拷贝，任何对pubMsg中payload的修改都会反馈到wrappedBuffer
-                        Unpooled.wrappedBuffer(pubMsg.getPayload())
-                );
+                        MqttMessage mqttMessage = MqttMessageFactory.newMessage(
+                                new MqttFixedHeader(MqttMessageType.PUBLISH, true, MqttQoS.valueOf(pubMsg.getQoS()), false, 0),
+                                new MqttPublishVariableHeader(topic, pubMsg.getMessageId()),
+                                // 这是一个浅拷贝，任何对pubMsg中payload的修改都会反馈到wrappedBuffer
+                                Unpooled.wrappedBuffer(pubMsg.getPayload())
+                        );
 
-                if (enableCluster) {
-                    // 集群消息发布
-                    internalMessagePublishService.publish(
-                            new InternalMessage<>(pubMsg, System.currentTimeMillis(), brokerId),
-                            InternalMessageEnum.PUB.getChannel()
-                    );
-                }
+                        if (enableCluster) {
+                            // 集群消息发布
+                            internalMessagePublishService.publish(
+                                    new InternalMessage<>(pubMsg, System.currentTimeMillis(), brokerId),
+                                    InternalMessageEnum.PUB.getChannel()
+                            );
+                        }
 
-                ctx.writeAndFlush(mqttMessage);
-            });
+                        ctx.writeAndFlush(mqttMessage);
+                    });
 
             List<Integer> pubRelList = pubRelMessageService.search(clientId);
             pubRelList.forEach(messageId -> {

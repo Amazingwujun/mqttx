@@ -1,5 +1,7 @@
 package com.jun.mqttx.service;
 
+import reactor.core.publisher.Mono;
+
 import java.util.List;
 
 /**
@@ -34,6 +36,11 @@ public interface IPubRelMessageService {
      * @param clientId  客户端ID
      */
     void remove(String clientId, int messageId);
+
+    /**
+     * @see #remove(String, int)
+     */
+    Mono<Long> asyncRemove(String clientId, int messageId);
 
     /**
      * 获取客户端未完成的 pubRel 消息

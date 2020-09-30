@@ -2,10 +2,12 @@ package com.jun.mqttx.service.impl;
 
 import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.service.IPubRelMessageService;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
+import reactor.core.publisher.Mono;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -20,6 +22,7 @@ import java.util.stream.Collectors;
 @Component
 public class PubRelMessageServiceImpl implements IPubRelMessageService {
 
+    private ReactiveStringRedisTemplate reactiveStringRedisTemplate;
     private StringRedisTemplate stringRedisTemplate;
 
     private String pubRelMsgSetPrefix;
@@ -70,6 +73,20 @@ public class PubRelMessageServiceImpl implements IPubRelMessageService {
         }
 
         stringRedisTemplate.opsForSet()
+                .remove(pubRelMsgSetPrefix + clientId, String.valueOf(messageId));
+    }
+
+    @Override
+    public Mono<Long> asyncRemove(String clientId, int messageId) {
+        if (enableTestMode) {
+            clientMsgStore.computeIfAbsent(clientId, s -> ConcurrentHashMap.newKeySet()).remove(messageId);
+            return Mono.just(Long.MIN_VALUE);
+        }
+
+        stringRedisTemplate.opsForSet()
+                .remove(pubRelMsgSetPrefix + clientId, String.valueOf(messageId));
+
+        return reactiveStringRedisTemplate.opsForSet()
                 .remove(pubRelMsgSetPrefix + clientId, String.valueOf(messageId));
     }
 

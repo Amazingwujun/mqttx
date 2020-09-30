@@ -29,7 +29,8 @@ public class PubRelHandler extends AbstractMqttSessionHandler {
         if (isCleanSession(ctx)) {
             getSession(ctx).removePubRelMsg(messageId);
         } else {
-            pubRelMessageService.remove(clientId(ctx), messageId);
+            pubRelMessageService.asyncRemove(clientId(ctx), messageId)
+                    .subscribe();
         }
 
         MqttMessage mqttMessage = MqttMessageFactory.newMessage(

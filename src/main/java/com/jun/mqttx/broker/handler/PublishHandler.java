@@ -65,6 +65,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
      */
     private Map<String, AtomicInteger> roundMap;
 
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     public PublishHandler(IPublishMessageService publishMessageService, IRetainMessageService retainMessageService,
                           ISubscriptionService subscriptionService, IPubRelMessageService pubRelMessageService,
                           @Nullable IInternalMessagePublishService internalMessagePublishService, MqttxConfig mqttxConfig,
@@ -280,7 +281,22 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                 // 如果 cleanSession = 1，消息直接关联会话，不需要持久化
                 getSession(ctx).savePubMsg(messageId, pubMsg);
             } else {
-                publishMessageService.save(clientId, pubMsg);
+                publishMessageService
+                        .asyncSave(clientId, pubMsg)
+                        .subscribe(result -> {
+
+                            // 将消息推送给集群中的broker
+                            if (enableCluster) {
+                                internalMessagePublish(pubMsg);
+                            }
+
+                            // 发送
+                            Optional.of(clientId)
+                                    .map(ConnectHandler.CLIENT_MAP::get)
+                                    .map(BrokerHandler.CHANNELS::find)
+                                    .ifPresent(channel -> channel.writeAndFlush(mpm));
+                        });
+                return;
             }
         }
 

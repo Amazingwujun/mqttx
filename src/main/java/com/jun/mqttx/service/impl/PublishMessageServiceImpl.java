@@ -4,10 +4,13 @@ import com.alibaba.fastjson.JSON;
 import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.entity.PubMsg;
 import com.jun.mqttx.service.IPublishMessageService;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -26,6 +29,8 @@ import java.util.stream.Collectors;
 public class PublishMessageServiceImpl implements IPublishMessageService {
 
     private StringRedisTemplate stringRedisTemplate;
+
+    private ReactiveStringRedisTemplate reactiveStringRedisTemplate;
 
     private String pubMsgSetPrefix;
 
@@ -51,8 +56,19 @@ public class PublishMessageServiceImpl implements IPublishMessageService {
                     .put(pubMsg.getMessageId(), pubMsg);
             return;
         }
-
         stringRedisTemplate.opsForHash().put(pubMsgSetPrefix + clientId,
+                String.valueOf(pubMsg.getMessageId()), JSON.toJSONString(pubMsg));
+    }
+
+    public Mono<Boolean> asyncSave(String clientId, PubMsg pubMsg) {
+        if (enableTestMode) {
+            pubMsgStore
+                    .computeIfAbsent(clientId, s -> new ConcurrentHashMap<>())
+                    .put(pubMsg.getMessageId(), pubMsg);
+            return Mono.just(Boolean.TRUE);
+        }
+
+        return reactiveStringRedisTemplate.opsForHash().put(pubMsgSetPrefix + clientId,
                 String.valueOf(pubMsg.getMessageId()), JSON.toJSONString(pubMsg));
     }
 
@@ -80,6 +96,26 @@ public class PublishMessageServiceImpl implements IPublishMessageService {
     }
 
     @Override
+    public Mono<Long> asyncRemove(String clientId, int messageId) {
+        if (enableTestMode) {
+            pubMsgStore.computeIfAbsent(clientId, s -> new ConcurrentHashMap<>()).remove(messageId);
+            return Mono.just(Long.MIN_VALUE);
+        }
+
+        return reactiveStringRedisTemplate.opsForHash().remove(key(clientId), String.valueOf(messageId));
+    }
+
+    @Override
+    public Mono<Long> asyncClear(String clientId) {
+        if (enableTestMode) {
+            pubMsgStore.remove(clientId);
+            return Mono.just(Long.MIN_VALUE);
+        }
+
+        return reactiveStringRedisTemplate.delete(pubMsgSetPrefix + clientId);
+    }
+
+    @Override
     public List<PubMsg> search(String clientId) {
         if (enableTestMode) {
             List<PubMsg> values = new ArrayList<>();
@@ -99,6 +135,22 @@ public class PublishMessageServiceImpl implements IPublishMessageService {
         return values.stream()
                 .map(o -> JSON.parseObject((String) o, PubMsg.class))
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public Flux<PubMsg> asyncSearch(String clientId) {
+        if (enableTestMode) {
+            List<PubMsg> values = new ArrayList<>();
+            pubMsgStore.computeIfPresent(clientId, (s, pubMsgMap) -> {
+                values.addAll(pubMsgMap.values());
+                return pubMsgMap;
+            });
+            return Flux.fromIterable(values);
+        }
+
+        return reactiveStringRedisTemplate.opsForHash()
+                .values(key(clientId))
+                .map(o -> JSON.parseObject((String) o, PubMsg.class));
     }
 
     private String key(String client) {
