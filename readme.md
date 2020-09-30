@@ -23,6 +23,9 @@
 - [6 附表](#6-附表)
     - [6.1 配置项](#61-配置项)
     - [6.2 版本说明](#62-版本说明)
+    - [6.3 Benchmark](#63-benchmark)
+      - [6.3.1 CleanSessionTrue](#631-cleansessiontrue)
+      - [6.3.2 CleanSessionFalse](#632-cleansessionfalse)
 
 ## 1 介绍
 
@@ -199,7 +202,8 @@
 > `msg-a` 消息分发策略取决于配置项 `mqttx.share-topic.share-sub-strategy`
 >
 > 可以配合 `cleanSession = 1` 的会话，共享主题的客户端断开连接后会被服务端移除订阅，这样共享主题的消息只会分发给在线的客户端。
-> 注意: `mqtt3.1.1` 协议规定当 `cleanSession = 1` 时，连接断开后与会话相关联的所有状态（不含 retained 消息）都会被删除（`mqtt5`  增加了会话超时设置，感兴趣的同学可以了解一下）。
+>
+> ***CleanSession*** 介绍：`mqtt3.1.1` 协议规定当 `cleanSession = 1` 时，连接断开后与会话相关联的所有状态（不含 retained 消息）都会被删除（`mqtt5`  增加了会话超时设置，感兴趣的同学可以了解一下）。
 > `mqttx v1.0.5.BETA` 版本后(含)，`cleanSession = 1` 的会话消息保存在内存中，具备极高的性能.
 >
 > > If CleanSession is set to 1, the Client and Server **MUST** discard any previous Session and start a new one. This Session lasts as long as the Network Connection. State data associated with this Session **MUST NOT** be reused in any subsequent Session [MQTT-3.1.2-6].
@@ -289,10 +293,6 @@
 
    > 本来说要放一部分精力到 `mqttx-admin` 这个衍生项目的，但后来发现 `mqttx` 还有太多事情需要做，只能变更计划了。
 
-4. `mqttx` 还没压测过，算了，看心情吧~ （有同学帮忙不？） 
-
-   > 说白了，就是懒。
-
 5. `netty 4.1.52.Final 支持了 mqtt5`，em...
 
    > `v1.0.5.RELEASE` 后，我会考虑支持 `mqtt5` 协议的，又是一个大工程啊。
@@ -374,3 +374,110 @@
   - [x] bug 修复及优化
 - **v1.0.0.RELEASE**
   - [x] `mqttv3.1.1` 完整协议实现
+
+### 6.3 Benchmark
+
+测试条件简陋，结果仅供参考。
+
+版本： ***MQTTX v1.0.5.BETA***
+
+工具： ***[mqtt-bench](https://github.com/takanorig/mqtt-bench)***
+
+机器：
+
+| 系统    | cpu       | 内存  |
+| ------- | --------- | ----- |
+| `win10` | `i5-4460` | `16G` |
+
+#### 6.3.1 CleanSessionTrue
+
+1. 启用 `redis`
+2. `cleanSession` : ***true***
+
+>  **实际上 `pub` 消息存储并未走 redis， 原因见 [共享主题](#46-共享主题支持) 中关于 `cleanSession` 的介绍**
+
+执行 `java -jar -Xmx1g -Xms1g mqttx-1.0.5.BETA.jar`
+
+- ***qos0***
+
+```
+C:\Users\Jun\go\windows_amd64>mqtt-bench.exe -broker=tcp://localhost:1883 -action=pub -clients=1000 -qos=0 -count=1000
+2020-09-30 15:33:54.462089 +0800 CST Start benchmark
+2020-09-30 15:34:33.6010217 +0800 CST End benchmark
+
+Result : broker=tcp://localhost:1883, clients=1000, totalCount=1000000, duration=39134ms, throughput=25553.23messages/sec
+```
+
+- ***qos1***
+
+```
+C:\Users\Jun\go\windows_amd64>mqtt-bench.exe -broker=tcp://localhost:1883 -action=pub -clients=1000 -qos=1 -count=1000
+2020-09-30 15:29:17.9027515 +0800 CST Start benchmark
+2020-09-30 15:30:25.0316915 +0800 CST End benchmark
+
+Result : broker=tcp://localhost:1883, clients=1000, totalCount=1000000, duration=67124ms, throughput=14897.80messages/sec
+```
+
+- ***qos2***
+
+```
+C:\Users\Jun\go\windows_amd64>mqtt-bench.exe -broker=tcp://localhost:1883 -action=pub -clients=1000 -qos=2 -count=1000
+2020-09-30 15:37:00.0678207 +0800 CST Start benchmark
+2020-09-30 15:38:55.4419847 +0800 CST End benchmark
+
+Result : broker=tcp://localhost:1883, clients=1000, totalCount=1000000, duration=115369ms, throughput=8667.84messages/sec
+```
+
+| 并发连接数量 | 行为     | 单个消息大小 | 单连接消息数量 | 报文总数 | qos  | 耗时     | qps     |
+| ------------ | -------- | ------------ | -------------- | -------- | ---- | -------- | ------- |
+| `1000`       | 发布消息 | `1024byte`   | `1000`         | 一百万   | `0`  | `39.1s`  | `25553` |
+| `1000`       | 发布消息 | `1024byte`   | `1000`         | 一百万   | `1`  | `67.1s`  | `14897` |
+| `1000`       | 发布消息 | `1024byte`   | `1000`         | 一百万   | `2`  | `115.3s` | 8667    |
+
+**资源消耗：`cpu: 25%`, `mem 440 MB`**
+
+#### 6.3.2 CleanSessionFalse
+
+1. 启用 `redis`
+2. `cleanSession`: ***false***
+
+执行 `java -jar -Xmx1g -Xms1g mqttx-1.0.5.BETA.jar`
+
+- **qos0**
+
+```
+C:\Users\Jun\go\windows_amd64>mqtt-bench.exe -broker=tcp://localhost:1883 -action=pub -clients=1000 -qos=0 -count=1000
+2020-09-30 17:03:55.7560928 +0800 CST Start benchmark
+2020-09-30 17:04:36.2080909 +0800 CST End benchmark
+
+Result : broker=tcp://localhost:1883, clients=1000, totalCount=1000000, duration=40447ms, throughput=24723.71messages/sec
+```
+
+- **qos1**
+
+```
+C:\Users\Jun\go\windows_amd64>mqtt-bench.exe -broker=tcp://localhost:1883 -action=pub -clients=1000 -qos=1 -count=1000
+2020-09-30 17:06:18.9136484 +0800 CST Start benchmark
+2020-09-30 17:08:20.9072865 +0800 CST End benchmark
+
+Result : broker=tcp://localhost:1883, clients=1000, totalCount=1000000, duration=121992ms, throughput=8197.26messages/sec
+```
+
+- **qos2**
+
+```
+C:\Users\Jun\go\windows_amd64>mqtt-bench.exe -broker=tcp://localhost:1883 -action=pub -clients=1000 -qos=2 -count=1000
+2020-09-30 17:09:35.1314262 +0800 CST Start benchmark
+2020-09-30 17:13:10.7914125 +0800 CST End benchmark
+
+Result : broker=tcp://localhost:1883, clients=1000, totalCount=1000000, duration=215656ms, throughput=4637.01messages/sec
+```
+
+| 并发连接数量 | 行为     | 单个消息大小 | 单连接消息数量 | 报文总数 | qos  | 耗时     | qps     |
+| ------------ | -------- | ------------ | -------------- | -------- | ---- | -------- | ------- |
+| `1000`       | 发布消息 | `1024byte`   | `1000`         | 一百万   | `0`  | `40.4s`  | `24723` |
+| `1000`       | 发布消息 | `1024byte`   | `1000`         | 一百万   | `1`  | `121.9s` | `8197`  |
+| `1000`       | 发布消息 | `1024byte`   | `1000`         | 一百万   | `2`  | `215.6s` | `4637`  |
+
+**资源消耗：`cpu: 45%`, `mem 440 MB`**
+
