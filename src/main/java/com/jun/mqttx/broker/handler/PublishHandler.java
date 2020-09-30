@@ -291,7 +291,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
 
         // 发送
         Optional.of(clientId)
-                .map(ConnectHandler.clientMap::get)
+                .map(ConnectHandler.CLIENT_MAP::get)
                 .map(BrokerHandler.CHANNELS::find)
                 .ifPresent(channel -> channel.writeAndFlush(mpm));
     }

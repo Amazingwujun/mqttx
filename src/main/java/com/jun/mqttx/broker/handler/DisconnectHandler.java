@@ -47,7 +47,7 @@ public final class DisconnectHandler extends AbstractMqttSessionHandler implemen
 
     @Override
     public void action(InternalMessage<String> im) {
-        ChannelId channelId = ConnectHandler.clientMap.get(im.getData());
+        ChannelId channelId = ConnectHandler.CLIENT_MAP.get(im.getData());
         if (channelId != null) {
             BrokerHandler.CHANNELS.find(channelId).close();
         }

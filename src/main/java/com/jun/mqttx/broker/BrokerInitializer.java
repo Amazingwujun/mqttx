@@ -119,13 +119,7 @@ public class BrokerInitializer {
         this.enableWebsocket = webSocket.getEnable();
         this.clientAuth = ssl.getClientAuth();
 
-        // 参数校验
-        Assert.hasText(host, "host can't be null");
-        Assert.notNull(port, "port can't be null");
-        Assert.notNull(heartbeat, "heartbeat can't be null");
-        Assert.notNull(soBacklog, "soBacklog can't be null");
-        Assert.hasText(websocketPath, "websocketPath can't be null");
-        Assert.notNull(wsPort, "wsPort can't be null");
+        // 配置检查
         Assert.isTrue(!Objects.equals(wsPort, port), "websocket 与 socket 监听端口不能相同");
         if (!enableSocket && !enableWebsocket) {
             throw new GlobalException("socket 或 websocket 服务最少存在一个");
@@ -156,11 +150,12 @@ public class BrokerInitializer {
      */
     public void start() throws InterruptedException {
         if (boss == null || work == null) {
+            int t = (enableSocket & enableWebsocket) ? 2 : 1;
             if (Epoll.isAvailable()) {
-                boss = new EpollEventLoopGroup(1);
+                boss = new EpollEventLoopGroup(t);
                 work = new EpollEventLoopGroup();
             } else {
-                boss = new NioEventLoopGroup(1);
+                boss = new NioEventLoopGroup(t);
                 work = new NioEventLoopGroup();
             }
         }

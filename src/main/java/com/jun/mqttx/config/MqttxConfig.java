@@ -10,7 +10,9 @@ import java.time.Duration;
 import java.util.Set;
 
 /**
- * 业务配置
+ * 业务配置.
+ * <p>
+ * 所有项目都有默认配置, 其它类注入配置后不再检查配置是否为空
  *
  * @author Jun
  * @since 1.0.4
@@ -26,13 +28,13 @@ public class MqttxConfig {
     ============================================*/
 
     /** mqttx 版本 */
-    private String version;
+    private String version = "unknown";
 
     /** broker id。区分集群内不同的 broker（如果集群功能开启） */
     private Integer brokerId = 1;
 
-    /** 心跳, 默认50S;如果 客户端通过 conn 设置了心跳周期，则对应的 channel 心跳为指定周期 */
-    private Duration heartbeat = Duration.ofSeconds(50);
+    /** 心跳, 默认 60S;如果 客户端通过 conn 设置了心跳周期，则对应的 channel 心跳为指定周期 */
+    private Duration heartbeat = Duration.ofMinutes(1);
 
     /** ip */
     private String host = "0.0.0.0";
@@ -55,11 +57,6 @@ public class MqttxConfig {
      * 2. 关闭集群
      */
     private Boolean enableTestMode = false;
-
-    /**
-     * 启用消息桥接功能
-     */
-    private Boolean enableMessageBridge;
 
     /*--------------------------------------------
     |                 模块配置项                   |
@@ -128,7 +125,7 @@ public class MqttxConfig {
         /**
          * 处理集群消息的中间件类型
          */
-        private String type = "redis";
+        private String type = ClusterConfig.REDIS;
     }
 
     /**
@@ -144,7 +141,7 @@ public class MqttxConfig {
         private String keyStoreLocation = "classpath:tls/mqttx.keystore";
 
         /** keyStore 密码 */
-        private String keyStorePassword;
+        private String keyStorePassword = "123456";
 
         /** keyStore 类别 */
         private String keyStoreType = "pkcs12";

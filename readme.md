@@ -136,7 +136,7 @@
 2. 不支持以 `/`结尾的topic，比如 `a/b/`，请改为 `a/b`。
 3. 其它规则见 ***[mqtt v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) 4.7 Topic Names and Topic Filters***
 
->  **mqttx** 仅对订阅 topicFilter 进行校验，publish 的 topic 是没有做合法性检查的，可通过开启 [4.5 topic 安全支持](#45-topic) 限制客户端可发布的 topic。
+>  **mqttx** 仅对订阅 topicFilter 进行校验，publish 的 topic 是没有做合法性检查的，可通过开启 [4.5 topic 安全支持](#45-topic-安全支持) 限制客户端可发布的 topic。
 
 举例：
 
@@ -318,24 +318,24 @@
 | ---------------------------------------- | ----------------------------- | ------------------------------------------------------------ |
 | `mqttx.version`                          | 取自 `pom.xml`               | 版本                                                         |
 | `mqttx.brokerId`                         | `1`                             | 应用标志, 唯一                                               |
-| `mqttx.heartbeat`                        | `50s`                           | 初始心跳，会被 conn 消息中的 keepalive 重置                  |
+| `mqttx.heartbeat`                        | `60s`                         | 初始心跳，会被 conn 消息中的 keepalive 重置                  |
 | `mqttx.host`                             | `0.0.0.0`                       | 监听地址                                                     |
 | `mqttx.soBacklog`                        | `512`                           | tcp 连接处理队列                                             |
 | `mqttx.enableTopicSubPubSecure`          | `false`                         | 客户订阅/发布主题安全功能，开启后将限制客户端发布/订阅的主题 |
 | `mqttx.enableInnerCache`                 | `true`                          | 发布消息每次都需要查询 redis 来获取订阅的客户端列表。开启此功能后，将在内存中建立一个主题-客户端关系映射, 应用直接访问内存中的数据即可 |
 | `mqttx.enableTestMode` | `false` | 测试模式开关，开启后系统进入测试模式 |
 | `mqttx.redis.clusterSessionHashKey`      | `mqttx.session.key`             | redis map key；用于集群的会话存储                          |
-| `mqttx.redis.topicPrefix`                | `mqttx:topic:`                  | 主题前缀； topic <--> client 映射关系保存                    |
-| `mqttx.redis.retainMessagePrefix`        | `mqttx:retain:`                 | 保留消息前缀, 保存 retian 消息                               |
+| `mqttx.redis.topicPrefix`                | `mqttx:topic:`                  | 主题前缀； topic <==> client 映射关系保存                  |
+| `mqttx.redis.retainMessagePrefix`        | `mqttx:retain:`                 | 保留消息前缀, 保存 retain 消息                            |
 | `mqttx.redis.pubMsgSetPrefix`            | `mqttx:client:pubmsg:`          | client pub消息 redis set 前缀； 保存 pubmsg，当收到 puback 获取 pubrec 后删除 |
 | `mqttx.redis.pubRelMsgSetPrefix`         | `mqttx:client:pubrelmsg:`       | client pubRel 消息 redis set 前缀；保存 pubrel 消息，收到 pubcom 消息删除 |
 | `mqttx.redis.topicSetKey`                | `mqttx:alltopic`                | topic 集合，redis set key 值；保存所有的主题                 |
 | `mqttx.cluster.enable`                   | `false`                         | 集群开关                                                     |
 | `mqttx.cluster.innerCacheConsistancyKey` | `mqttx:cache_consistence`       | 应用启动后，先查询 redis 中无此 key 值，然后在检查一致性     |
 | `mqttx.ssl.enable`                       | `false`                         | ssl 开关                                                     |
-| `mqttx.ssl.client-auth` | false | 客户端证书校验 |
+| `mqttx.ssl.client-auth` | `false` | 客户端证书校验 |
 | `mqttx.ssl.keyStoreLocation`             | `classpath: tls/mqttx.keystore` | keyStore 位置                                                |
-| `mqttx.ssl.keyStorePassword`             | `用户手动配置`                  | keyStore 密码                                                |
+| `mqttx.ssl.keyStorePassword`             | `123456`             | keyStore 密码                                                |
 | `mqttx.ssl.keyStoreType`                 | `pkcs12`                        | keyStore 类别                                                |
 | `mqttx.socket.enable`                    | `true`                          | socket 开关                                                  |
 | `mqttx.socket.port`                      | `1883`                          | socket 监听端口                                              |

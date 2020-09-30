@@ -1,23 +1,6 @@
 {
   "hints": [
     {
-      "name": "mqttx.share-topic.share-sub-strategy",
-      "values": [
-        {
-          "value": "round",
-          "description": "轮询."
-        },
-        {
-          "value": "random",
-          "description": "随机."
-        },
-        {
-          "value": "hash",
-          "description": "哈希."
-        }
-      ]
-    },
-    {
       "name": "mqttx.ssl.key-store-type",
       "values": [
         {
@@ -42,19 +25,6 @@
         {
           "value": "2",
           "description": "at exactly once, 不建议使用此参数."
-        }
-      ]
-    },
-    {
-      "name": "mqttx.ssl.client-auth",
-      "values": [
-        {
-          "value": "NONE",
-          "description": "不校验客户端证书."
-        },
-        {
-          "value": "REQUIRE",
-          "description": "校验客户端证书."
         }
       ]
     },

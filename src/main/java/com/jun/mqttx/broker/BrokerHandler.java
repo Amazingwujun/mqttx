@@ -81,7 +81,7 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
     /**
      * 连接断开后进行如下操作:
      * <ol>
-     *     <li>清理 {@link ConnectHandler#clientMap} 中保存的 clientId 与 channelId 绑定关系</li>
+     *     <li>清理 {@link ConnectHandler#CLIENT_MAP} 中保存的 clientId 与 channelId 绑定关系</li>
      *     <li>遗嘱消息处理</li>
      *     <li>当 cleanSession = 0 时持久化 session,这样做的目的是保存 <code>Session#messageId</code> 字段变化</li>
      * </ol>
@@ -107,7 +107,7 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
                     .map(Session::getWillMessage)
                     .ifPresent(msg -> messageDelegatingHandler.handle(ctx, msg));
 
-            ConnectHandler.clientMap.remove(session.getClientId());
+            ConnectHandler.CLIENT_MAP.remove(session.getClientId());
             if (Boolean.FALSE.equals(session.getCleanSession())) {
                 sessionService.save(session);
             }
@@ -126,7 +126,7 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
             return;
         }
 
-        Optional.ofNullable(ConnectHandler.clientMap.get(clientId))
+        Optional.ofNullable(ConnectHandler.CLIENT_MAP.get(clientId))
                 .map(CHANNELS::find)
                 .ifPresent(channel -> {
                     if (!CollectionUtils.isEmpty(authorizedPubTopics)) {

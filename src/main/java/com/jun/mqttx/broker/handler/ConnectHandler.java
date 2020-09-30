@@ -37,7 +37,7 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
     /**
      * 初始化10000长连接客户端
      */
-    public final static ConcurrentHashMap<String, ChannelId> clientMap = new ConcurrentHashMap<>(10000);
+    public final static ConcurrentHashMap<String, ChannelId> CLIENT_MAP = new ConcurrentHashMap<>(10000);
     private static final String NONE_ID_PREFIX = "NONE_ID_";
     final private Boolean enableCluster;
 
@@ -168,7 +168,7 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
                     InternalMessageEnum.DISCONNECT.getChannel()
             );
         }
-        Optional.ofNullable(clientMap.get(clientId))
+        Optional.ofNullable(CLIENT_MAP.get(clientId))
                 .map(BrokerHandler.CHANNELS::find)
                 .filter(channel -> !Objects.equals(channel, ctx.channel()))
                 .ifPresent(ChannelOutboundInvoker::close);
@@ -198,7 +198,7 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
                 sessionService.save(session);
             }
         }
-        clientMap.put(clientId, ctx.channel().id());
+        CLIENT_MAP.put(clientId, ctx.channel().id());
         saveSessionWithChannel(ctx, session);
         if (enableTopicSubPubSecure) {
             saveAuthorizedTopics(ctx, auth);

@@ -13,21 +13,4 @@ public enum ShareStrategy {
     hash,
     random,
     round;
-
-    /**
-     * 返回处理共享订阅处理策略
-     *
-     * @param strategy 策略
-     * @return 支持的策略
-     */
-    public static ShareStrategy getStrategy(String strategy) {
-        ShareStrategy shareStrategy;
-        try {
-            shareStrategy = valueOf(strategy);
-        } catch (IllegalArgumentException e) {
-            return round;
-        }
-
-        return shareStrategy;
-    }
 }

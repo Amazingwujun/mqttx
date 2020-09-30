@@ -1,6 +1,8 @@
 # 测试环境、开发环境配置文件
 
 spring:
+  application:
+    name: mqttx
   redis:
     host: localhost
 
