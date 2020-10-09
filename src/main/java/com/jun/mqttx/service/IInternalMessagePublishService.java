@@ -1,6 +1,7 @@
 package com.jun.mqttx.service;
 
 import com.jun.mqttx.entity.InternalMessage;
+import reactor.core.publisher.Mono;
 
 /**
  * 内部消息发布服务
@@ -18,4 +19,9 @@ public interface IInternalMessagePublishService {
      * @param channel         推送频道
      */
     <T> void publish(InternalMessage<T> internalMessage, String channel);
+
+    /**
+     * @see #publish(InternalMessage, String)
+     */
+    <T> Mono<Long> asyncPublish(InternalMessage<T> internalMessage, String channel);
 }

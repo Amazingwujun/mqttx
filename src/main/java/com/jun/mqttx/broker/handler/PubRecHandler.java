@@ -35,10 +35,17 @@ public class PubRecHandler extends AbstractMqttSessionHandler {
             session.savePubRelMsg(messageId);
         } else {
             String clientId = clientId(ctx);
-            publishMessageService.remove(clientId, messageId);
-
-            // 保存 pubRec
-            pubRelMessageService.save(clientId, messageId);
+            publishMessageService.asyncRemove(clientId, messageId)
+                    .subscribe(e -> pubRelMessageService.asyncSave(clientId, messageId)
+                            .subscribe(t -> {
+                                MqttMessage mqttMessage = MqttMessageFactory.newMessage(
+                                        new MqttFixedHeader(MqttMessageType.PUBREL, false, MqttQoS.AT_LEAST_ONCE, false, 0),
+                                        MqttMessageIdVariableHeader.from(messageId),
+                                        null
+                                );
+                                ctx.writeAndFlush(mqttMessage);
+                            }));
+            return;
         }
 
         MqttMessage mqttMessage = MqttMessageFactory.newMessage(

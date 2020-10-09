@@ -166,10 +166,10 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         // [MQTT-3.1.4-2] If the ClientId represents a Client already connected to the Server then the Server MUST
         // disconnect the existing Client
         if (enableCluster) {
-            internalMessagePublishService.publish(
+            internalMessagePublishService.asyncPublish(
                     new InternalMessage<>(clientId, System.currentTimeMillis(), brokerId),
                     InternalMessageEnum.DISCONNECT.getChannel()
-            );
+            ).subscribe();
         }
         Optional.ofNullable(CLIENT_MAP.get(clientId))
                 .map(BrokerHandler.CHANNELS::find)

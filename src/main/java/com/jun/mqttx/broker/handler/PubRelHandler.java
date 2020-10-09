@@ -30,7 +30,15 @@ public class PubRelHandler extends AbstractMqttSessionHandler {
             getSession(ctx).removePubRelMsg(messageId);
         } else {
             pubRelMessageService.asyncRemove(clientId(ctx), messageId)
-                    .subscribe();
+                    .subscribe(e -> {
+                        MqttMessage mqttMessage = MqttMessageFactory.newMessage(
+                                new MqttFixedHeader(MqttMessageType.PUBCOMP, false, MqttQoS.AT_MOST_ONCE, false, 0),
+                                MqttMessageIdVariableHeader.from(messageId),
+                                null
+                        );
+                        ctx.writeAndFlush(mqttMessage);
+                    });
+            return;
         }
 
         MqttMessage mqttMessage = MqttMessageFactory.newMessage(

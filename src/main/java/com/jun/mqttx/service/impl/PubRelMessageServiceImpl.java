@@ -30,8 +30,11 @@ public class PubRelMessageServiceImpl implements IPubRelMessageService {
     private Boolean enableTestMode;
     private Map<String, Set<Integer>> clientMsgStore;
 
-    public PubRelMessageServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig) {
+    public PubRelMessageServiceImpl(StringRedisTemplate stringRedisTemplate,
+                                    ReactiveStringRedisTemplate reactiveStringRedisTemplate,
+                                    MqttxConfig mqttxConfig) {
         this.stringRedisTemplate = stringRedisTemplate;
+        this.reactiveStringRedisTemplate = reactiveStringRedisTemplate;
 
         this.pubRelMsgSetPrefix = mqttxConfig.getRedis().getPubRelMsgSetPrefix();
         this.enableTestMode = mqttxConfig.getEnableTestMode();
@@ -49,6 +52,17 @@ public class PubRelMessageServiceImpl implements IPubRelMessageService {
         }
 
         stringRedisTemplate.opsForSet()
+                .add(pubRelMsgSetPrefix + clientId, String.valueOf(messageId));
+    }
+
+    @Override
+    public Mono<Long> asyncSave(String clientId, int messageId) {
+        if (enableTestMode) {
+            clientMsgStore.computeIfAbsent(clientId, s -> ConcurrentHashMap.newKeySet()).add(messageId);
+            return Mono.just(Long.MIN_VALUE);
+        }
+
+        return reactiveStringRedisTemplate.opsForSet()
                 .add(pubRelMsgSetPrefix + clientId, String.valueOf(messageId));
     }
 
