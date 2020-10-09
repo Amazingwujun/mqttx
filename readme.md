@@ -19,7 +19,7 @@
     - [4.7 websocket 支持](#47-websocket-支持)
     - [4.8 系统主题](#48-系统主题)
     - [4.9 消息桥接支持](#49-消息桥接支持)
-- [5 路线图](#5-路线图)
+- [5 开发者说](#5-开发者说)
 - [6 附表](#6-附表)
     - [6.1 配置项](#61-配置项)
     - [6.2 版本说明](#62-版本说明)
@@ -29,7 +29,7 @@
 
 ## 1 介绍
 
-`Mqttx` 基于 [mqtt v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) 协议开发，旨在提供 ***易于使用*** 且 ***性能优越*** 的 **mqtt broker**。
+`Mqttx` 基于 [MQTT v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) 协议开发，旨在提供 ***易于使用*** 且 ***性能优越*** 的 **mqtt broker**。
 
 ### 1.1 快速开始
 
@@ -279,7 +279,7 @@
 
 **仅支持单向桥接：device(client) => mqttx => MQ**
 
-## 5 开发计划
+## 5 开发者说
 
 1. 集群态考虑整合服务注册的功能，便于管理集群状态，可能会使用 `consul`，做不做看我后面的想法吧
 
@@ -293,11 +293,13 @@
 
    > 本来说要放一部分精力到 `mqttx-admin` 这个衍生项目的，但后来发现 `mqttx` 还有太多事情需要做，只能变更计划了。
 
-5. `netty 4.1.52.Final 支持了 mqtt5`，em...
+4. `netty 4.1.52.Final 支持了 mqtt5`，em...
 
    > `v1.0.5.RELEASE` 后，我会考虑支持 `mqtt5` 协议的，又是一个大工程啊。
 
-
+5. [benchmark](#63-benchmark) 表明 mqttx 性能还有提升的可能，我将在 `v1.0.6.RELEASE` 改造 `pub/sub` 处理逻辑
+   
+   > 主要是 `StringRedisTemplate` => `ReactiveStringRedisTemplate`，改**同步**为**异步**
 
 邮箱：85998282@qq.com，项目相关问题可以联系我。
 
@@ -352,7 +354,9 @@
 
 ### 6.2 版本说明
 
-- **v1.0.5.RELEASE(开发中)**
+- **v1.0.6.RELEASE（开发中）**
+  - [x] `redis` 同步转异步实现，提升性能
+- **v1.0.5.RELEASE**
   - [x] 测试模式支持
   - [x] `epoll` 支持，见 [https://netty.io/wiki/native-transports.html](https://netty.io/wiki/native-transports.html)
   - [x] 优化 `cleanSession` 消息处理机制
@@ -432,7 +436,7 @@ Result : broker=tcp://localhost:1883, clients=1000, totalCount=1000000, duration
 | ------------ | -------- | ------------ | -------------- | -------- | ---- | -------- | ------- |
 | `1000`       | 发布消息 | `1024byte`   | `1000`         | 一百万   | `0`  | `39.1s`  | `25553` |
 | `1000`       | 发布消息 | `1024byte`   | `1000`         | 一百万   | `1`  | `67.1s`  | `14897` |
-| `1000`       | 发布消息 | `1024byte`   | `1000`         | 一百万   | `2`  | `115.3s` | 8667    |
+| `1000`       | 发布消息 | `1024byte`   | `1000`         | 一百万   | `2`  | `115.3s` | `8667`  |
 
 **资源消耗：`cpu: 25%`, `mem 440 MB`**
 
