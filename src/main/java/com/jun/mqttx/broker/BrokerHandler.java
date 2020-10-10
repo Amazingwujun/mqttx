@@ -1,6 +1,7 @@
 package com.jun.mqttx.broker;
 
-import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.TypeReference;
 import com.jun.mqttx.broker.handler.AbstractMqttSessionHandler;
 import com.jun.mqttx.broker.handler.ConnectHandler;
 import com.jun.mqttx.broker.handler.MessageDelegatingHandler;
@@ -44,7 +45,7 @@ import java.util.Optional;
 @Slf4j
 @ChannelHandler.Sharable
 @Component
-public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> implements Watcher<Object> {
+public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> implements Watcher {
 
     /**
      * channel 群组
@@ -234,26 +235,26 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
      *     <li>修改用户权限</li>
      * </ol>
      *
-     * @param im {@see InternalMessage}
+     * @param msg 集群消息
      */
     @Override
-    public void action(InternalMessage<Object> im) {
-        if (im.getData() instanceof JSONObject) {
-            Authentication data = ((JSONObject) im.getData()).toJavaObject(Authentication.class);
-            // 目的是为了兼容 v1.0.2(含) 之前的版本
-            String clientId = StringUtils.isEmpty(data.getClientId()) ? data.getUsername() : data.getClientId();
-            List<String> authorizedPub = data.getAuthorizedPub();
-            List<String> authorizedSub = data.getAuthorizedSub();
-            if (StringUtils.isEmpty(clientId) || (CollectionUtils.isEmpty(authorizedPub) && CollectionUtils.isEmpty(authorizedSub))) {
-                log.info("权限修改参数非法:{}", im);
-                return;
-            }
-            alterUserAuthorizedTopic(clientId, authorizedSub, authorizedPub);
+    public void action(String msg) {
+        InternalMessage<Authentication> im = JSON.parseObject(msg, new TypeReference<InternalMessage<Authentication>>() {
+        });
+        Authentication data = im.getData();
+        // 目的是为了兼容 v1.0.2(含) 之前的版本
+        String clientId = StringUtils.isEmpty(data.getClientId()) ? data.getUsername() : data.getClientId();
+        List<String> authorizedPub = data.getAuthorizedPub();
+        List<String> authorizedSub = data.getAuthorizedSub();
+        if (StringUtils.isEmpty(clientId) || (CollectionUtils.isEmpty(authorizedPub) && CollectionUtils.isEmpty(authorizedSub))) {
+            log.info("权限修改参数非法:{}", im);
+            return;
+        }
+        alterUserAuthorizedTopic(clientId, authorizedSub, authorizedPub);
 
-            // 移除 cache&redis 中客户端订阅的 topic
-            if (!CollectionUtils.isEmpty(authorizedSub)) {
-                subscriptionService.clearClientSub(clientId, authorizedSub);
-            }
+        // 移除 cache&redis 中客户端订阅的 topic
+        if (!CollectionUtils.isEmpty(authorizedSub)) {
+            subscriptionService.clearClientSub(clientId, authorizedSub);
         }
     }
 

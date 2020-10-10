@@ -1,7 +1,6 @@
 package com.jun.mqttx.consumer;
 
 import com.jun.mqttx.constants.InternalMessageEnum;
-import com.jun.mqttx.entity.InternalMessage;
 
 /**
  * 观察者，实现此接口.
@@ -9,15 +8,15 @@ import com.jun.mqttx.entity.InternalMessage;
  * @author Jun
  * @since 1.0.4
  */
-public interface Watcher<T> {
+public interface Watcher {
 
     /**
      * 每当有新的集群消息达到是，触发行为。
      * 注意：实现方法不应该有耗时操作(e.g. 访问数据库)
      *
-     * @param im {@see InternalMessage}
+     * @param msg 集群消息
      */
-    void action(InternalMessage<T> im);
+    void action(String msg);
 
     /**
      * Watcher 支持的 channel 类别

@@ -1,5 +1,7 @@
 package com.jun.mqttx.broker.handler;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.TypeReference;
 import com.jun.mqttx.broker.BrokerHandler;
 import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.constants.InternalMessageEnum;
@@ -36,7 +38,7 @@ import static com.jun.mqttx.constants.ShareStrategy.*;
  * @since 1.0.4
  */
 @Handler(type = MqttMessageType.PUBLISH)
-public class PublishHandler extends AbstractMqttTopicSecureHandler implements Watcher<PubMsg> {
+public class PublishHandler extends AbstractMqttTopicSecureHandler implements Watcher {
 
     private IRetainMessageService retainMessageService;
 
@@ -65,6 +67,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
      */
     private Map<String, AtomicInteger> roundMap;
 
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     public PublishHandler(IPublishMessageService publishMessageService, IRetainMessageService retainMessageService,
                           ISubscriptionService subscriptionService, IPubRelMessageService pubRelMessageService,
                           @Nullable IInternalMessagePublishService internalMessagePublishService, MqttxConfig mqttxConfig,
@@ -182,7 +185,9 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
     }
 
     @Override
-    public void action(InternalMessage<PubMsg> im) {
+    public void action(String msg) {
+        InternalMessage<PubMsg> im = JSON.parseObject(msg, new TypeReference<InternalMessage<PubMsg>>() {
+        });
         PubMsg data = im.getData();
         publish(data, null, true);
     }

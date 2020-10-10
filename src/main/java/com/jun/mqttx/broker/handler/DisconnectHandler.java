@@ -1,5 +1,7 @@
 package com.jun.mqttx.broker.handler;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.TypeReference;
 import com.jun.mqttx.broker.BrokerHandler;
 import com.jun.mqttx.constants.InternalMessageEnum;
 import com.jun.mqttx.consumer.Watcher;
@@ -20,7 +22,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Handler(type = MqttMessageType.DISCONNECT)
-public final class DisconnectHandler extends AbstractMqttSessionHandler implements Watcher<String> {
+public final class DisconnectHandler extends AbstractMqttSessionHandler implements Watcher {
 
     private ConnectHandler connectHandler;
 
@@ -46,7 +48,9 @@ public final class DisconnectHandler extends AbstractMqttSessionHandler implemen
     }
 
     @Override
-    public void action(InternalMessage<String> im) {
+    public void action(String msg) {
+        InternalMessage<String> im = JSON.parseObject(msg, new TypeReference<InternalMessage<String>>() {
+        });
         ChannelId channelId = ConnectHandler.CLIENT_MAP.get(im.getData());
         if (channelId != null) {
             BrokerHandler.CHANNELS.find(channelId).close();

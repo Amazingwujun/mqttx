@@ -159,7 +159,7 @@
 ![ak6nHK.png](https://s1.ax1x.com/2020/07/28/ak6nHK.png)
 
 1. `mqttx.cluster.enable`：功能开关，默认 `false`
-
+> `v1.0.5.RELEASE` 之前的版本集群消息处理存在 bug，无法使用.
 #### 4.4 ssl 支持
 
 开启 ssl 你首先应该有了 *ca*(自签名或购买)，然后修改 `application.yml` 文件中几个配置：

@@ -45,7 +45,6 @@ public class InternalMessageSubscriber {
      * @param message 消息内容
      * @param channel 订阅频道
      */
-    @SuppressWarnings("unchecked")
     public void handleMessage(String message, String channel) {
         // 同 broker 消息屏蔽
         InternalMessage internalMessage = JSON.parseObject(message, InternalMessage.class);
@@ -55,7 +54,7 @@ public class InternalMessageSubscriber {
 
         for (Watcher watcher : watchers) {
             if (watcher.support(channel)) {
-                watcher.action(JSON.parseObject(message, InternalMessage.class));
+                watcher.action(message);
                 // 一个消息只能由一个观察者消费
                 break;
             }
