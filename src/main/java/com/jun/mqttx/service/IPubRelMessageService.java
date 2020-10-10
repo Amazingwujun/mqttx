@@ -23,7 +23,7 @@ public interface IPubRelMessageService {
      *
      * @param clientId  客户端ID
      * @param messageId 消息ID
-     * @return
+     * @return true if msg exist
      */
     boolean isDupMsg(String clientId, int messageId);
 

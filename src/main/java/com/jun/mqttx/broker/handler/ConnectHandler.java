@@ -108,15 +108,20 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         MqttConnectMessage mcm = (MqttConnectMessage) msg;
         MqttConnectVariableHeader variableHeader = mcm.variableHeader();
         MqttConnectPayload payload = mcm.payload();
+        MqttProperties properties = variableHeader.properties();
+
+
         final String username = payload.userName();
         final byte[] password = payload.passwordInBytes();
 
         // 用户名及密码校验
-        if (variableHeader.hasPassword() && variableHeader.hasUserName()) {
+        if (variableHeader.hasPassword() && variableHeader.hasUserName())
+        {
             authenticationService.asyncAuthenticate(
                     ClientAuthDTO.of(username, password),
                     authentication -> proccess0(ctx, msg, authentication),
-                    throwable -> {
+                    throwable ->
+                    {
                         throw new AuthenticationException("登入失败", throwable);
                     });
         } else {

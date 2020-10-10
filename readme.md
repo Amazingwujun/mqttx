@@ -307,9 +307,9 @@
 
    `v1.0.5.RELEASE` 成为 `mqttx` 第一个 **LTS** 版本，`v1.0` 将基于它维护和更新。 为提升单机性能， `v1.1` 版本将全面异步化。后续 [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html) 协议支持可能会率先从 `v1.0` 开始。
 
-7. 技术交流群
+7. 交流群
 
-![qq交流群](https://s1.ax1x.com/2020/10/10/0y9hPx.png)
+<img src="https://s1.ax1x.com/2020/10/10/0ytoSx.jpg" alt="群二维码" height="300" />
 
 ## 6 附表
 

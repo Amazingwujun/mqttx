@@ -191,8 +191,17 @@ public class SubscriptionServiceImpl implements ISubscriptionService, Watcher {
 
     @Override
     public void clearClientSubscriptions(String clientId) {
-        Set<String> keys = stringRedisTemplate.opsForSet().members(topicSetKey);
-        if (CollectionUtils.isEmpty(keys)) {
+        Set<String> keys;
+        if (enableTestMode)
+        {
+            keys = allTopics;
+        } else
+        {
+            keys = stringRedisTemplate.opsForSet().members(topicSetKey);
+        }
+
+        if (CollectionUtils.isEmpty(keys))
+        {
             return;
         }
         unsubscribe(clientId, new ArrayList<>(keys));
