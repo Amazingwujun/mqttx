@@ -6,8 +6,8 @@
 
 - [1 Introduction](#1-introduction)
   - [1.1 Quick Start](#11-quick-start)
-  - [1.2 Project dependency](#12-project-dependency)
-  - [1.3 Online example](#13-online-example)
+  - [1.2 Project dependencies](#12-project-dependencies)
+  - [1.3 Online Examples](#13-online-examples)
 - [2 Architecture](#2-architecture)
   - [2.1 Directory Structure](#21-directory-structure)
 - [3 Containerized Deployment](#3-containerized-deployment)
@@ -21,10 +21,10 @@
   - [4.7 websocket support](#47-websocket-support)
   - [4.8 System Theme](#48-system-theme)
   - [4.9 Message Bridge Support](#49-message-bridge-support)
-- [5 Developer Talk](#5-developer-talk)
+- [5 The Developer says](#5-the-developer-says)
 - [6 Schedule](#6-schedule)
-  - [6.1 Configuration Item](#61-configuration-item)
-  - [6.2 Version Description](#62-version-description)
+  - [6.1 Configuration Items](#61-configuration-items)
+  - [6.2 Release Notes](#62-release-notes)
     - [6.2.1 v1.0](#621-v10)
     - [6.2.2 v1.1](#622-v11)
   - [6.3 Benchmark](#63-benchmark)
@@ -71,7 +71,7 @@ other instructions:
 >
 > Example: `idea` needs to install the plug-in `Lombok`, `settings> Build,Execution, Deployment> Compiler> Annotation Processor` to enable `Enable annotation processing`
 
-### 1.3 Online Examples
+### 	1.3 Online Examples
 
 A singleton service of `mqttx` is deployed in the cloud for functional testing:
 1. Does not support ssl
@@ -235,7 +235,7 @@ supported
 The client can obtain the broker status by subscribing to system topics. Currently, the system supports the following topics:
 
 | topic | repeat | comment |
-| -------------------------------- | ------- | -------- -------------------------------------------------- - |
+| -------------------------------- | ------- | ----------------------------------------------------------- |
 | `$SYS/broker/status` | `false` | Clients subscribing to this topic will periodically (`mqttx.sys-topic.interval`) receive the status of the broker, which covers the status values ​​of all topics below. <br/>**Note: After the client connection is disconnected, the subscription is cancelled** |
 | `$SYS/broker/activeConnectCount` | `true` | Immediately return the current number of active connections |
 | `$SYS/broker/time` | `true` | Return the current timestamp immediately |
@@ -262,7 +262,7 @@ The response object format is `json` string:
 ```
 
 | field | Description |
-| -------------------- | ---------------------------- --- |
+| -------------------- | ------------------------------- |
 | `ActiveConnectCount` | Current number of active connections |
 | `timestamp` | Timestamp; (`yyyy-MM-dd HH:mm:ss`) |
 | `version` | `mqttx` version |
@@ -329,7 +329,7 @@ The purpose of the latter two configuration files is to distinguish configuratio
 Configuration item description:
 
 | Configuration | Default | Description |
-| ---------------------------------------- | -------- --------------------- | ---------------------------- -------------------------------- |
+| ---------------------------------------- | ----------------------------- | ------------------------------------------------------------ |
 | `mqttx.version` | From `pom.xml` | Version |
 | `mqttx.brokerId` | `1` | Application logo, unique |
 | `mqttx.heartbeat` | `60s` | The initial heartbeat will be reset by keepalive in the conn message |
@@ -414,7 +414,7 @@ machine:
 
 | System | cpu | Memory |
 | ------- | --------- | ----- |
-| `win10` | `i5-4460` | `16G` ||
+| `win10` | `i5-4460` | `16G` |
 
 #### 6.3.1 CleanSessionTrue
 
