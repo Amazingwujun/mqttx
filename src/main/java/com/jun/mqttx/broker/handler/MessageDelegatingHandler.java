@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * 消息处理器
+ * 消息处理器, 消息将委派给 {@link Handler} 处理.
  *
  * @author Jun
  * @since 1.0.4

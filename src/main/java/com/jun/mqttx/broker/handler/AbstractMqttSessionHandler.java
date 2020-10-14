@@ -4,6 +4,7 @@ import com.jun.mqttx.entity.Authentication;
 import com.jun.mqttx.entity.Session;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.mqtt.MqttVersion;
 import io.netty.util.AttributeKey;
 
 /**
@@ -96,5 +97,15 @@ public abstract class AbstractMqttSessionHandler implements MqttMessageHandler {
      */
     Session getSession(ChannelHandlerContext ctx) {
         return (Session) ctx.channel().attr(AttributeKey.valueOf(Session.KEY)).get();
+    }
+
+    /**
+     * 返回当前连接使用的协议版本
+     *
+     * @param ctx {@link ChannelHandlerContext}
+     * @return mqtt 协议版本
+     */
+    MqttVersion version(ChannelHandlerContext ctx) {
+        return getSession(ctx).getVersion();
     }
 }

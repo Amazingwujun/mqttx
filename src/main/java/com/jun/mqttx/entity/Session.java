@@ -1,6 +1,7 @@
 package com.jun.mqttx.entity;
 
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
+import io.netty.handler.codec.mqtt.MqttVersion;
 import lombok.Data;
 
 import java.util.HashMap;
@@ -17,37 +18,34 @@ import java.util.Set;
 @Data
 public class Session {
 
+    //@formatter:off
     public static final String KEY = "session";
 
     /**
-     * 客户ID
+     * mqtt 协议版本
+     *
+     * @see MqttVersion
      */
+    private transient MqttVersion version;
+
+    /** 客户ID */
     private String clientId;
 
-    /**
-     * 清理会话标志
-     */
+    /** 清理会话标志 */
     private Boolean cleanSession;
 
-    /**
-     * 用于 cleanSession 连接，负责存储 qos > 0 的消息
-     */
+    /** 用于 cleanSession 连接，负责存储 qos > 0 的消息 */
     private transient Map<Integer, PubMsg> pubMsgStore;
 
-    /**
-     * @see #pubMsgStore
-     */
+    /** @see #pubMsgStore */
     private transient Set<Integer> pubRelMsgStore;
 
-    /**
-     * 遗嘱消息
-     */
+    /** 遗嘱消息 */
     private transient MqttPublishMessage willMessage;
 
-    /**
-     * 用于生成 msgId
-     */
+    /** 用于生成 msgId */
     private int messageId;
+    //@formatter:on
 
     private Session() {
     }
@@ -60,9 +58,22 @@ public class Session {
      * @return Session for clean session = 1
      */
     public static Session of(String clientId, boolean cleanSession) {
+        return of(clientId, cleanSession, MqttVersion.MQTT_3_1_1);
+    }
+
+    /**
+     * 创建会话
+     *
+     * @param clientId     客户端 id
+     * @param cleanSession clean session 标识. true: 1; false: 0
+     * @param version      mqtt 协议版本
+     * @return Session for clean session = 1
+     */
+    public static Session of(String clientId, boolean cleanSession, MqttVersion version) {
         Session session = new Session();
         session.setClientId(clientId);
         session.setCleanSession(cleanSession);
+        session.setVersion(version);
         if (cleanSession) {
             session.setPubMsgStore(new HashMap<>());
             session.setPubRelMsgStore(new HashSet<>());

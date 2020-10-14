@@ -46,23 +46,16 @@ import java.util.Optional;
 @ChannelHandler.Sharable
 @Component
 public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> implements Watcher {
+    //@formatter:off
 
-    /**
-     * channel 群组
-     */
+    /** channel 群组 */
     public static final ChannelGroup CHANNELS = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
 
-    /**
-     * 消息处理器
-     */
     private MessageDelegatingHandler messageDelegatingHandler;
-
-    /**
-     * 会话服务
-     */
     private ISessionService sessionService;
-
     private ISubscriptionService subscriptionService;
+
+    //@formatter:on
 
     public BrokerHandler(MessageDelegatingHandler messageDelegatingHandler, ISessionService sessionService, ISubscriptionService subscriptionService) {
         Assert.notNull(messageDelegatingHandler, "messageDelegatingHandler can't be null");

@@ -112,19 +112,13 @@ public class MqttxConfig {
     @Data
     public static class Cluster{
 
-        /**
-         * 用于集群内部缓存开启状态一致性检查
-         */
+        /** 用于集群内部缓存开启状态一致性检查 */
         private String innerCacheConsistencyKey = "mqttx:cache_consistence";
 
-        /**
-         * 集群开关
-         */
+        /** 集群开关 */
         private Boolean enable = false;
 
-        /**
-         * 处理集群消息的中间件类型
-         */
+        /** 处理集群消息的中间件类型 */
         private String type = ClusterConfig.REDIS;
     }
 

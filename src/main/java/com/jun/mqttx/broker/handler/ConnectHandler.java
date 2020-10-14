@@ -33,42 +33,27 @@ import static io.netty.handler.codec.mqtt.MqttMessageType.CONNECT;
 @Slf4j
 @Handler(type = CONNECT)
 public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
+    //@formatter:off
 
-    /**
-     * 初始化10000长连接客户端
-     */
-    public final static ConcurrentHashMap<String, ChannelId> CLIENT_MAP = new ConcurrentHashMap<>(10000);
+    public final static ConcurrentHashMap<String, ChannelId> CLIENT_MAP = new ConcurrentHashMap<>(100000);
     private static final String NONE_ID_PREFIX = "NONE_ID_";
-    final private Boolean enableCluster;
+    final private Boolean enableCluster, enableTopicSubPubSecure;
 
-    final private Boolean enableTopicSubPubSecure;
     private int brokerId;
-    /**
-     * 认证服务
-     */
+    /** 认证服务 */
     private IAuthenticationService authenticationService;
-
-    /**
-     * 会话服务
-     */
+    /** 会话服务 */
     private ISessionService sessionService;
-
-    /**
-     * 主题订阅相关服务
-     */
+    /** 主题订阅相关服务 */
     private ISubscriptionService subscriptionService;
-
-    /**
-     * publish 消息服务
-     */
+    /** publish 消息服务 */
     private IPublishMessageService publishMessageService;
-
-    /**
-     * pubRel 消息服务
-     */
+    /** pubRel 消息服务 */
     private IPubRelMessageService pubRelMessageService;
-
+    /** 内部消息发布服务 */
     private IInternalMessagePublishService internalMessagePublishService;
+
+    //@formatter:on
 
     public ConnectHandler(IAuthenticationService authenticationService, ISessionService sessionService,
                           ISubscriptionService subscriptionService, IPublishMessageService publishMessageService,
@@ -108,15 +93,12 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         MqttConnectMessage mcm = (MqttConnectMessage) msg;
         MqttConnectVariableHeader variableHeader = mcm.variableHeader();
         MqttConnectPayload payload = mcm.payload();
-        MqttProperties properties = variableHeader.properties();
-
 
         final String username = payload.userName();
         final byte[] password = payload.passwordInBytes();
 
         // 用户名及密码校验
-        if (variableHeader.hasPassword() && variableHeader.hasUserName())
-        {
+        if (variableHeader.hasPassword() && variableHeader.hasUserName()) {
             authenticationService.asyncAuthenticate(
                     ClientAuthDTO.of(username, password),
                     authentication -> proccess0(ctx, msg, authentication),

@@ -39,33 +39,28 @@ import static com.jun.mqttx.constants.ShareStrategy.*;
  */
 @Handler(type = MqttMessageType.PUBLISH)
 public class PublishHandler extends AbstractMqttTopicSecureHandler implements Watcher {
+    //@formatter:off
 
     private IRetainMessageService retainMessageService;
-
     private ISubscriptionService subscriptionService;
-
     private IPublishMessageService publishMessageService;
-
     private IPubRelMessageService pubRelMessageService;
-
     private IInternalMessagePublishService internalMessagePublishService;
 
     private int brokerId;
-
     private Boolean enableCluster, enableTopicSubPubSecure, enableShareTopic;
+    /** 共享主题轮询策略 */
     private ShareStrategy shareStrategy;
-
-    /**
-     * 消息桥接开关
-     */
+    /** 消息桥接开关 */
     private Boolean enableMessageBridge;
+    /** 需要桥接消息的主题 */
     private Set<String> bridgeTopics;
     private KafkaTemplate<String, byte[]> kafkaTemplate;
 
-    /**
-     * 共享订阅轮询，存储轮询参数
-     */
+    /** 共享订阅轮询，存储轮询参数 */
     private Map<String, AtomicInteger> roundMap;
+
+    //@formatter:on
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     public PublishHandler(IPublishMessageService publishMessageService, IRetainMessageService retainMessageService,

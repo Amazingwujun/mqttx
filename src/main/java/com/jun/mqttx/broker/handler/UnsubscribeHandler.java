@@ -20,7 +20,6 @@ import java.util.stream.Collectors;
 public class UnsubscribeHandler extends AbstractMqttSessionHandler {
 
     private Boolean enableSysTopic;
-
     private ISubscriptionService subscriptionService;
 
     public UnsubscribeHandler(MqttxConfig config, ISubscriptionService subscriptionService) {

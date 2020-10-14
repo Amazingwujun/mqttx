@@ -32,20 +32,19 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Handler(type = MqttMessageType.SUBSCRIBE)
 public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
     //@formatter:off
+
+    /**系统主题 $SYS 订阅群组 */
+    static ChannelGroup SYS_CHANNELS;
     private final boolean enableTopicPubSubSecure;
     private IRetainMessageService retainMessageService;
     private ISubscriptionService subscriptionService;
-
     private boolean enableSysTopic;
     private long interval;
     private MqttQoS sysTopicQos;
     private String version;
-
-    /** 系统主题 $SYS 订阅群组 */
-    static ChannelGroup SYS_CHANNELS;
     /** 定时任务执行器 */
     private ScheduledExecutorService fixRateExecutor;
-    /** 系统主题消息 id  */
+    /** 系统主题消息 id */
     private AtomicInteger sysTopicMsgId;
 
     //@formatter:on

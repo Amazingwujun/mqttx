@@ -13,6 +13,16 @@ import org.springframework.util.StringUtils;
 
 import java.util.Objects;
 
+/**
+ * 项目地址:
+ * <ul>
+ *     <li><a href="https://github.com/Amazingwujun/mqttx">github</a></li>
+ *     <li><a href="https://gitee.com/amazingJun/mqttx">gitee</a></li>
+ * </ul>
+ * 如果项目对你有所帮助，就帮作者 <i>star</i> 一下吧😊
+ *
+ * @author Jun
+ */
 @Slf4j
 @SpringBootApplication
 public class MqttxApplication {

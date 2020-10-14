@@ -29,6 +29,7 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.timeout.IdleStateHandler;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.DisposableBean;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
@@ -44,57 +45,37 @@ import java.util.Objects;
  */
 @Slf4j
 @Component
-public class BrokerInitializer {
+public class BrokerInitializer implements DisposableBean {
     //@formatter:off
 
     /** ip */
     private String host;
-
     /** 端口 */
     private Integer port;
-
     /** socket 开关 */
     private Boolean enableSocket;
-
     /** 心跳 */
     private Duration heartbeat;
-
     /** websocket 端口 */
     private Integer wsPort;
-
     /** websocket 地址 */
     private String websocketPath;
-
     /** 握手队列 */
     private Integer soBacklog;
-
     /** ssl开关 */
     private Boolean sslEnable;
-
     /** 客户端证书校验 */
     private ClientAuth clientAuth;
-
-    /**
-     * 证书工具
-     */
+    /** 证书工具 */
     private SslUtils sslUtils;
-
-    /**
-     * broker handler
-     */
+    /** broker handler */
     private BrokerHandler brokerHandler;
-
-    /**
-     * reactor 线程，提供给 socket, websocket 使用
-     */
+    /** reactor 线程，提供给 socket, websocket 使用 */
     private EventLoopGroup boss, work;
-
     private SslContext sslContext;
-
-    /**
-     * websocket 开关
-     */
+    /** websocket 开关 */
     private Boolean enableWebsocket;
+
     //@formatter:on
 
     public BrokerInitializer(MqttxConfig mqttxConfig, BrokerHandler brokerHandler, SslUtils sslUtils) {
@@ -272,5 +253,15 @@ public class BrokerInitializer {
                 });
 
         b.bind(host, wsPort).sync();
+    }
+
+    @Override
+    public void destroy() throws Exception {
+        if (boss != null) {
+            boss.shutdownGracefully();
+        }
+        if (work != null) {
+            work.shutdownGracefully();
+        }
     }
 }

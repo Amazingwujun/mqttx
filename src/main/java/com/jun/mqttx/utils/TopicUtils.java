@@ -23,20 +23,15 @@ public class TopicUtils {
     private static final String SHARE_TOPIC = "$share";
 
     private static final String SYS_TOPIC = "$SYS";
-
-    private static final Set<String> sysTopicSets;
-
     /** broker 全部状态值 */
     public static final String BROKER_STATUS = SYS_TOPIC + "/broker/status";
-
     /** 当前连接的客户端数 */
     public static final String BROKER_CLIENTS_ACTIVE_CONNECTED_COUNT = SYS_TOPIC + "/broker/activeConnectCount";
-
     /** 服务器时间 */
     public static final String BROKER_TIME = SYS_TOPIC + "/broker/time";
-
     /** mqttx 版本 */
     public static final String BROKER_VERSION = SYS_TOPIC + "/broker/version";
+    private static final Set<String> sysTopicSets;
 
     //@formatter:on
 

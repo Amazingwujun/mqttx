@@ -287,7 +287,7 @@
 
    >  其实我想引入 `SpringCloud` ，但又觉得 `springcloud` 有点重了，可能会开一个分支去实现。
 
-1. bug fix and optimization，这个会一直继续的，不过主要靠使用和学习 `mqttx` 的同学反馈问题给我（没反馈我就当没有呗~摊手.jpg）
+2. bug fix and optimization，这个会一直继续的，不过主要靠使用和学习 `mqttx` 的同学反馈问题给我（没反馈我就当没有呗~摊手.jpg）
 
    >  这个其实非常重要的，但截至到目前也少有同学找我反馈问题，我一个人终究力量有限。
 
@@ -295,19 +295,22 @@
 
    > 本来说要放一部分精力到 `mqttx-admin` 这个衍生项目的，但后来发现 `mqttx` 还有太多事情需要做，只能变更计划了。
 
-4. `netty 4.1.52.Final 支持了 mqtt5`，em...
-
-   > `v1.0.5.RELEASE` 后，我会考虑支持 `mqtt5` 协议的，又是一个大工程啊。
-
-5. [benchmark](#63-benchmark) 表明 mqttx 性能还有提升的可能，我将在 `v1.1.0.RELEASE` 改造 `pub/sub` 处理逻辑
+4. [benchmark](#63-benchmark) 表明 mqttx 性能还有提升的可能，我将在 `v1.1.0.RELEASE` 改造 `pub/sub` 处理逻辑
    
    > 主要是 `StringRedisTemplate` => `ReactiveStringRedisTemplate`，改**同步**为**异步**
    
-6. 开发方向介绍
+5. 开发方向介绍
 
-   `v1.0.5.RELEASE` 成为 `mqttx` 第一个 **LTS** 版本，`v1.0` 将基于它维护和更新。 为提升单机性能， `v1.1` 版本将全面异步化。后续 [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html) 协议支持可能会率先从 `v1.0` 开始。
+   ~~`v1.0.5.RELEASE` 成为 `mqttx` 第一个 **LTS** 版本，`v1.0` 将基于它维护和更新。 为提升单机性能， `v1.1` 版本将全面异步化。后续 [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html) 协议支持可能会率先从 `v1.0` 开始。~~
 
-7. 交流群
+   `mqttx` 建立两个分支：
+
+   - v1.0：`com.jun.mqttx.service.impl` 同步接口
+   - v1.1：`com.jun.mqttx.service.impl` 改为异步接口
+
+    [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html) 由 `v1.0` 开始支持，不出意外就是 `v1.0.6.RELEASE`。
+
+6. 交流群
 
 <img src="https://s1.ax1x.com/2020/10/10/0ytoSx.jpg" alt="群二维码" height="300" />
 
@@ -364,6 +367,9 @@
 
 #### 6.2.1 v1.0
 
+- **v1.0.6.RELEASE（开发中）**
+  - [x] [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html) 支持
+  - [x] bug 修复及优化
 - **v1.0.5.RELEASE**
   - [x] 测试模式支持
   - [x] `epoll` 支持，见 [https://netty.io/wiki/native-transports.html](https://netty.io/wiki/native-transports.html)
