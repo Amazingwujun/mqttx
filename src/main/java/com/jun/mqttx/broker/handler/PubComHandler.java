@@ -2,7 +2,9 @@ package com.jun.mqttx.broker.handler;
 
 import com.jun.mqttx.service.IPubRelMessageService;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.mqtt.*;
+import io.netty.handler.codec.mqtt.MqttMessage;
+import io.netty.handler.codec.mqtt.MqttMessageIdVariableHeader;
+import io.netty.handler.codec.mqtt.MqttMessageType;
 
 /**
  * {@link MqttMessageType#PUBCOMP} 消息处理器
@@ -29,13 +31,6 @@ public class PubComHandler extends AbstractMqttSessionHandler {
             String clientId = clientId(ctx);
             pubRelMessageService.remove(clientId, messageId);
         }
-
-        MqttMessage mqttMessage = MqttMessageFactory.newMessage(
-                new MqttFixedHeader(MqttMessageType.PUBCOMP, false, MqttQoS.AT_MOST_ONCE, false, 0),
-                MqttMessageIdVariableHeader.from(messageId),
-                null
-        );
-        ctx.writeAndFlush(mqttMessage);
     }
 
 }
