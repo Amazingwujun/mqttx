@@ -87,6 +87,12 @@ public class Session {
      * @return {@link #messageId}
      */
     public int increaseAndGetMessageId() {
+        // SUBSCRIBE, UNSUBSCRIBE, and PUBLISH (in cases where QoS > 0) Control Packets MUST contain a
+        // non-zero 16-bit Packet Identifier [MQTT-2.3.1-1].
+        if ((++messageId & 0xffff) == 0) {
+            return messageId;
+        }
+
         return ++messageId;
     }
 

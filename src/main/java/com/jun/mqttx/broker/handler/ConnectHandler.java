@@ -258,7 +258,7 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
             pubRelList.forEach(messageId -> {
                 MqttMessage mqttMessage = MqttMessageFactory.newMessage(
                         // pubRel 的 fixHeader 是固定死了的 [0,1,1,0,0,0,1,0]
-                        new MqttFixedHeader(MqttMessageType.PUBREL, false, MqttQoS.AT_MOST_ONCE, false, 0),
+                        new MqttFixedHeader(MqttMessageType.PUBREL, false, MqttQoS.AT_LEAST_ONCE, false, 0),
                         MqttMessageIdVariableHeader.from(messageId),
                         null
                 );
