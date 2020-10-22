@@ -369,9 +369,12 @@
 
 #### 6.2.1 v1.0
 
-- **v1.0.6.RELEASE（开发中）**
+- **v1.0.7.RELEASE(开发中)**
   - [x] [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html) 支持
   - [x] bug 修复及优化
+- **v1.0.6.RELEASE**
+  - [x] `netty 4.1.52.Final` 这个版本的 MqttEncoder.java 处理 UnsubAck 响应消息会导致 NPE，直接影响功能，不得不提前结束此版本的开发
+  - [x] bug 修复
 - **v1.0.5.RELEASE**
   - [x] 测试模式支持
   - [x] `epoll` 支持，见 [https://netty.io/wiki/native-transports.html](https://netty.io/wiki/native-transports.html)

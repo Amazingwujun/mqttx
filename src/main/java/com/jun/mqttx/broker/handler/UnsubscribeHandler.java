@@ -65,6 +65,5 @@ public class UnsubscribeHandler extends AbstractMqttSessionHandler {
                 })
                 .filter(topic -> !TopicUtils.isSys(topic))
                 .collect(Collectors.toList());
-
     }
 }
