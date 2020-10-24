@@ -15,7 +15,7 @@ import io.netty.handler.codec.mqtt.MqttPubAckMessage;
 @Handler(type = MqttMessageType.PUBACK)
 public class PubAckHandler extends AbstractMqttSessionHandler {
 
-    private IPublishMessageService publishMessageService;
+    private final IPublishMessageService publishMessageService;
 
     public PubAckHandler(IPublishMessageService publishMessageService) {
         this.publishMessageService = publishMessageService;

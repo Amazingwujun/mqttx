@@ -15,8 +15,8 @@ import io.netty.handler.codec.mqtt.*;
 @Handler(type = MqttMessageType.PUBREC)
 public class PubRecHandler extends AbstractMqttSessionHandler {
 
-    private IPubRelMessageService pubRelMessageService;
-    private IPublishMessageService publishMessageService;
+    private final IPubRelMessageService pubRelMessageService;
+    private final IPublishMessageService publishMessageService;
 
     public PubRecHandler(IPubRelMessageService pubRelMessageService, IPublishMessageService publishMessageService) {
         this.pubRelMessageService = pubRelMessageService;

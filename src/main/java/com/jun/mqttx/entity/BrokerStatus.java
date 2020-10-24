@@ -1,43 +1,41 @@
 package com.jun.mqttx.entity;
 
 import com.alibaba.fastjson.JSON;
+import lombok.Builder;
 import lombok.Getter;
 
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 /**
  * 系统主题状态
  */
 @Getter
+@Builder
 public class BrokerStatus {
     //@formatter:off
 
     /** broker 当前活动连接 */
-    private Integer activeConnectCount;
+    private final Integer activeConnectCount;
 
     /** 时间戳 */
-    private String timestamp;
+    private final String timestamp;
 
     /** 版本号 */
-    private String version;
+    private final String version;
+
+    /** 最大活动连接数 */
+    private final Integer maxActiveConnectCount;
+
+    /** @see  com.jun.mqttx.broker.handler.ProbeHandler#IN_MSG_SIZE */
+    private final Integer receivedMsg;
+
+    /** @see com.jun.mqttx.broker.handler.ProbeHandler#OUT_MSG_SIZE */
+    private final Integer sendMsg;
+
+    private final Integer uptime;
 
     //@formatter:on
 
-    private BrokerStatus(Integer activeConnectCount, String timestamp, String version) {
-        this.activeConnectCount = activeConnectCount;
-        this.timestamp = timestamp;
-        this.version = version;
-    }
-
-    public static BrokerStatus of(Integer activeConnected, String version) {
-        return of(activeConnected, LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")), version);
-    }
-
-    public static BrokerStatus of(Integer activeConnected, String timestamp, String version) {
-        return new BrokerStatus(activeConnected, timestamp, version);
-    }
 
     public byte[] toUtf8Bytes() {
         return JSON.toJSONString(this).getBytes(StandardCharsets.UTF_8);

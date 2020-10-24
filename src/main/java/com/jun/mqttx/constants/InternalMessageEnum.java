@@ -24,12 +24,12 @@ public enum InternalMessageEnum {
 
     SUB_UNSUB(8, "INTERNAL_SUB_OR_UNSUB");
 
-    private int type;
+    private final int type;
 
     /**
      * redis pub/sub channel
      */
-    private String channel;
+    private final String channel;
 
     InternalMessageEnum(int type, String channel) {
         this.type = type;

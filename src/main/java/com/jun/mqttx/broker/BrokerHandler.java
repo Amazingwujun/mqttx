@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * broker handler
@@ -51,10 +52,14 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
     /** channel 群组 */
     public static final ChannelGroup CHANNELS = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
 
-    private MessageDelegatingHandler messageDelegatingHandler;
-    private ISessionService sessionService;
-    private ISubscriptionService subscriptionService;
+    private final MessageDelegatingHandler messageDelegatingHandler;
+    private final ISessionService sessionService;
+    private final ISubscriptionService subscriptionService;
 
+    /** 历史最大连接数量 */
+    public static final AtomicInteger MAX_ACTIVE_SIZE = new AtomicInteger(0);
+    /** broker 启动时间 */
+    public static final long START_TIME = System.currentTimeMillis();
     //@formatter:on
 
     public BrokerHandler(MessageDelegatingHandler messageDelegatingHandler, ISessionService sessionService, ISubscriptionService subscriptionService) {
@@ -70,6 +75,20 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
         CHANNELS.add(ctx.channel());
+
+        // cas
+        while (true) {
+            int old = MAX_ACTIVE_SIZE.get();
+            int now = CHANNELS.size();
+
+            if (old >= now) {
+                break;
+            }
+
+            if (MAX_ACTIVE_SIZE.compareAndSet(old, now)) {
+                break;
+            }
+        }
     }
 
     /**

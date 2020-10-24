@@ -30,6 +30,16 @@ public abstract class AbstractMqttSessionHandler implements MqttMessageHandler {
     }
 
     /**
+     * 生成消息ID
+     *
+     * @see #nextMessageId(Channel)
+     */
+    int nextMessageId(Channel channel){
+        Session session = (Session) channel.attr(AttributeKey.valueOf(Session.KEY)).get();
+        return session.increaseAndGetMessageId();
+    }
+
+    /**
      * 返回客户id
      *
      * @param ctx {@link ChannelHandlerContext}

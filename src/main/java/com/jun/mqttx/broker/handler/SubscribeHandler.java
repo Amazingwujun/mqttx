@@ -16,12 +16,12 @@ import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.handler.codec.mqtt.*;
 import io.netty.util.concurrent.GlobalEventExecutor;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * {@link MqttMessageType#SUBSCRIBE} 消息处理器
@@ -36,16 +36,14 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
     /**系统主题 $SYS 订阅群组 */
     static ChannelGroup SYS_CHANNELS;
     private final boolean enableTopicPubSubSecure;
-    private IRetainMessageService retainMessageService;
-    private ISubscriptionService subscriptionService;
-    private boolean enableSysTopic;
+    private final IRetainMessageService retainMessageService;
+    private final ISubscriptionService subscriptionService;
+    private final boolean enableSysTopic;
     private long interval;
     private MqttQoS sysTopicQos;
-    private String version;
+    private final String version;
     /** 定时任务执行器 */
     private ScheduledExecutorService fixRateExecutor;
-    /** 系统主题消息 id */
-    private AtomicInteger sysTopicMsgId;
 
     //@formatter:on
 
@@ -62,7 +60,6 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
             this.interval = mqttxConfig.getSysTopic().getInterval().getSeconds();
             this.sysTopicQos = MqttQoS.valueOf(mqttxConfig.getSysTopic().getQos());
             fixRateExecutor = Executors.newSingleThreadScheduledExecutor();
-            sysTopicMsgId = new AtomicInteger(1);
             initSystemStatePublishTimer();
         }
     }
@@ -142,18 +139,27 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
      * 系统 topic 任务处理. 定时发送的系统主题（repeat = true）订阅状态与 tcp 连接状态相关，连接断开则订阅关系解除.
      * 系统主题:
      * <pre>
-     * +---------------------------------------+--------+--------------------------------------------------------------------------+
-     * | topic                                 | repeat | comment                                                                  |
-     * +=======================================+========+==========================================================================+
-     * | BROKER_STATUS                         | false  | 订阅此主题的客户端会定期（mqttx.sys-topic.interval）收到 broker 的状态，      |
-     * |                                       |        | 该状态涵盖下面所有主题的状态值.  注意：客户端连接断开后，订阅取消                |
-     * +---------------------------------------+--------+--------------------------------------------------------------------------+
-     * | BROKER_CLIENTS_ACTIVE_CONNECTED_COUNT | true   | 立即返回当前的活动连接数量                                                 |
-     * +---------------------------------------+--------+--------------------------------------------------------------------------+
-     * | BROKER_TIME                           | true   | 立即返回当前时间戳                                                         |
-     * +---------------------------------------+--------+--------------------------------------------------------------------------+
-     * | BROKER_VERSION                        | true   | 立即返回 broker 版本                                                      |
-     * +---------------------------------------+--------+--------------------------------------------------------------------------+
+     * +-----------------------------------+--------+--------------------------------------------------------------------------+
+     * | topic                             | repeat | comment                                                                  |
+     * +-----------------------------------+--------+--------------------------------------------------------------------------+
+     * | $SYS/broker/status                | false  | 订阅此主题的客户端会定期（mqttx.sys-topic.interval）收到 broker 的状态， |
+     * |                                   |        | 该状态涵盖下面所有主题的状态值。                                         |
+     * |                                   |        | 注意：客户端连接断开后，订阅取消                                         |
+     * +-----------------------------------+--------+--------------------------------------------------------------------------+
+     * | $SYS/broker/activeConnectCount    | true   | 立即返回当前的活动连接数量                                               |
+     * +-----------------------------------+--------+--------------------------------------------------------------------------+
+     * | $SYS/broker/time                  | true   | 立即返回当前时间戳                                                       |
+     * +-----------------------------------+--------+--------------------------------------------------------------------------+
+     * | $SYS/broker/version               | true   | 立即返回 broker 版本                                                     |
+     * +-----------------------------------+--------+--------------------------------------------------------------------------+
+     * | $SYS/broker/receivedMsg           | true   | 立即返回 broker 启动到现在收到的 MqttMessage, 不含 ping                  |
+     * +-----------------------------------+--------+--------------------------------------------------------------------------+
+     * | $SYS/broker/sendMsg               | true   | 立即返回 broker 启动到现在发送的 MqttMessage, 不含 pingAck               |
+     * +-----------------------------------+--------+--------------------------------------------------------------------------+
+     * | $SYS/broker/uptime                | true   | 立即返回 broker 运行时长，单位秒                                         |
+     * +-----------------------------------+--------+--------------------------------------------------------------------------+
+     * | $SYS/broker/maxActiveConnectCount | true   | 立即返回 broker 运行至今的最大 tcp 连接数                                |
+     * +-----------------------------------+--------+--------------------------------------------------------------------------+
      * </pre>
      * repeat 说明:
      * <ul>
@@ -165,50 +171,118 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
      * @param ctx   {@link ChannelHandlerContext}
      */
     private void sysTopicSubscribeHandle(final String topic, final ChannelHandlerContext ctx) {
+        final int messageId = nextMessageId(ctx);
         switch (topic) {
             case TopicUtils.BROKER_STATUS: {
                 SYS_CHANNELS.add(ctx.channel());
                 break;
             }
             case TopicUtils.BROKER_VERSION: {
-                byte[] version = BrokerStatus.of(null, null, this.version)
-                        .toUtf8Bytes();
+                byte[] version = BrokerStatus.builder()
+                        .version(this.version)
+                        .build().toUtf8Bytes();
 
                 MqttPublishMessage versionResponse = MqttMessageBuilders.publish()
                         .qos(sysTopicQos)
                         .retained(false)
                         .topicName(topic)
-                        .messageId(sysTopicMsgId.getAndIncrement())
+                        .messageId(messageId)
                         .payload(Unpooled.buffer(version.length).writeBytes(version))
                         .build();
                 ctx.writeAndFlush(versionResponse);
                 break;
             }
             case TopicUtils.BROKER_CLIENTS_ACTIVE_CONNECTED_COUNT: {
-                byte[] activeConnected = BrokerStatus.of(BrokerHandler.CHANNELS.size(), null, null)
-                        .toUtf8Bytes();
+                byte[] activeConnected = BrokerStatus.builder()
+                        .activeConnectCount(BrokerHandler.CHANNELS.size())
+                        .build().toUtf8Bytes();
 
                 MqttPublishMessage timeResponse = MqttMessageBuilders.publish()
                         .qos(sysTopicQos)
                         .retained(false)
                         .topicName(topic)
-                        .messageId(sysTopicMsgId.getAndIncrement())
+                        .messageId(messageId)
                         .payload(Unpooled.buffer(activeConnected.length).writeBytes(activeConnected))
                         .build();
                 ctx.writeAndFlush(timeResponse);
                 break;
             }
             case TopicUtils.BROKER_TIME: {
-                byte[] timestamp = BrokerStatus.of(null, null).toUtf8Bytes();
+                byte[] timestamp = BrokerStatus.builder()
+                        .timestamp(LocalDateTime.now().toString())
+                        .build().toUtf8Bytes();
 
                 MqttPublishMessage timeResponse = MqttMessageBuilders.publish()
                         .qos(sysTopicQos)
                         .retained(false)
                         .topicName(topic)
-                        .messageId(sysTopicMsgId.getAndIncrement())
+                        .messageId(messageId)
                         .payload(Unpooled.buffer(timestamp.length).writeBytes(timestamp))
                         .build();
                 ctx.writeAndFlush(timeResponse);
+                break;
+            }
+            case TopicUtils.BROKER_MAX_CLIENTS_ACTIVE: {
+                byte[] maxAlive = BrokerStatus.builder()
+                        .maxActiveConnectCount(BrokerHandler.MAX_ACTIVE_SIZE.get())
+                        .build().toUtf8Bytes();
+
+                MqttPublishMessage timeResponse = MqttMessageBuilders.publish()
+                        .qos(sysTopicQos)
+                        .retained(false)
+                        .topicName(topic)
+                        .messageId(messageId)
+                        .payload(Unpooled.buffer(maxAlive.length).writeBytes(maxAlive))
+                        .build();
+                ctx.writeAndFlush(timeResponse);
+                break;
+            }
+            case TopicUtils.BROKER_RECEIVED_MSG:{
+                byte[] received = BrokerStatus.builder()
+                        .receivedMsg(ProbeHandler.IN_MSG_SIZE.intValue())
+                        .build().toUtf8Bytes();
+
+                MqttPublishMessage timeResponse = MqttMessageBuilders.publish()
+                        .qos(sysTopicQos)
+                        .retained(false)
+                        .topicName(topic)
+                        .messageId(messageId)
+                        .payload(Unpooled.buffer(received.length).writeBytes(received))
+                        .build();
+                ctx.writeAndFlush(timeResponse);
+
+                break;
+            }
+            case TopicUtils.BROKER_SEND_MSG:{
+                byte[] send = BrokerStatus.builder()
+                        .receivedMsg(ProbeHandler.OUT_MSG_SIZE.intValue())
+                        .build().toUtf8Bytes();
+
+                MqttPublishMessage timeResponse = MqttMessageBuilders.publish()
+                        .qos(sysTopicQos)
+                        .retained(false)
+                        .topicName(topic)
+                        .messageId(messageId)
+                        .payload(Unpooled.buffer(send.length).writeBytes(send))
+                        .build();
+                ctx.writeAndFlush(timeResponse);
+
+                break;
+            }
+            case TopicUtils.BROKER_UPTIME: {
+                byte[] uptime = BrokerStatus
+                        .builder()
+                        .uptime((int) ((System.currentTimeMillis() - BrokerHandler.START_TIME) / 1000))
+                        .build().toUtf8Bytes();
+
+                MqttPublishMessage uptimeResponse = MqttMessageBuilders.publish()
+                        .qos(sysTopicQos)
+                        .retained(false)
+                        .topicName(topic)
+                        .messageId(messageId)
+                        .payload(Unpooled.buffer(uptime.length).writeBytes(uptime))
+                        .build();
+                ctx.writeAndFlush(uptimeResponse);
                 break;
             }
             default:
@@ -226,17 +300,29 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
             }
 
             // broker 状态
-            byte[] bytes = BrokerStatus.of(BrokerHandler.CHANNELS.size(), version).toUtf8Bytes();
+            LocalDateTime now = LocalDateTime.now();
+            byte[] bytes = BrokerStatus.builder()
+                    .activeConnectCount(BrokerHandler.CHANNELS.size())
+                    .maxActiveConnectCount(BrokerHandler.MAX_ACTIVE_SIZE.get())
+                    .receivedMsg(ProbeHandler.IN_MSG_SIZE.intValue())
+                    .sendMsg(ProbeHandler.OUT_MSG_SIZE.intValue())
+                    .timestamp(now.toString())
+                    .uptime((int) ((System.currentTimeMillis() - BrokerHandler.START_TIME) / 1000))
+                    .version(this.version)
+                    .build().toUtf8Bytes();
             ByteBuf payload = Unpooled.buffer(bytes.length).writeBytes(bytes);
 
-            MqttPublishMessage mpm = MqttMessageBuilders.publish()
-                    .qos(sysTopicQos)
-                    .retained(false)
-                    .topicName(TopicUtils.BROKER_STATUS)
-                    .messageId(sysTopicMsgId.getAndIncrement())
-                    .payload(payload)
-                    .build();
-            SYS_CHANNELS.writeAndFlush(mpm);
+            // 遍历发送
+            SYS_CHANNELS.forEach(channel -> {
+                MqttPublishMessage mpm = MqttMessageBuilders.publish()
+                        .qos(sysTopicQos)
+                        .retained(false)
+                        .topicName(TopicUtils.BROKER_STATUS)
+                        .messageId(nextMessageId(channel))
+                        .payload(payload)
+                        .build();
+                channel.writeAndFlush(mpm);
+            });
         }, 0, interval, TimeUnit.SECONDS);
     }
 }

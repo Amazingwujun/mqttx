@@ -15,7 +15,7 @@ import io.netty.handler.codec.mqtt.MqttMessageType;
 @Handler(type = MqttMessageType.PUBCOMP)
 public class PubComHandler extends AbstractMqttSessionHandler {
 
-    private IPubRelMessageService pubRelMessageService;
+    private final IPubRelMessageService pubRelMessageService;
 
     public PubComHandler(IPubRelMessageService pubRelMessageService) {
         this.pubRelMessageService = pubRelMessageService;

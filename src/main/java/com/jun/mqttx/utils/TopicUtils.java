@@ -23,24 +23,40 @@ public class TopicUtils {
     private static final String SHARE_TOPIC = "$share";
 
     private static final String SYS_TOPIC = "$SYS";
+    /** "$SYS/broker/" */
+    private static final String SYS_TOPIC_BROKER = SYS_TOPIC + "/broker/";
+
     /** broker 全部状态值 */
-    public static final String BROKER_STATUS = SYS_TOPIC + "/broker/status";
+    public static final String BROKER_STATUS = SYS_TOPIC_BROKER + "status";
     /** 当前连接的客户端数 */
-    public static final String BROKER_CLIENTS_ACTIVE_CONNECTED_COUNT = SYS_TOPIC + "/broker/activeConnectCount";
+    public static final String BROKER_CLIENTS_ACTIVE_CONNECTED_COUNT = SYS_TOPIC_BROKER + "activeConnectCount";
     /** 服务器时间 */
-    public static final String BROKER_TIME = SYS_TOPIC + "/broker/time";
+    public static final String BROKER_TIME = SYS_TOPIC_BROKER + "time";
     /** mqttx 版本 */
-    public static final String BROKER_VERSION = SYS_TOPIC + "/broker/version";
+    public static final String BROKER_VERSION = SYS_TOPIC_BROKER + "version";
+    /** 最大客户端连接数 */
+    public static final String BROKER_MAX_CLIENTS_ACTIVE = SYS_TOPIC_BROKER + "maxActiveConnectCount";
+    /** @see com.jun.mqttx.broker.handler.ProbeHandler#IN_MSG_SIZE */
+    public static final String BROKER_RECEIVED_MSG = SYS_TOPIC_BROKER + "receivedMsg";
+    /** @see com.jun.mqttx.broker.handler.ProbeHandler#OUT_MSG_SIZE */
+    public static final String BROKER_SEND_MSG = SYS_TOPIC_BROKER + "sendMsg";
+    /** 代理上线时长 */
+    public static final String BROKER_UPTIME = SYS_TOPIC_BROKER + "uptime";
+
     private static final Set<String> sysTopicSets;
 
     //@formatter:on
 
     static {
-        sysTopicSets = new HashSet<>(4);
+        sysTopicSets = new HashSet<>(6);
         sysTopicSets.add(BROKER_STATUS);
         sysTopicSets.add(BROKER_CLIENTS_ACTIVE_CONNECTED_COUNT);
         sysTopicSets.add(BROKER_TIME);
         sysTopicSets.add(BROKER_VERSION);
+        sysTopicSets.add(BROKER_MAX_CLIENTS_ACTIVE);
+        sysTopicSets.add(BROKER_RECEIVED_MSG);
+        sysTopicSets.add(BROKER_SEND_MSG);
+        sysTopicSets.add(BROKER_UPTIME);
     }
 
     /**

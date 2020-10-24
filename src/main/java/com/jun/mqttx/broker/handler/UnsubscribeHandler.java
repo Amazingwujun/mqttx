@@ -19,8 +19,8 @@ import java.util.stream.Collectors;
 @Handler(type = MqttMessageType.UNSUBSCRIBE)
 public class UnsubscribeHandler extends AbstractMqttSessionHandler {
 
-    private Boolean enableSysTopic;
-    private ISubscriptionService subscriptionService;
+    private final Boolean enableSysTopic;
+    private final ISubscriptionService subscriptionService;
 
     public UnsubscribeHandler(MqttxConfig config, ISubscriptionService subscriptionService) {
         this.enableSysTopic = config.getSysTopic().getEnable();

@@ -235,12 +235,16 @@
 
 客户端可通过订阅系统主题获取 broker 状态，目前系统支持如下主题：
 
-| topic                            | repeat  | comment                                                      |
-| -------------------------------- | ------- | ------------------------------------------------------------ |
-| `$SYS/broker/status`             | `false` | 订阅此主题的客户端会定期（`mqttx.sys-topic.interval`）收到 broker 的状态，该状态涵盖下面所有主题的状态值. <br/>**注意：客户端连接断开后，订阅取消** |
-| `$SYS/broker/activeConnectCount` | `true`  | 立即返回当前的活动连接数量                                   |
-| `$SYS/broker/time`               | `true`  | 立即返回当前时间戳                                           |
-| `$SYS/broker/version`            | `true`  | 立即返回 `broker` 版本                                       |
+| topic                               | repeat  | comment                                                      |
+| ----------------------------------- | ------- | ------------------------------------------------------------ |
+| `$SYS/broker/status`                | `false` | 订阅此主题的客户端会定期（`mqttx.sys-topic.interval`）收到 broker 的状态，该状态涵盖下面所有主题的状态值. <br/>**注意：客户端连接断开后，订阅取消** |
+| `$SYS/broker/activeConnectCount`    | `true`  | 立即返回当前的活动连接数量                                   |
+| `$SYS/broker/time`                  | `true`  | 立即返回当前时间戳                                           |
+| `$SYS/broker/version`               | `true`  | 立即返回 `broker` 版本                                       |
+| `$SYS/broker/receivedMsg`           | `true`  | 立即返回 `broker` 启动到现在收到的 `MqttMessage`, 不含 `ping` |
+| `$SYS/broker/sendMsg`               | `true`  | 立即返回 `broker` 启动到现在发送的 `MqttMessage`, 不含 `pingAck` |
+| `$SYS/broker/uptime`                | `true`  | 立即返回 `broker` 运行时长，单位***秒***                     |
+| `$SYS/broker/maxActiveConnectCount` | true    | 立即返回 `broker` 运行至今的最大 `tcp` 连接数                |
 
 > `repeat`:
 >

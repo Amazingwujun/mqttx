@@ -1,6 +1,7 @@
 package com.jun.mqttx.broker;
 
 import com.jun.mqttx.broker.codec.MqttWebsocketCodec;
+import com.jun.mqttx.broker.handler.ProbeHandler;
 import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.exception.GlobalException;
 import com.jun.mqttx.exception.SslException;
@@ -30,6 +31,7 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.timeout.IdleStateHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.DisposableBean;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
@@ -49,36 +51,38 @@ public class BrokerInitializer implements DisposableBean {
     //@formatter:off
 
     /** ip */
-    private String host;
+    private final String host;
     /** 端口 */
-    private Integer port;
+    private final Integer port;
     /** socket 开关 */
-    private Boolean enableSocket;
+    private final Boolean enableSocket;
     /** 心跳 */
-    private Duration heartbeat;
+    private final Duration heartbeat;
     /** websocket 端口 */
-    private Integer wsPort;
+    private final Integer wsPort;
     /** websocket 地址 */
-    private String websocketPath;
+    private final String websocketPath;
     /** 握手队列 */
-    private Integer soBacklog;
+    private final Integer soBacklog;
     /** ssl开关 */
-    private Boolean sslEnable;
+    private final Boolean sslEnable;
     /** 客户端证书校验 */
-    private ClientAuth clientAuth;
+    private final ClientAuth clientAuth;
     /** 证书工具 */
-    private SslUtils sslUtils;
+    private final SslUtils sslUtils;
     /** broker handler */
-    private BrokerHandler brokerHandler;
+    private final BrokerHandler brokerHandler;
     /** reactor 线程，提供给 socket, websocket 使用 */
     private EventLoopGroup boss, work;
     private SslContext sslContext;
     /** websocket 开关 */
-    private Boolean enableWebsocket;
+    private final Boolean enableWebsocket, enableSysTopic;
+
+    private final ProbeHandler probeHandler;
 
     //@formatter:on
 
-    public BrokerInitializer(MqttxConfig mqttxConfig, BrokerHandler brokerHandler, SslUtils sslUtils) {
+    public BrokerInitializer(MqttxConfig mqttxConfig, BrokerHandler brokerHandler, SslUtils sslUtils, @Nullable ProbeHandler probeHandler) {
         Assert.notNull(mqttxConfig, "mqttxConfig can't be null");
         Assert.notNull(sslUtils, "sslUtils can't be null");
         Assert.notNull(brokerHandler, "brokerHandler can't be null");
@@ -86,7 +90,9 @@ public class BrokerInitializer implements DisposableBean {
         MqttxConfig.Ssl ssl = mqttxConfig.getSsl();
         MqttxConfig.Socket socket = mqttxConfig.getSocket();
         MqttxConfig.WebSocket webSocket = mqttxConfig.getWebSocket();
+        MqttxConfig.SysTopic sysTopic = mqttxConfig.getSysTopic();
 
+        this.probeHandler = probeHandler;
         this.sslUtils = sslUtils;
         this.brokerHandler = brokerHandler;
         this.host = mqttxConfig.getHost();
@@ -99,6 +105,7 @@ public class BrokerInitializer implements DisposableBean {
         this.wsPort = webSocket.getPort();
         this.enableWebsocket = webSocket.getEnable();
         this.clientAuth = ssl.getClientAuth();
+        this.enableSysTopic = sysTopic.getEnable();
 
         // 配置检查
         Assert.isTrue(!Objects.equals(wsPort, port), "websocket 与 socket 监听端口不能相同");
@@ -127,7 +134,7 @@ public class BrokerInitializer implements DisposableBean {
      * These JNI transports add features specific to a particular platform, generate less garbage,
      * and generally improve performance when compared to the NIO based transport.
      * </pre>
-     * 普遍的服务器都是 x86 架构 64bit 的 linux 系统, 所以 pom 中引入 <classifier>linux-x86_64</classifier> 的依赖
+     * 普遍的服务器都是 x86 架构 64bit 的 linux 系统, 所以 pom 中引入 &lt;classifier&gt;linux-x86_64&lt;/classifier&gt; 的依赖
      */
     public void start() throws InterruptedException {
         if (boss == null || work == null) {
@@ -196,6 +203,9 @@ public class BrokerInitializer implements DisposableBean {
                                 (int) heartbeat.getSeconds()));
                         pipeline.addLast(MqttEncoder.INSTANCE);
                         pipeline.addLast(new MqttDecoder());
+                        if (enableSysTopic) {
+                            pipeline.addLast(probeHandler);
+                        }
                         pipeline.addLast(brokerHandler);
                     }
                 });
@@ -248,6 +258,9 @@ public class BrokerInitializer implements DisposableBean {
                         pipeline.addLast(new MqttWebsocketCodec());
                         pipeline.addLast(MqttEncoder.INSTANCE);
                         pipeline.addLast(new MqttDecoder());
+                        if (enableSysTopic) {
+                            pipeline.addLast(probeHandler);
+                        }
                         pipeline.addLast(brokerHandler);
                     }
                 });

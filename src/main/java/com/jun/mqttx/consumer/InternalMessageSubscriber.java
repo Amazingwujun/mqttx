@@ -17,9 +17,9 @@ import java.util.List;
 @SuppressWarnings("rawtypes")
 public class InternalMessageSubscriber {
 
-    private int brokerId;
+    private final int brokerId;
 
-    private List<Watcher> watchers;
+    private final List<Watcher> watchers;
 
     public InternalMessageSubscriber(List<Watcher> watchers, MqttxConfig mqttxConfig) {
         Assert.notNull(watchers, "watchers can't be null");

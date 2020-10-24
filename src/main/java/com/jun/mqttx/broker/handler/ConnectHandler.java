@@ -102,8 +102,7 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
             authenticationService.asyncAuthenticate(
                     ClientAuthDTO.of(username, password),
                     authentication -> proccess0(ctx, msg, authentication),
-                    throwable ->
-                    {
+                    throwable -> {
                         throw new AuthenticationException("登入失败", throwable);
                     });
         } else {

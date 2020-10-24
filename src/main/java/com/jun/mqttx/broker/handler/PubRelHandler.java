@@ -14,7 +14,7 @@ import org.springframework.util.Assert;
 @Handler(type = MqttMessageType.PUBREL)
 public class PubRelHandler extends AbstractMqttSessionHandler {
 
-    private IPubRelMessageService pubRelMessageService;
+    private final IPubRelMessageService pubRelMessageService;
 
     public PubRelHandler(IPubRelMessageService pubRelMessageService) {
         this.pubRelMessageService = pubRelMessageService;

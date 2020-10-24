@@ -34,7 +34,6 @@ public class ClusterConfig {
 
     public static final String REDIS = "redis";
 
-    @SuppressWarnings("rawtypes")
     @Bean
     public InternalMessageSubscriber internalMessageSubscriber(List<Watcher> watchers, MqttxConfig mqttxConfig) {
         return new InternalMessageSubscriber(watchers, mqttxConfig);
