@@ -43,9 +43,11 @@ public class UnsubscribeHandler extends AbstractMqttSessionHandler {
         subscriptionService.unsubscribe(clientId(ctx), collect);
 
         // response
-        MqttMessage mqttMessage = MqttMessageBuilders.unsubAck()
-                .packetId((short) messageId)
-                .build();
+        MqttMessage mqttMessage = MqttMessageFactory.newMessage(
+                new MqttFixedHeader(MqttMessageType.UNSUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
+                MqttMessageIdVariableHeader.from(messageId),
+                null
+        );
         ctx.writeAndFlush(mqttMessage);
     }
 

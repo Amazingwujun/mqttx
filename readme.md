@@ -310,7 +310,7 @@
    - v1.0：`com.jun.mqttx.service.impl` 同步接口
    - v1.1：`com.jun.mqttx.service.impl` 改为异步接口
 
-    [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html) 由 `v1.0` 开始支持，不出意外就是 `v1.0.6.RELEASE`。
+    [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html) 由 `v1.0` 开始支持。
 
 6. 交流群
 
