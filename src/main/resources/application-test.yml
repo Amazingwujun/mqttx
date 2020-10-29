@@ -1,19 +1,15 @@
-# 开发环境配置文件
+# 测试环境配置文件
 
 spring:
   application:
     name: mqttx
-  redis:
-    host: localhost
 
 mqttx:
+  enable-test-mode: true
   web-socket:
     enable: true
   sys-topic:
     enable: true
-  cluster:
-    enable: false
-    type: redis
 
 # 1 开启 ssl 配置示例
 #spring:
@@ -30,8 +26,6 @@ mqttx:
 
 # 2 桥接消息配置示例
 #spring:
-#  redis:
-#    host: localhost
 #  kafka:
 #    bootstrap-servers:
 #      - localhost:9092

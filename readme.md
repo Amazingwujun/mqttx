@@ -244,7 +244,7 @@
 | `$SYS/broker/receivedMsg`           | `true`  | 立即返回 `broker` 启动到现在收到的 `MqttMessage`, 不含 `ping` |
 | `$SYS/broker/sendMsg`               | `true`  | 立即返回 `broker` 启动到现在发送的 `MqttMessage`, 不含 `pingAck` |
 | `$SYS/broker/uptime`                | `true`  | 立即返回 `broker` 运行时长，单位***秒***                     |
-| `$SYS/broker/maxActiveConnectCount` | true    | 立即返回 `broker` 运行至今的最大 `tcp` 连接数                |
+| `$SYS/broker/maxActiveConnectCount` | `true`  | 立即返回 `broker` 运行至今的最大 `tcp` 连接数                |
 
 > `repeat`:
 >
