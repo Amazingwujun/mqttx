@@ -24,7 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 @Handler(type = MqttMessageType.DISCONNECT)
 public final class DisconnectHandler extends AbstractMqttSessionHandler implements Watcher {
 
-    private ConnectHandler connectHandler;
+    private final ConnectHandler connectHandler;
 
     public DisconnectHandler(ConnectHandler connectHandler) {
         this.connectHandler = connectHandler;

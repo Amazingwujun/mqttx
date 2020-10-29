@@ -49,7 +49,7 @@ public class ProbeHandler extends ChannelDuplexHandler {
     }
 
     private void handleEvent(Object msg, AtomicLong mark) {
-        if (msg instanceof MqttMessage) {
+        if (msg instanceof MqttMessage && ((MqttMessage) msg).decoderResult().isSuccess()) {
             MqttMessageType messageType = ((MqttMessage) msg).fixedHeader().messageType();
             // 忽略心跳
             if (MqttMessageType.PINGREQ == messageType || MqttMessageType.PINGRESP == messageType) {

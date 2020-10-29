@@ -39,17 +39,17 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
     private static final String NONE_ID_PREFIX = "NONE_ID_";
     final private Boolean enableCluster, enableTopicSubPubSecure;
 
-    private int brokerId;
+    private final int brokerId;
     /** 认证服务 */
-    private IAuthenticationService authenticationService;
+    private final IAuthenticationService authenticationService;
     /** 会话服务 */
-    private ISessionService sessionService;
+    private final ISessionService sessionService;
     /** 主题订阅相关服务 */
-    private ISubscriptionService subscriptionService;
+    private final ISubscriptionService subscriptionService;
     /** publish 消息服务 */
-    private IPublishMessageService publishMessageService;
+    private final IPublishMessageService publishMessageService;
     /** pubRel 消息服务 */
-    private IPubRelMessageService pubRelMessageService;
+    private final IPubRelMessageService pubRelMessageService;
     /** 内部消息发布服务 */
     private IInternalMessagePublishService internalMessagePublishService;
 
