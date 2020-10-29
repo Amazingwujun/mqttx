@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
@@ -41,8 +42,8 @@ public class ClusterConfig {
     }
 
     @Bean
-    public IInternalMessagePublishService internalMessagePublishService(StringRedisTemplate stringRedisTemplate) {
-        return new InternalMessagePublishServiceImpl(stringRedisTemplate);
+    public IInternalMessagePublishService internalMessagePublishService(StringRedisTemplate stringRedisTemplate, ReactiveStringRedisTemplate reactiveStringRedisTemplate) {
+        return new InternalMessagePublishServiceImpl(stringRedisTemplate, reactiveStringRedisTemplate);
     }
 
     /**

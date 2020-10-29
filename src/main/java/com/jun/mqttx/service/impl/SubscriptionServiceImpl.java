@@ -1,5 +1,7 @@
 package com.jun.mqttx.service.impl;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.TypeReference;
 import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.constants.InternalMessageEnum;
 import com.jun.mqttx.consumer.Watcher;
@@ -28,7 +30,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-public class SubscriptionServiceImpl implements ISubscriptionService, Watcher<ClientSubOrUnsubMsg> {
+public class SubscriptionServiceImpl implements ISubscriptionService, Watcher {
 
     /**
      * 按顺序 -> 订阅，解除订阅，删除 topic
@@ -229,8 +231,10 @@ public class SubscriptionServiceImpl implements ISubscriptionService, Watcher<Cl
     }
 
     @Override
-    public void action(InternalMessage<ClientSubOrUnsubMsg> im) {
+    public void action(String msg) {
         if (enableInnerCache) {
+            InternalMessage<ClientSubOrUnsubMsg> im = JSON.parseObject(msg, new TypeReference<InternalMessage<ClientSubOrUnsubMsg>>() {
+            });
             ClientSubOrUnsubMsg data = im.getData();
             int type = data.getType();
             switch (type) {

@@ -1,5 +1,7 @@
 package com.jun.mqttx.broker.handler;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.TypeReference;
 import com.jun.mqttx.broker.BrokerHandler;
 import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.constants.InternalMessageEnum;
@@ -36,7 +38,7 @@ import static com.jun.mqttx.constants.ShareStrategy.*;
  * @since 1.0.4
  */
 @Handler(type = MqttMessageType.PUBLISH)
-public class PublishHandler extends AbstractMqttTopicSecureHandler implements Watcher<PubMsg> {
+public class PublishHandler extends AbstractMqttTopicSecureHandler implements Watcher {
 
     private IRetainMessageService retainMessageService;
 
@@ -143,10 +145,13 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
 
         // 响应
         switch (mqttQoS) {
-            case 0: // at most once
+            case 0: {
+                // at most once
                 publish(pubMsg, ctx, false);
                 break;
-            case 1: // at least once
+            }
+            case 1: {
+                // at least once
                 publish(pubMsg, ctx, false);
                 MqttMessage pubAck = MqttMessageFactory.newMessage(
                         new MqttFixedHeader(MqttMessageType.PUBACK, false, MqttQoS.valueOf(mqttQoS), false, 0),
@@ -155,7 +160,9 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                 );
                 ctx.writeAndFlush(pubAck);
                 break;
-            case 2: // exactly once
+            }
+            case 2: {
+                // exactly once
                 MqttMessage pubRec = MqttMessageFactory.newMessage(
                         new MqttFixedHeader(MqttMessageType.PUBREC, false, MqttQoS.valueOf(mqttQoS), false, 0),
                         MqttMessageIdVariableHeader.from(packetId),
@@ -164,16 +171,21 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                 ctx.writeAndFlush(pubRec);
 
                 // 判断消息是否重复
-                if (!pubRelMessageService.isDupMsg(clientId(ctx), packetId)) {
-                    // 发布新的消息并保存 pubRel 标记，用于实现Qos2
-                    publish(pubMsg, ctx, false);
-                    if (isCleanSession(ctx)) {
-                        getSession(ctx).savePubRelMsg(packetId);
-                    } else {
-                        pubRelMessageService.save(clientId(ctx), packetId);
-                    }
-                }
+                pubRelMessageService.isDupMsg(clientId(ctx), packetId)
+                        .subscribe(e -> {
+                            if (!e) {
+                                // 发布新的消息并保存 pubRel 标记，用于实现Qos2
+                                publish(pubMsg, ctx, false);
+                                if (isCleanSession(ctx)) {
+                                    getSession(ctx).savePubRelMsg(packetId);
+                                } else {
+                                    pubRelMessageService.asyncSave(clientId(ctx), packetId)
+                                            .subscribe();
+                                }
+                            }
+                        });
                 break;
+            }
         }
 
         // retain 消息处理
@@ -183,7 +195,9 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
     }
 
     @Override
-    public void action(InternalMessage<PubMsg> im) {
+    public void action(String msg) {
+        InternalMessage<PubMsg> im = JSON.parseObject(msg, new TypeReference<InternalMessage<PubMsg>>() {
+        });
         PubMsg data = im.getData();
         publish(data, null, true);
     }
@@ -319,7 +333,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
      */
     private void internalMessagePublish(PubMsg pubMsg) {
         InternalMessage<PubMsg> im = new InternalMessage<>(pubMsg, System.currentTimeMillis(), brokerId);
-        internalMessagePublishService.publish(im, InternalMessageEnum.PUB.getChannel());
+        internalMessagePublishService.asyncPublish(im, InternalMessageEnum.PUB.getChannel()).subscribe();
     }
 
     /**

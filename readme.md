@@ -23,13 +23,15 @@
 - [6 附表](#6-附表)
     - [6.1 配置项](#61-配置项)
     - [6.2 版本说明](#62-版本说明)
+      - [6.2.1 v1.0](#621-v10)
+      - [6.2.2 v1.1](#622-v11)
     - [6.3 Benchmark](#63-benchmark)
       - [6.3.1 CleanSessionTrue](#631-cleansessiontrue)
       - [6.3.2 CleanSessionFalse](#632-cleansessionfalse)
 
 ## 1 介绍
 
-`Mqttx` 基于 [mqtt v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) 协议开发，旨在提供 ***易于使用*** 且 ***性能优越*** 的 **mqtt broker**。
+`Mqttx` 基于 [MQTT v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) 协议开发，旨在提供 ***易于使用*** 且 ***性能优越*** 的 **mqtt broker**。
 
 ### 1.1 快速开始
 
@@ -159,7 +161,7 @@
 ![ak6nHK.png](https://s1.ax1x.com/2020/07/28/ak6nHK.png)
 
 1. `mqttx.cluster.enable`：功能开关，默认 `false`
-
+> `v1.0.5.RELEASE` 之前的版本集群消息处理存在 bug，无法使用.
 #### 4.4 ssl 支持
 
 开启 ssl 你首先应该有了 *ca*(自签名或购买)，然后修改 `application.yml` 文件中几个配置：
@@ -293,13 +295,21 @@
 
    > 本来说要放一部分精力到 `mqttx-admin` 这个衍生项目的，但后来发现 `mqttx` 还有太多事情需要做，只能变更计划了。
 
-5. `netty 4.1.52.Final 支持了 mqtt5`，em...
+4. `netty 4.1.52.Final 支持了 mqtt5`，em...
 
    > `v1.0.5.RELEASE` 后，我会考虑支持 `mqtt5` 协议的，又是一个大工程啊。
 
+5. [benchmark](#63-benchmark) 表明 mqttx 性能还有提升的可能，我将在 `v1.1.0.RELEASE` 改造 `pub/sub` 处理逻辑
+   
+   > 主要是 `StringRedisTemplate` => `ReactiveStringRedisTemplate`，改**同步**为**异步**
+   
+6. 开发方向介绍
 
+   `v1.0.5.RELEASE` 成为 `mqttx` 第一个 **LTS** 版本，`v1.0` 将基于它维护和更新。 为提升单机性能， `v1.1` 版本将全面异步化。后续 [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html) 协议支持可能会率先从 `v1.0` 开始。
 
-邮箱：85998282@qq.com，项目相关问题可以联系我。
+7. 技术交流群
+
+![qq交流群](https://s1.ax1x.com/2020/10/10/0y9hPx.png)
 
 ## 6 附表
 
@@ -352,7 +362,9 @@
 
 ### 6.2 版本说明
 
-- **v1.0.5.RELEASE(开发中)**
+#### 6.2.1 v1.0
+
+- **v1.0.5.RELEASE**
   - [x] 测试模式支持
   - [x] `epoll` 支持，见 [https://netty.io/wiki/native-transports.html](https://netty.io/wiki/native-transports.html)
   - [x] 优化 `cleanSession` 消息处理机制
@@ -365,7 +377,7 @@
 - **v1.0.3.RELEASE**
   - [x] bug 修复
 - **v1.0.2.RELEASE**
-  - [x]  共享主题加入轮询策略
+  - [x] 共享主题加入轮询策略
   - [x] bug 修复及优化
 - **v1.0.1.RELEASE**
   - [x] 基于 `redis` 的集群功能支持
@@ -374,6 +386,14 @@
   - [x] bug 修复及优化
 - **v1.0.0.RELEASE**
   - [x] `mqttv3.1.1` 完整协议实现
+
+#### 6.2.2 v1.1
+
+- ***v1.1.0.RELEASE（开发中）***
+  
+  - [x] `redis` 同步转异步实现，提升性能
+  
+  
 
 ### 6.3 Benchmark
 
@@ -432,7 +452,7 @@ Result : broker=tcp://localhost:1883, clients=1000, totalCount=1000000, duration
 | ------------ | -------- | ------------ | -------------- | -------- | ---- | -------- | ------- |
 | `1000`       | 发布消息 | `1024byte`   | `1000`         | 一百万   | `0`  | `39.1s`  | `25553` |
 | `1000`       | 发布消息 | `1024byte`   | `1000`         | 一百万   | `1`  | `67.1s`  | `14897` |
-| `1000`       | 发布消息 | `1024byte`   | `1000`         | 一百万   | `2`  | `115.3s` | 8667    |
+| `1000`       | 发布消息 | `1024byte`   | `1000`         | 一百万   | `2`  | `115.3s` | `8667`  |
 
 **资源消耗：`cpu: 25%`, `mem 440 MB`**
 

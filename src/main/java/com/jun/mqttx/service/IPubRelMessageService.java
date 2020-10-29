@@ -32,7 +32,7 @@ public interface IPubRelMessageService {
      * @param messageId 消息ID
      * @return true if msg exist
      */
-    boolean isDupMsg(String clientId, int messageId);
+    Mono<Boolean> isDupMsg(String clientId, int messageId);
 
     /**
      * 移除 pubRel 标志

@@ -67,16 +67,15 @@ public class PubRelMessageServiceImpl implements IPubRelMessageService {
     }
 
     @Override
-    public boolean isDupMsg(String clientId, int messageId) {
+    public Mono<Boolean> isDupMsg(String clientId, int messageId) {
         if (enableTestMode) {
-            return clientMsgStore
+            boolean result = clientMsgStore
                     .computeIfAbsent(clientId, s -> ConcurrentHashMap.newKeySet())
                     .contains(messageId);
+            return Mono.just(result);
         }
 
-        Boolean member = stringRedisTemplate.opsForSet()
-                .isMember(key(clientId), String.valueOf(messageId));
-        return Boolean.TRUE.equals(member);
+        return reactiveStringRedisTemplate.opsForSet().isMember(key(clientId), String.valueOf(messageId));
     }
 
     @Override
@@ -96,9 +95,6 @@ public class PubRelMessageServiceImpl implements IPubRelMessageService {
             clientMsgStore.computeIfAbsent(clientId, s -> ConcurrentHashMap.newKeySet()).remove(messageId);
             return Mono.just(Long.MIN_VALUE);
         }
-
-        stringRedisTemplate.opsForSet()
-                .remove(pubRelMsgSetPrefix + clientId, String.valueOf(messageId));
 
         return reactiveStringRedisTemplate.opsForSet()
                 .remove(pubRelMsgSetPrefix + clientId, String.valueOf(messageId));

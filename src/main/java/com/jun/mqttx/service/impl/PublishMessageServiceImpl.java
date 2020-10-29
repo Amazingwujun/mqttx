@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 @Service
 public class PublishMessageServiceImpl implements IPublishMessageService {
 
+    private ReactiveStringRedisTemplate reactiveStringRedisTemplate;
     private StringRedisTemplate stringRedisTemplate;
 
     private ReactiveStringRedisTemplate reactiveStringRedisTemplate;
@@ -37,7 +38,8 @@ public class PublishMessageServiceImpl implements IPublishMessageService {
     private Boolean enableTestMode;
     private Map<String, Map<Integer, PubMsg>> pubMsgStore;
 
-    public PublishMessageServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig) {
+    public PublishMessageServiceImpl(StringRedisTemplate stringRedisTemplate, ReactiveStringRedisTemplate reactiveStringRedisTemplate, MqttxConfig mqttxConfig) {
+        this.reactiveStringRedisTemplate = reactiveStringRedisTemplate;
         this.stringRedisTemplate = stringRedisTemplate;
 
         this.pubMsgSetPrefix = mqttxConfig.getRedis().getPubMsgSetPrefix();
