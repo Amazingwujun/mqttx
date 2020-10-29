@@ -31,8 +31,6 @@ public class PublishMessageServiceImpl implements IPublishMessageService {
     private ReactiveStringRedisTemplate reactiveStringRedisTemplate;
     private StringRedisTemplate stringRedisTemplate;
 
-    private ReactiveStringRedisTemplate reactiveStringRedisTemplate;
-
     private String pubMsgSetPrefix;
 
     private Boolean enableTestMode;

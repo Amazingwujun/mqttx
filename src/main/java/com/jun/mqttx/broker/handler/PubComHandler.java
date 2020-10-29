@@ -2,7 +2,9 @@ package com.jun.mqttx.broker.handler;
 
 import com.jun.mqttx.service.IPubRelMessageService;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.mqtt.*;
+import io.netty.handler.codec.mqtt.MqttMessage;
+import io.netty.handler.codec.mqtt.MqttMessageIdVariableHeader;
+import io.netty.handler.codec.mqtt.MqttMessageType;
 
 /**
  * {@link MqttMessageType#PUBCOMP} 消息处理器
@@ -13,7 +15,7 @@ import io.netty.handler.codec.mqtt.*;
 @Handler(type = MqttMessageType.PUBCOMP)
 public class PubComHandler extends AbstractMqttSessionHandler {
 
-    private IPubRelMessageService pubRelMessageService;
+    private final IPubRelMessageService pubRelMessageService;
 
     public PubComHandler(IPubRelMessageService pubRelMessageService) {
         this.pubRelMessageService = pubRelMessageService;
@@ -27,24 +29,8 @@ public class PubComHandler extends AbstractMqttSessionHandler {
             getSession(ctx).removePubRelMsg(messageId);
         } else {
             String clientId = clientId(ctx);
-            pubRelMessageService.asyncRemove(clientId, messageId)
-                    .subscribe(e -> {
-                        MqttMessage mqttMessage = MqttMessageFactory.newMessage(
-                                new MqttFixedHeader(MqttMessageType.PUBCOMP, false, MqttQoS.AT_MOST_ONCE, false, 0),
-                                MqttMessageIdVariableHeader.from(messageId),
-                                null
-                        );
-                        ctx.writeAndFlush(mqttMessage);
-                    });
-            return;
+            pubRelMessageService.asyncRemove(clientId, messageId).subscribe();
         }
-
-        MqttMessage mqttMessage = MqttMessageFactory.newMessage(
-                new MqttFixedHeader(MqttMessageType.PUBCOMP, false, MqttQoS.AT_MOST_ONCE, false, 0),
-                MqttMessageIdVariableHeader.from(messageId),
-                null
-        );
-        ctx.writeAndFlush(mqttMessage);
     }
 
 }
