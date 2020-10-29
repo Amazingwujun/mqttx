@@ -146,7 +146,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
             case 1: // at least once
                 publish(pubMsg, ctx, false);
                 MqttMessage pubAck = MqttMessageFactory.newMessage(
-                        new MqttFixedHeader(MqttMessageType.PUBACK, false, MqttQoS.valueOf(mqttQoS), false, 0),
+                        new MqttFixedHeader(MqttMessageType.PUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
                         MqttMessageIdVariableHeader.from(packetId),
                         null
                 );
@@ -154,7 +154,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                 break;
             case 2: // exactly once
                 MqttMessage pubRec = MqttMessageFactory.newMessage(
-                        new MqttFixedHeader(MqttMessageType.PUBREC, false, MqttQoS.valueOf(mqttQoS), false, 0),
+                        new MqttFixedHeader(MqttMessageType.PUBREC, false, MqttQoS.AT_MOST_ONCE, false, 0),
                         MqttMessageIdVariableHeader.from(packetId),
                         null
                 );
