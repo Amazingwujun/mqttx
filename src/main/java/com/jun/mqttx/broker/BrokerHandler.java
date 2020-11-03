@@ -5,6 +5,7 @@ import com.alibaba.fastjson.TypeReference;
 import com.jun.mqttx.broker.handler.AbstractMqttSessionHandler;
 import com.jun.mqttx.broker.handler.ConnectHandler;
 import com.jun.mqttx.broker.handler.MessageDelegatingHandler;
+import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.constants.InternalMessageEnum;
 import com.jun.mqttx.consumer.Watcher;
 import com.jun.mqttx.entity.Authentication;
@@ -56,13 +57,15 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
     private final ISessionService sessionService;
     private final ISubscriptionService subscriptionService;
 
+    private final boolean enableSysTopic;
+
     /** 历史最大连接数量 */
     public static final AtomicInteger MAX_ACTIVE_SIZE = new AtomicInteger(0);
     /** broker 启动时间 */
     public static final long START_TIME = System.currentTimeMillis();
     //@formatter:on
 
-    public BrokerHandler(MessageDelegatingHandler messageDelegatingHandler, ISessionService sessionService, ISubscriptionService subscriptionService) {
+    public BrokerHandler(MqttxConfig config, MessageDelegatingHandler messageDelegatingHandler, ISessionService sessionService, ISubscriptionService subscriptionService) {
         Assert.notNull(messageDelegatingHandler, "messageDelegatingHandler can't be null");
         Assert.notNull(sessionService, "sessionService can't be null");
         Assert.notNull(subscriptionService, "subscriptionService can't be null");
@@ -70,23 +73,26 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
         this.messageDelegatingHandler = messageDelegatingHandler;
         this.sessionService = sessionService;
         this.subscriptionService = subscriptionService;
+        this.enableSysTopic = config.getSysTopic().getEnable();
     }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
         CHANNELS.add(ctx.channel());
 
-        // cas
-        while (true) {
-            int old = MAX_ACTIVE_SIZE.get();
-            int now = CHANNELS.size();
+        if (enableSysTopic) {
+            // cas
+            while (true) {
+                int old = MAX_ACTIVE_SIZE.get();
+                int now = CHANNELS.size();
 
-            if (old >= now) {
-                break;
-            }
+                if (old >= now) {
+                    break;
+                }
 
-            if (MAX_ACTIVE_SIZE.compareAndSet(old, now)) {
-                break;
+                if (MAX_ACTIVE_SIZE.compareAndSet(old, now)) {
+                    break;
+                }
             }
         }
     }
@@ -218,24 +224,28 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
     }
 
     /**
-     * 处理未通过 {@link MqttMessageType#DISCONNECT} 消息断开连接的客户端的遗嘱消息.
-     * <p>
+     * 心跳、握手事件处理
      *
      * @param ctx {@link ChannelHandlerContext}
      * @param evt {@link IdleStateEvent}
      */
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+        InetSocketAddress socketAddress = (InetSocketAddress) ctx.channel().remoteAddress();
+        String host = socketAddress.getAddress().getHostAddress();
+        int port = socketAddress.getPort();
+
         if (evt instanceof IdleStateEvent) {
             if (IdleState.ALL_IDLE.equals(((IdleStateEvent) evt).state())) {
+                log.info("R[{}:{}] 心跳超时", host, port);
+
                 // 关闭连接
                 ctx.close();
             }
         } else if (evt instanceof SslHandshakeCompletionEvent) {
             // 监听 ssl 握手事件
             if (!((SslHandshakeCompletionEvent) evt).isSuccess()) {
-                InetSocketAddress socketAddress = (InetSocketAddress) ctx.channel().remoteAddress();
-                log.warn("ssl 握手失败，客户端ip:{}", socketAddress.getHostName());
+                log.warn("R[{}:{}] ssl 握手失败", host, port);
                 ctx.close();
             }
         }

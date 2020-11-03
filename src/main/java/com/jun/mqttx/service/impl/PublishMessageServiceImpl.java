@@ -25,11 +25,9 @@ import java.util.stream.Collectors;
 @Service
 public class PublishMessageServiceImpl implements IPublishMessageService {
 
-    private StringRedisTemplate stringRedisTemplate;
-
-    private String pubMsgSetPrefix;
-
-    private Boolean enableTestMode;
+    private final StringRedisTemplate stringRedisTemplate;
+    private final String pubMsgSetPrefix;
+    private final boolean enableTestMode;
     private Map<String, Map<Integer, PubMsg>> pubMsgStore;
 
     public PublishMessageServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig) {

@@ -8,11 +8,12 @@ import com.jun.mqttx.consumer.Watcher;
 import com.jun.mqttx.entity.InternalMessage;
 import com.jun.mqttx.entity.Session;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelId;
+import io.netty.channel.ChannelOutboundInvoker;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttMessageType;
-import io.netty.util.AttributeKey;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.Optional;
 
 /**
  * {@link MqttMessageType#DISCONNECT} 消息处理器
@@ -41,7 +42,7 @@ public final class DisconnectHandler extends AbstractMqttSessionHandler implemen
         // stored on the Server and associated with the Network Connection. The Will Message MUST be published when the
         // Network Connection is subsequently closed unless the Will Message has been deleted by the Server on receipt of
         // a DISCONNECT Packet.
-        Session session = (Session) ctx.channel().attr(AttributeKey.valueOf(Session.KEY)).get();
+        Session session = getSession(ctx);
         session.clearWillMessage();
 
         ctx.close();
@@ -51,10 +52,10 @@ public final class DisconnectHandler extends AbstractMqttSessionHandler implemen
     public void action(String msg) {
         InternalMessage<String> im = JSON.parseObject(msg, new TypeReference<InternalMessage<String>>() {
         });
-        ChannelId channelId = ConnectHandler.CLIENT_MAP.get(im.getData());
-        if (channelId != null) {
-            BrokerHandler.CHANNELS.find(channelId).close();
-        }
+        Optional.ofNullable(im.getData())
+                .map(ConnectHandler.CLIENT_MAP::get)
+                .map(BrokerHandler.CHANNELS::find)
+                .map(ChannelOutboundInvoker::close);
     }
 
     @Override

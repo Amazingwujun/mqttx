@@ -37,45 +37,58 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
 
     public final static ConcurrentHashMap<String, ChannelId> CLIENT_MAP = new ConcurrentHashMap<>(100000);
     private static final String NONE_ID_PREFIX = "NONE_ID_";
-    final private Boolean enableCluster, enableTopicSubPubSecure;
+    final private boolean enableTestMode, enableCluster, enableTopicSubPubSecure;
 
     private final int brokerId;
-    /** 认证服务 */
+    /**
+     * 认证服务
+     */
     private final IAuthenticationService authenticationService;
-    /** 会话服务 */
+    /**
+     * 会话服务
+     */
     private final ISessionService sessionService;
-    /** 主题订阅相关服务 */
+    /**
+     * 主题订阅相关服务
+     */
     private final ISubscriptionService subscriptionService;
-    /** publish 消息服务 */
+    /**
+     * publish 消息服务
+     */
     private final IPublishMessageService publishMessageService;
-    /** pubRel 消息服务 */
+    /**
+     * pubRel 消息服务
+     */
     private final IPubRelMessageService pubRelMessageService;
-    /** 内部消息发布服务 */
+    /**
+     * 内部消息发布服务
+     */
     private IInternalMessagePublishService internalMessagePublishService;
 
     //@formatter:on
 
     public ConnectHandler(IAuthenticationService authenticationService, ISessionService sessionService,
                           ISubscriptionService subscriptionService, IPublishMessageService publishMessageService,
-                          IPubRelMessageService pubRelMessageService, MqttxConfig mqttxConfig, @Nullable IInternalMessagePublishService internalMessagePublishService) {
+                          IPubRelMessageService pubRelMessageService, MqttxConfig config, @Nullable IInternalMessagePublishService internalMessagePublishService) {
         Assert.notNull(authenticationService, "authentication can't be null");
         Assert.notNull(sessionService, "sessionService can't be null");
         Assert.notNull(subscriptionService, "subscriptionService can't be null");
         Assert.notNull(publishMessageService, "publishMessageService can't be null");
         Assert.notNull(pubRelMessageService, "pubRelMessageService can't be null");
-        Assert.notNull(mqttxConfig, "mqttxConfig can't be null");
+        Assert.notNull(config, "mqttxConfig can't be null");
 
-        MqttxConfig.Cluster cluster = mqttxConfig.getCluster();
+        MqttxConfig.Cluster cluster = config.getCluster();
         this.authenticationService = authenticationService;
         this.sessionService = sessionService;
         this.subscriptionService = subscriptionService;
         this.publishMessageService = publishMessageService;
         this.pubRelMessageService = pubRelMessageService;
         this.enableCluster = cluster.getEnable();
-        this.brokerId = mqttxConfig.getBrokerId();
-        this.enableTopicSubPubSecure = mqttxConfig.getEnableTopicSubPubSecure();
+        this.enableTestMode = config.getEnableTestMode();
+        this.brokerId = config.getBrokerId();
+        this.enableTopicSubPubSecure = config.getEnableTopicSubPubSecure();
 
-        if (enableCluster) {
+        if (enableCluster && !enableTestMode) {
             this.internalMessagePublishService = internalMessagePublishService;
             Assert.notNull(internalMessagePublishService, "internalMessagePublishService can't be null");
         }
@@ -148,7 +161,7 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         // 关闭之前可能存在的tcp链接
         // [MQTT-3.1.4-2] If the ClientId represents a Client already connected to the Server then the Server MUST
         // disconnect the existing Client
-        if (enableCluster) {
+        if (enableCluster && !enableTestMode) {
             internalMessagePublishService.publish(
                     new InternalMessage<>(clientId, System.currentTimeMillis(), brokerId),
                     InternalMessageEnum.DISCONNECT.getChannel()
@@ -242,7 +255,7 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
                         Unpooled.wrappedBuffer(pubMsg.getPayload())
                 );
 
-                if (enableCluster) {
+                if (enableCluster && !enableTestMode) {
                     // 集群消息发布
                     internalMessagePublishService.publish(
                             new InternalMessage<>(pubMsg, System.currentTimeMillis(), brokerId),

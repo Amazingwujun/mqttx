@@ -22,9 +22,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SessionServiceImpl implements ISessionService {
 
     private final String clusterSessionHashKey;
-    private StringRedisTemplate stringRedisTemplate;
+    private final StringRedisTemplate stringRedisTemplate;
 
-    private Boolean enableTestMode;
+    private final boolean enableTestMode;
     private Map<String, Session> sessionStore;
 
     public SessionServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig) {

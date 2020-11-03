@@ -37,8 +37,8 @@ public class SubscriptionServiceImpl implements ISubscriptionService, Watcher {
      */
     private static final int SUB = 1, UN_SUB = 2, DEL_TOPIC = 3;
 
-    private StringRedisTemplate stringRedisTemplate;
-    private IInternalMessagePublishService internalMessagePublishService;
+    private final StringRedisTemplate stringRedisTemplate;
+    private final IInternalMessagePublishService internalMessagePublishService;
 
     /**
      * 内部缓存，{@link this#enableInnerCache} == true 时使用
@@ -49,15 +49,15 @@ public class SubscriptionServiceImpl implements ISubscriptionService, Watcher {
     /**
      * 订阅主题前缀
      */
-    private String topicPrefix;
+    private final String topicPrefix;
 
     /**
      * 主题集合
      */
-    private String topicSetKey;
+    private final String topicSetKey;
 
-    private Boolean enableInnerCache, enableCluster, enableTestMode;
-    private int brokerId;
+    private final boolean enableInnerCache, enableCluster, enableTestMode;
+    private final int brokerId;
 
     public SubscriptionServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig,
                                    @Nullable IInternalMessagePublishService internalMessagePublishService) {

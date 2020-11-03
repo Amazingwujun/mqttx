@@ -15,7 +15,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 @Slf4j
 public class InternalMessagePublishServiceImpl implements IInternalMessagePublishService {
 
-    private StringRedisTemplate stringRedisTemplate;
+    private final StringRedisTemplate stringRedisTemplate;
 
     public InternalMessagePublishServiceImpl(StringRedisTemplate stringRedisTemplate) {
         this.stringRedisTemplate = stringRedisTemplate;

@@ -20,11 +20,11 @@ import java.util.stream.Collectors;
 @Component
 public class PubRelMessageServiceImpl implements IPubRelMessageService {
 
-    private StringRedisTemplate stringRedisTemplate;
+    private final StringRedisTemplate stringRedisTemplate;
 
-    private String pubRelMsgSetPrefix;
+    private final String pubRelMsgSetPrefix;
 
-    private Boolean enableTestMode;
+    private final boolean enableTestMode;
     private Map<String, Set<Integer>> clientMsgStore;
 
     public PubRelMessageServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig) {
@@ -83,6 +83,7 @@ public class PubRelMessageServiceImpl implements IPubRelMessageService {
 
         Set<String> members = stringRedisTemplate.opsForSet().members(key(clientId));
         if (CollectionUtils.isEmpty(members)) {
+            //noinspection unchecked
             return Collections.EMPTY_LIST;
         }
 

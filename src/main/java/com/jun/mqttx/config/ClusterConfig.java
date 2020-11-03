@@ -33,13 +33,16 @@ import static com.jun.mqttx.constants.InternalMessageEnum.*;
 public class ClusterConfig {
 
     public static final String REDIS = "redis";
+    public static final String KAFKA = "kafka";
 
     @Bean
+    @ConditionalOnProperty(name = "mqttx.cluster.type", havingValue = REDIS, matchIfMissing = true)
     public InternalMessageSubscriber internalMessageSubscriber(List<Watcher> watchers, MqttxConfig mqttxConfig) {
         return new InternalMessageSubscriber(watchers, mqttxConfig);
     }
 
     @Bean
+    @ConditionalOnProperty(name = "mqttx.cluster.type", havingValue = REDIS, matchIfMissing = true)
     public IInternalMessagePublishService internalMessagePublishService(StringRedisTemplate stringRedisTemplate) {
         return new InternalMessagePublishServiceImpl(stringRedisTemplate);
     }
@@ -50,6 +53,7 @@ public class ClusterConfig {
      * @param subscriber 消息订阅者
      */
     @Bean
+    @ConditionalOnProperty(name = "mqttx.cluster.type", havingValue = REDIS, matchIfMissing = true)
     public MessageListener messageListenerAdapter(InternalMessageSubscriber subscriber) {
         MessageListenerAdapter mla = new MessageListenerAdapter();
         mla.setDelegate(subscriber);

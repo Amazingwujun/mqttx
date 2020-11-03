@@ -48,16 +48,24 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
     private IInternalMessagePublishService internalMessagePublishService;
 
     private final int brokerId;
-    private final Boolean enableCluster, enableTopicSubPubSecure, enableShareTopic;
-    /** 共享主题轮询策略 */
+    private final boolean enableTestMode, enableCluster, enableTopicSubPubSecure, enableShareTopic;
+    /**
+     * 共享主题轮询策略
+     */
     private final ShareStrategy shareStrategy;
-    /** 消息桥接开关 */
+    /**
+     * 消息桥接开关
+     */
     private final Boolean enableMessageBridge;
-    /** 需要桥接消息的主题 */
+    /**
+     * 需要桥接消息的主题
+     */
     private Set<String> bridgeTopics;
     private KafkaTemplate<String, byte[]> kafkaTemplate;
 
-    /** 共享订阅轮询，存储轮询参数 */
+    /**
+     * 共享订阅轮询，存储轮询参数
+     */
     private Map<String, AtomicInteger> roundMap;
 
     //@formatter:on
@@ -65,24 +73,25 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     public PublishHandler(IPublishMessageService publishMessageService, IRetainMessageService retainMessageService,
                           ISubscriptionService subscriptionService, IPubRelMessageService pubRelMessageService,
-                          @Nullable IInternalMessagePublishService internalMessagePublishService, MqttxConfig mqttxConfig,
-                          KafkaTemplate<String, byte[]> kafkaTemplate) {
+                          @Nullable IInternalMessagePublishService internalMessagePublishService, MqttxConfig config,
+                          @Nullable KafkaTemplate<String, byte[]> kafkaTemplate) {
         Assert.notNull(publishMessageService, "publishMessageService can't be null");
         Assert.notNull(retainMessageService, "retainMessageService can't be null");
         Assert.notNull(subscriptionService, "publishMessageService can't be null");
         Assert.notNull(pubRelMessageService, "publishMessageService can't be null");
-        Assert.notNull(mqttxConfig, "mqttxConfig can't be null");
+        Assert.notNull(config, "mqttxConfig can't be null");
 
-        MqttxConfig.Cluster cluster = mqttxConfig.getCluster();
-        MqttxConfig.ShareTopic shareTopic = mqttxConfig.getShareTopic();
-        MqttxConfig.MessageBridge messageBridge = mqttxConfig.getMessageBridge();
+        MqttxConfig.Cluster cluster = config.getCluster();
+        MqttxConfig.ShareTopic shareTopic = config.getShareTopic();
+        MqttxConfig.MessageBridge messageBridge = config.getMessageBridge();
         this.publishMessageService = publishMessageService;
         this.retainMessageService = retainMessageService;
         this.subscriptionService = subscriptionService;
         this.pubRelMessageService = pubRelMessageService;
-        this.brokerId = mqttxConfig.getBrokerId();
+        this.brokerId = config.getBrokerId();
         this.enableCluster = cluster.getEnable();
-        this.enableTopicSubPubSecure = mqttxConfig.getEnableTopicSubPubSecure();
+        this.enableTestMode = config.getEnableTestMode();
+        this.enableTopicSubPubSecure = config.getEnableTopicSubPubSecure();
         this.enableShareTopic = shareTopic.getEnable();
         this.shareStrategy = shareTopic.getShareSubStrategy();
         if (round == shareStrategy) {
@@ -96,7 +105,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
             Assert.notEmpty(bridgeTopics, "消息桥接主题列表不能为空!!!");
         }
 
-        if (enableCluster) {
+        if (enableCluster && !enableTestMode) {
             this.internalMessagePublishService = internalMessagePublishService;
             Assert.notNull(internalMessagePublishService, "internalMessagePublishService can't be null");
         }
@@ -285,7 +294,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         }
 
         // 将消息推送给集群中的broker
-        if (enableCluster) {
+        if (enableCluster && !enableTestMode) {
             internalMessagePublish(pubMsg);
         }
 

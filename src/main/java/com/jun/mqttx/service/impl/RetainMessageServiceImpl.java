@@ -27,8 +27,8 @@ public class RetainMessageServiceImpl implements IRetainMessageService {
      * redis retain message prefix
      */
     private final String retainMessageHashKey;
-    private StringRedisTemplate stringRedisTemplate;
-    private Boolean enableTestMode;
+    private final StringRedisTemplate stringRedisTemplate;
+    private final boolean enableTestMode;
     private Map<String, PubMsg> pubMsgStore;
 
     public RetainMessageServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig) {
