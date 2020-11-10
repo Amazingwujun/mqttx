@@ -13,11 +13,11 @@ import org.springframework.data.redis.core.StringRedisTemplate;
  * @since 1.0.4
  */
 @Slf4j
-public class InternalMessagePublishServiceImpl implements IInternalMessagePublishService {
+public class DefaultInternalMessagePublishServiceImpl implements IInternalMessagePublishService {
 
     private final StringRedisTemplate stringRedisTemplate;
 
-    public InternalMessagePublishServiceImpl(StringRedisTemplate stringRedisTemplate) {
+    public DefaultInternalMessagePublishServiceImpl(StringRedisTemplate stringRedisTemplate) {
         this.stringRedisTemplate = stringRedisTemplate;
     }
 

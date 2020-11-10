@@ -16,7 +16,7 @@ import java.util.function.Consumer;
  * @since 1.0.4
  */
 @Service
-public class AuthenticationServiceImpl implements IAuthenticationService {
+public class DefaultAuthenticationServiceImpl implements IAuthenticationService {
 
     @Override
     public Authentication authenticate(String username, byte[] password) throws AuthenticationException, AuthorizationException {

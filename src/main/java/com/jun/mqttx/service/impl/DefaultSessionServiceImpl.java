@@ -19,7 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @since 1.0.4
  */
 @Service
-public class SessionServiceImpl implements ISessionService {
+public class DefaultSessionServiceImpl implements ISessionService {
 
     private final String clusterSessionHashKey;
     private final StringRedisTemplate stringRedisTemplate;
@@ -27,7 +27,7 @@ public class SessionServiceImpl implements ISessionService {
     private final boolean enableTestMode;
     private Map<String, Session> sessionStore;
 
-    public SessionServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig) {
+    public DefaultSessionServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig) {
         this.stringRedisTemplate = stringRedisTemplate;
         this.clusterSessionHashKey = mqttxConfig.getRedis().getClusterSessionHashKey();
 

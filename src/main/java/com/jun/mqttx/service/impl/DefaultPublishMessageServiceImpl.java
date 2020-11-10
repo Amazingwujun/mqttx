@@ -23,14 +23,14 @@ import java.util.stream.Collectors;
  * @since 1.0.4
  */
 @Service
-public class PublishMessageServiceImpl implements IPublishMessageService {
+public class DefaultPublishMessageServiceImpl implements IPublishMessageService {
 
     private final StringRedisTemplate stringRedisTemplate;
     private final String pubMsgSetPrefix;
     private final boolean enableTestMode;
     private Map<String, Map<Integer, PubMsg>> pubMsgStore;
 
-    public PublishMessageServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig) {
+    public DefaultPublishMessageServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig) {
         this.stringRedisTemplate = stringRedisTemplate;
 
         this.pubMsgSetPrefix = mqttxConfig.getRedis().getPubMsgSetPrefix();

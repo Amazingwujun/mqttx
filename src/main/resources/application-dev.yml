@@ -1,21 +1,20 @@
 # 开发环境配置文件
 
 spring:
-  application:
-    name: mqttx
   redis:
     host: localhost
 
 mqttx:
   web-socket:
     enable: true
-  sys-topic:
-    enable: true
-  cluster:
-    enable: false
-    type: redis
 
-# 1 开启 ssl 配置示例
+logging:
+  pattern:
+    console: "%clr(%d{${LOG_DATEFORMAT_PATTERN:yyyy-MM-dd HH:mm:ss.SSS}}){faint} %clr(${LOG_LEVEL_PATTERN:-%5p}) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger){cyan} %clr([%4.4L]){cyan} %clr(:){faint} %m%n"
+
+#mqttx 配置项说明见 readme.md #6.1 配置项
+#下方是配置示例，供参考
+# 1. 开启 ssl
 #spring:
 #  redis:
 #    host: localhost
@@ -28,7 +27,7 @@ mqttx:
 #    client-auth: NONE
 #    key-store-type: pkcs12
 
-# 2 桥接消息配置示例
+# 2. 桥接消息
 #spring:
 #  redis:
 #    host: localhost
@@ -45,4 +44,31 @@ mqttx:
 #    bridge-topics:
 #      - "/bridge/topic"
 #      - "mqttx/love"
+#    enable: true
+
+# 3. kafka 集群
+#spring:
+#  application:
+#    name: mqttx
+#  kafka:
+#    bootstrap-servers:
+#      - localhost:9092
+#    producer:
+#      acks: 1
+#      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+#      value-serializer: org.apache.kafka.common.serialization.ByteArraySerializer
+#    consumer:
+#      enable-auto-commit: true
+#      client-id: ${mqttx.broker-id}
+#      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+#      value-deserializer: org.apache.kafka.common.serialization.ByteArrayDeserializer
+#      group-id: ${spring.application.name}_${mqttx.broker-id}
+#      auto-offset-reset: latest
+#
+#mqttx:
+#  enable-test-mode: false
+#  web-socket:
+#    enable: true
+#  cluster:
+#    type: kafka
 #    enable: true

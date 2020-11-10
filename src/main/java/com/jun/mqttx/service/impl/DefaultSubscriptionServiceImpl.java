@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-public class SubscriptionServiceImpl implements ISubscriptionService, Watcher {
+public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Watcher {
 
     /**
      * 按顺序 -> 订阅，解除订阅，删除 topic
@@ -59,8 +59,9 @@ public class SubscriptionServiceImpl implements ISubscriptionService, Watcher {
     private final boolean enableInnerCache, enableCluster, enableTestMode;
     private final int brokerId;
 
-    public SubscriptionServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig,
-                                   @Nullable IInternalMessagePublishService internalMessagePublishService) {
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    public DefaultSubscriptionServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig,
+                                          @Nullable IInternalMessagePublishService internalMessagePublishService) {
         Assert.notNull(stringRedisTemplate, "stringRedisTemplate can't be null");
 
         this.stringRedisTemplate = stringRedisTemplate;

@@ -40,29 +40,17 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
     final private boolean enableTestMode, enableCluster, enableTopicSubPubSecure;
 
     private final int brokerId;
-    /**
-     * 认证服务
-     */
+    /** 认证服务 */
     private final IAuthenticationService authenticationService;
-    /**
-     * 会话服务
-     */
+    /** 会话服务 */
     private final ISessionService sessionService;
-    /**
-     * 主题订阅相关服务
-     */
+    /** 主题订阅相关服务 */
     private final ISubscriptionService subscriptionService;
-    /**
-     * publish 消息服务
-     */
+    /** publish 消息服务 */
     private final IPublishMessageService publishMessageService;
-    /**
-     * pubRel 消息服务
-     */
+    /** pubRel 消息服务 */
     private final IPubRelMessageService pubRelMessageService;
-    /**
-     * 内部消息发布服务
-     */
+    /** 内部消息发布服务 */
     private IInternalMessagePublishService internalMessagePublishService;
 
     //@formatter:on

@@ -138,7 +138,7 @@ public class BrokerInitializer implements DisposableBean {
      */
     public void start() throws InterruptedException {
         if (boss == null || work == null) {
-            int t = (enableSocket & enableWebsocket) ? 2 : 1;
+            int t = (enableSocket && enableWebsocket) ? 2 : 1;
             if (Epoll.isAvailable()) {
                 boss = new EpollEventLoopGroup(t);
                 work = new EpollEventLoopGroup();
@@ -149,16 +149,16 @@ public class BrokerInitializer implements DisposableBean {
         }
         if (sslEnable) {
             try {
-                if (ClientAuth.REQUIRE == clientAuth) {
+                if (ClientAuth.NONE == clientAuth) {
                     sslContext = SslContextBuilder
                             .forServer(sslUtils.getKeyManagerFactory())
-                            .trustManager(sslUtils.getTrustManagerFactory())
-                            .clientAuth(ClientAuth.REQUIRE)
+                            .clientAuth(clientAuth)
                             .build();
                 } else {
                     sslContext = SslContextBuilder
                             .forServer(sslUtils.getKeyManagerFactory())
-                            .clientAuth(ClientAuth.NONE)
+                            .trustManager(sslUtils.getTrustManagerFactory())
+                            .clientAuth(clientAuth)
                             .build();
                 }
             } catch (SSLException e) {
@@ -269,7 +269,7 @@ public class BrokerInitializer implements DisposableBean {
     }
 
     @Override
-    public void destroy() throws Exception {
+    public void destroy() {
         if (boss != null) {
             boss.shutdownGracefully();
         }

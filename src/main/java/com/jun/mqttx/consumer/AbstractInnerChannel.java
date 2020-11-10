@@ -9,25 +9,23 @@ import org.springframework.util.Assert;
 import java.util.List;
 
 /**
- * 集群消息接收器，默认采用 redis 实现，这样不用引入多余的依赖。但是个人推荐后面结合公司自身的业务需求使用合适的 mq ，比如 KAFKA。
- *
- * @author Jun
- * @since 1.0.4
+ * 该抽象类有两个子类 {@link KafkaInternalMessageSubscriber} 和 {@link DefaultInternalMessageSubscriber},
+ * 具体采用哪个实现取决于用户配置 <code>mqttx.enable-cluster.type</code>
  */
-@SuppressWarnings("rawtypes")
-public class InternalMessageSubscriber {
+public abstract class AbstractInnerChannel {
 
     private final int brokerId;
 
     private final List<Watcher> watchers;
 
-    public InternalMessageSubscriber(List<Watcher> watchers, MqttxConfig mqttxConfig) {
+    public AbstractInnerChannel(List<Watcher> watchers, MqttxConfig mqttxConfig) {
         Assert.notNull(watchers, "watchers can't be null");
         Assert.notNull(mqttxConfig, "mqttxConfig can't be null");
 
         this.watchers = watchers;
         this.brokerId = mqttxConfig.getBrokerId();
     }
+
 
     /**
      * 分发集群消息，当前处理类别：
@@ -45,7 +43,8 @@ public class InternalMessageSubscriber {
      * @param message 消息内容
      * @param channel 订阅频道
      */
-    public void handleMessage(String message, String channel) {
+    @SuppressWarnings("rawtypes")
+    public void dispatch(String message, String channel) {
         // 同 broker 消息屏蔽
         InternalMessage internalMessage = JSON.parseObject(message, InternalMessage.class);
         if (brokerId == internalMessage.getBrokerId()) {
@@ -55,8 +54,6 @@ public class InternalMessageSubscriber {
         for (Watcher watcher : watchers) {
             if (watcher.support(channel)) {
                 watcher.action(message);
-                // 一个消息只能由一个观察者消费
-                break;
             }
         }
     }

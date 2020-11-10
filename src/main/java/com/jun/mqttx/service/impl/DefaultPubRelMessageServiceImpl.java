@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
  * @since 1.0.4
  */
 @Component
-public class PubRelMessageServiceImpl implements IPubRelMessageService {
+public class DefaultPubRelMessageServiceImpl implements IPubRelMessageService {
 
     private final StringRedisTemplate stringRedisTemplate;
 
@@ -27,7 +27,7 @@ public class PubRelMessageServiceImpl implements IPubRelMessageService {
     private final boolean enableTestMode;
     private Map<String, Set<Integer>> clientMsgStore;
 
-    public PubRelMessageServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig) {
+    public DefaultPubRelMessageServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig) {
         this.stringRedisTemplate = stringRedisTemplate;
 
         this.pubRelMsgSetPrefix = mqttxConfig.getRedis().getPubRelMsgSetPrefix();

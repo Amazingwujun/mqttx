@@ -8,21 +8,21 @@ package com.jun.mqttx.constants;
  */
 public enum InternalMessageEnum {
 
-    PUB(1, "INTERNAL_PUB"),
+    PUB(1, ClusterTopic.PUB),
 
-    PUB_ACK(2, "INTERNAL_PUBACK"),
+    PUB_ACK(2, ClusterTopic.PUB_ACK),
 
-    PUB_REC(3, "INTERNAL_PUBREC"),
+    PUB_REC(3, ClusterTopic.PUB_REC),
 
-    PUB_COM(4, "INTERNAL_PUBCOM"),
+    PUB_COM(4, ClusterTopic.PUB_COM),
 
-    PUB_REL(5, "INTERNAL_PUBREL"),
+    PUB_REL(5, ClusterTopic.PUB_REL),
 
-    DISCONNECT(6, "INTERNAL_DISCONNECT"),
+    DISCONNECT(6, ClusterTopic.DISCONNECT),
 
-    ALTER_USER_AUTHORIZED_TOPICS(7, "ALTER_USER_AUTHORIZED_TOPICS"),
+    ALTER_USER_AUTHORIZED_TOPICS(7, ClusterTopic.ALTER_USER_AUTHORIZED_TOPICS),
 
-    SUB_UNSUB(8, "INTERNAL_SUB_OR_UNSUB");
+    SUB_UNSUB(8, ClusterTopic.SUB_UNSUB);
 
     private final int type;
 

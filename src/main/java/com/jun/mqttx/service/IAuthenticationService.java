@@ -39,13 +39,13 @@ public interface IAuthenticationService {
      *
      *     client.newCall(request).enqueue(new Callback() {
      *
-     *     public void onFailure(Call call, IOException e) {
-     *         onFailure.accept(e);
-     *     }
+     *         public void onFailure(Call call, IOException e) {
+     *             onFailure.accept(e);
+     *         }
      *
-     *     public void onResponse(Call call, Response response) throws IOException {
-     *         Authentication auth = JSON.parseObject(response.body().string(), Authentication.class);
-     *            onResponse.accept(auth);
+     *         public void onResponse(Call call, Response response) throws IOException {
+     *             Authentication auth = JSON.parseObject(response.body().string(), Authentication.class);
+     *             onResponse.accept(auth);
      *         }
      *     });
      * </pre>

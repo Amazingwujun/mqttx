@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
  * @since 1.0.4
  */
 @Service
-public class RetainMessageServiceImpl implements IRetainMessageService {
+public class DefaultRetainMessageServiceImpl implements IRetainMessageService {
 
     /**
      * redis retain message prefix
@@ -31,7 +31,7 @@ public class RetainMessageServiceImpl implements IRetainMessageService {
     private final boolean enableTestMode;
     private Map<String, PubMsg> pubMsgStore;
 
-    public RetainMessageServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig) {
+    public DefaultRetainMessageServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig) {
         Assert.notNull(stringRedisTemplate, "stringRedisTemplate can't be null");
 
         this.stringRedisTemplate = stringRedisTemplate;

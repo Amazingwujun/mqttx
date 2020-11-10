@@ -49,23 +49,15 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
 
     private final int brokerId;
     private final boolean enableTestMode, enableCluster, enableTopicSubPubSecure, enableShareTopic;
-    /**
-     * 共享主题轮询策略
-     */
+    /** 共享主题轮询策略 */
     private final ShareStrategy shareStrategy;
-    /**
-     * 消息桥接开关
-     */
-    private final Boolean enableMessageBridge;
-    /**
-     * 需要桥接消息的主题
-     */
+    /** 消息桥接开关 */
+    private final boolean enableMessageBridge;
+    /** 需要桥接消息的主题 */
     private Set<String> bridgeTopics;
     private KafkaTemplate<String, byte[]> kafkaTemplate;
 
-    /**
-     * 共享订阅轮询，存储轮询参数
-     */
+    /** 共享订阅轮询，存储轮询参数 */
     private Map<String, AtomicInteger> roundMap;
 
     //@formatter:on

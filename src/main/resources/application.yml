@@ -1,46 +1,13 @@
 # 公共配置文件
 
 spring:
+  application:
+    name: @broker.name@
   profiles:
     # 该配置决定使用 application-dev.yml 还是 application-prod.yml 作为附加配置文件
     active: @profile@
 
 mqttx:
   version: @version@
-
-#下方是配置示例，提供参考。如果你手动配置了，那么你的配置将被采用。
-#默认配置值可查看 com.jun.mqttx.config.MqttxConfig 配置类
-#mqttx:
-#  heartbeat: 50s
-#  host: "0.0.0.0"
-#  so-backlog: 512
-#  enable-topic-sub-pub-secure: false
-#  enable-inner-cache: true
-#  redis:
-#    cluster-session-hash-key: "Session:key"
-#    message-id-prefix: "MQTT:MESSAGEID:"
-#    retain-message-prefix: "MQTT:RETAIN:"
-#    topic-prefix: "MQTT:TOPIC:"
-#    pub-msg-set-prefix: "MQTT:CLIENT:PUBMSG:"
-#    pub-rel-msg-set-prefix: "MQTT:CLIENT:PUBRELMSG:"
-#    topic-set-key: "MQTT:ALLTOPIC"
-#  ssl:
-#    enable: false
-#    key-store-location: "classpath:tls/mqttx.keystore"
-#    key-store-password: "123456"
-#    key-store-type: "PKCS12"
-#  socket:
-#    port: 1883
-#    enable: true
-#  web-socket:
-#    path: "/mqtt"
-#    port: 8083
-#    enable: true
-#  cluster:
-#    broker-id: 1
-#    enable: true
-#    inner-cache-consistency-key: "mqttx:cache_consistence"
-#  share-topic:
-#    share-sub-strategy: "round"
-#    enable: true
+  broker-id: @broker.id@
 

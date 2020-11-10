@@ -1,15 +1,13 @@
 # 测试环境配置文件
 
-spring:
-  application:
-    name: mqttx
-
 mqttx:
   enable-test-mode: true
   web-socket:
     enable: true
-  sys-topic:
-    enable: true
+
+logging:
+  pattern:
+    console: "%clr(%d{${LOG_DATEFORMAT_PATTERN:yyyy-MM-dd HH:mm:ss.SSS}}){faint} %clr(${LOG_LEVEL_PATTERN:-%5p}) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger){cyan} %clr([%4.4L]){cyan} %clr(:){faint} %m%n"
 
 # 1 开启 ssl 配置示例
 #spring:

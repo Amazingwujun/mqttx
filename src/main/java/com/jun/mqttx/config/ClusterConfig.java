@@ -1,9 +1,11 @@
 package com.jun.mqttx.config;
 
-import com.jun.mqttx.consumer.InternalMessageSubscriber;
+import com.jun.mqttx.consumer.DefaultInternalMessageSubscriber;
+import com.jun.mqttx.consumer.KafkaInternalMessageSubscriber;
 import com.jun.mqttx.consumer.Watcher;
 import com.jun.mqttx.service.IInternalMessagePublishService;
-import com.jun.mqttx.service.impl.InternalMessagePublishServiceImpl;
+import com.jun.mqttx.service.impl.DefaultInternalMessagePublishServiceImpl;
+import com.jun.mqttx.service.impl.KafkaInternalMessagePublishServiceImpl;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -16,6 +18,7 @@ import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.listener.Topic;
 import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
 import org.springframework.data.redis.serializer.RedisSerializer;
+import org.springframework.kafka.core.KafkaTemplate;
 
 import java.util.*;
 import java.util.concurrent.Executors;
@@ -23,7 +26,12 @@ import java.util.concurrent.Executors;
 import static com.jun.mqttx.constants.InternalMessageEnum.*;
 
 /**
- * 集群配置
+ * 集群配置, 两种实现:
+ * <ul>
+ *     <li>redis</li>
+ *     <li>kafka</li>
+ * </ul>
+ * 默认采用 redis 实现
  *
  * @author Jun
  * @since 1.0.4
@@ -37,14 +45,27 @@ public class ClusterConfig {
 
     @Bean
     @ConditionalOnProperty(name = "mqttx.cluster.type", havingValue = REDIS, matchIfMissing = true)
-    public InternalMessageSubscriber internalMessageSubscriber(List<Watcher> watchers, MqttxConfig mqttxConfig) {
-        return new InternalMessageSubscriber(watchers, mqttxConfig);
+    public DefaultInternalMessageSubscriber defaultInternalMessageSubscriber(List<Watcher> watchers, MqttxConfig mqttxConfig) {
+        return new DefaultInternalMessageSubscriber(watchers, mqttxConfig);
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "mqttx.cluster.type", havingValue = KAFKA)
+    public KafkaInternalMessageSubscriber kafkaInternalMessageSubscriber(List<Watcher> watchers, MqttxConfig mqttxConfig) {
+        return new KafkaInternalMessageSubscriber(watchers, mqttxConfig);
     }
 
     @Bean
     @ConditionalOnProperty(name = "mqttx.cluster.type", havingValue = REDIS, matchIfMissing = true)
-    public IInternalMessagePublishService internalMessagePublishService(StringRedisTemplate stringRedisTemplate) {
-        return new InternalMessagePublishServiceImpl(stringRedisTemplate);
+    public IInternalMessagePublishService defaultInternalMessagePublishServiceImpl(StringRedisTemplate stringRedisTemplate) {
+        return new DefaultInternalMessagePublishServiceImpl(stringRedisTemplate);
+    }
+
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    @Bean
+    @ConditionalOnProperty(name = "mqttx.cluster.type", havingValue = KAFKA)
+    public IInternalMessagePublishService kafkaInternalMessagePublishServiceImpl(KafkaTemplate<String, byte[]> kafkaTemplate) {
+        return new KafkaInternalMessagePublishServiceImpl(kafkaTemplate);
     }
 
     /**
@@ -54,7 +75,7 @@ public class ClusterConfig {
      */
     @Bean
     @ConditionalOnProperty(name = "mqttx.cluster.type", havingValue = REDIS, matchIfMissing = true)
-    public MessageListener messageListenerAdapter(InternalMessageSubscriber subscriber) {
+    public MessageListener messageListenerAdapter(DefaultInternalMessageSubscriber subscriber) {
         MessageListenerAdapter mla = new MessageListenerAdapter();
         mla.setDelegate(subscriber);
         mla.setSerializer(RedisSerializer.string());

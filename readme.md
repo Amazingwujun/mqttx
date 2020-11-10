@@ -60,12 +60,12 @@
 
 所谓**测试模式**、**开发模式**只是方便同学们快速启动项目，方便测试功能测试。熟悉项目后，同学们可通过修改 ***[6.1 配置项](#61-配置项)*** 开启或关闭 `mqttx` 提供的各项功能。
 
-> `mqttx` 依赖 `redis` 实现消息持久化、集群等功能，使用其它中间件（`mysql`, `mongodb`, `kafka` 等）同样能够实现，而 `springboot` 具备 `spring-boot-starter-***`  等各种可插拔组件，方便大家修改默认的实现
+> `mqttx` 默认依赖 `redis` 实现消息持久化、集群等功能，使用其它中间件（`mysql`, `mongodb`, `kafka` 等）同样能够实现，而 `springboot` 具备 `spring-boot-starter-***`  等各种可插拔组件，方便大家修改默认的实现
 
 ### 1.2 项目依赖
 
-- [x] redis： 集群消息、消息持久化
-- [x] kafka：桥接消息支持
+- [x] **Redis**： 集群消息、消息持久化
+- [x] **Kafka**：桥接消息支持，集群消息（可选功能）
 
 其它说明：
 1. 项目使用了 lombok，使用 ide 请安装对应的插件
@@ -76,8 +76,8 @@
 ### 1.3 线上实例
 
 云端部署了一个 `mqttx` 单例服务，可供功能测试：
-1. 不支持 ssl
-2. 开启了 websocket, 可通过 http://tools.emqx.io/ 测试，仅需将域名修改为：`119.45.158.51`(端口、地址不变)
+1. 不支持 `ssl`
+2. 开启了 `websocket`, 可通过 http://tools.emqx.io/ 测试，仅需将域名修改为：`119.45.158.51`(端口、地址不变)
 3. 支持共享订阅功能
 4. 部署版本 `v1.0.5.BETA`
 
@@ -147,40 +147,52 @@
 
 举例：
 
-| topicFilter | match topics            |
-| ----------- | ----------------------- |
-| /a/b/+      | /a/b/abc, /a/b/test     |
-| a/b/#       | a/b, a/b/abc, a/b/c/def |
-| a/+/b/#     | a/nani/b/abc            |
-| /+/a/b/+/c  | /aaa/a/b/test/c         |
+| topicFilter  | match topics                  |
+| ------------ | ----------------------------- |
+| `/a/b/+`     | `/a/b/abc`,`/a/b/test`        |
+| `a/b/#`      | `a/b`, `a/b/abc`, `a/b/c/def` |
+| `a/+/b/#`    | `a/nani/b/abc`                |
+| `/+/a/b/+/c` | `/aaa/a/b/test/c`             |
 
 校验工具类为：`com.jun.mqttx.utils.TopicUtils`
 
 #### 4.3 集群支持
 
-项目引入 `redis pub/sub ` 分发消息以支持集群功能。如果需要修改为 `kafka` 或其它 `mq` ，需要修改配置类 `ClusterConfig` 及替换实现类 `InternalMessageServiceImpl`。
+`mqttx` 依赖消息中间件分发消息实现集群功能，目前支持的中间件：
+
+- [x] `Kafka`：可选配置
+- [x] `Redis`：默认配置
+
+实现原理如下图：
 
 ![ak6nHK.png](https://s1.ax1x.com/2020/07/28/ak6nHK.png)
 
 1. `mqttx.cluster.enable`：功能开关，默认 `false`
-> `v1.0.5.RELEASE` 之前的版本集群消息处理存在 bug，无法使用.
+2. `mqttx.cluster.type`: 消息中间件类型，默认 `redis`
+
+注意事项：
+
+ 1. `v1.0.5.RELEASE` 之前的版本集群功能存在 bug，无法使用。
+
+ 2. 如需使用 `kafka` 实现集群消息，需要手动修改配置 `application-*.yml`, 可参考 `application-dev.yml` 中的配置示例 ***3. kafka 集群***。
+3. 测试模式开启后，集群功能 **强制** 关闭
 #### 4.4 ssl 支持
 
 开启 ssl 你首先应该有了 *ca*(自签名或购买)，然后修改 `application.yml` 文件中几个配置：
 
 1. `mqttx.ssl.enable`：功能开关，默认 `false`，同时控制 `websocket` 与 `socket`
-2. `mqttx.ssl.key-store-location`：证书地址，基于 `classpath`
-3. `mqttx.ssl.key-store-password`：证书密码
+2. `mqttx.ssl.key-store-location`：keystore 地址，基于 `classpath`
+3. `mqttx.ssl.key-store-password`：keystore 密码
 4. `mqttx.ssl.key-store-type`：keystore 类别，如 `PKCS12`
-5. `mqttx.ssl.client-auth`：服务端是否需要校验客户端证书，默认 `false`
+5. `mqttx.ssl.client-auth`：服务端是否需要校验客户端证书，默认 `NONE`
 
-> `resources/tls` 目录中的 `mqttx.keystore` 仅供测试使用, 密码: `123456`.
+> `resources/tls` 目录中的 `mqttx.keystore` 仅供测试使用, 密码: `123456`
 >
 > 证书加载工具类：`com/jun/mqttx/utils/SslUtils.java`
 
 #### 4.5 topic 安全支持
 
-为了对 client 订阅 topic 进行限制，加入 topic 订阅&发布鉴权机制:
+为了对 client 订阅 topic 进行限制，加入 **topic 订阅&发布鉴权**机制:
 
 1. `mqttx.enable-topic-sub-pub-secure`: 功能开关，默认 `false`
 2. 使用时需要实现接口 `AuhenticationService` ，该接口返回对象中含有 `authorizedSub,authorizedPub` 存储 client 被授权订阅及发布的 `topic` 列表。
@@ -289,34 +301,22 @@
 
 ## 5 开发者说
 
-1. 集群态考虑整合服务注册的功能，便于管理集群状态，可能会使用 `consul`，做不做看我后面的想法吧
-
-   >  其实我想引入 `SpringCloud` ，但又觉得 `springcloud` 有点重了，可能会开一个分支去实现。
-
-2. bug fix and optimization，这个会一直继续的，不过主要靠使用和学习 `mqttx` 的同学反馈问题给我（没反馈我就当没有呗~摊手.jpg）
+1. bug fix and optimization，这个会一直继续的，不过主要靠使用和学习 `mqttx` 的同学反馈问题给我（没反馈我就当没有呗~摊手.jpg）
 
    >  这个其实非常重要的，但截至到目前也少有同学找我反馈问题，我一个人终究力量有限。
 
-3. 目前正在开发基于 `vue2.0`, `element-ui` 的 [mqttx-admin](https://github.com/Amazingwujun/mqttx-admin) 管理平台，`mqttx` 的功能更新会暂停一段时间~~(最近在看 [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html))~~。项目开发过程中发现需要对 `mqttx` 做一些改动，但这些改动不应该 push 给 mqttx master（比如 topic 安全认证这个功能需要配合 `mqttx-platform`，我可能会引入 [Retrofit](https://square.github.io/retrofit/) 处理接口调用，其实可以用 `feign`，我觉的这两个都差不多），我应该会开一个业务 branch 处理这个事情。话说 `javascript` 写项目可太爽了，以前怎么不觉得?
+2. [benchmark](#63-benchmark) 表明 mqttx 性能还有提升的可能，我将在 `v1.1.0.RELEASE` 改造 `pub/sub` 处理逻辑
 
-   > 本来说要放一部分精力到 `mqttx-admin` 这个衍生项目的，但后来发现 `mqttx` 还有太多事情需要做，只能变更计划了。
-
-4. [benchmark](#63-benchmark) 表明 mqttx 性能还有提升的可能，我将在 `v1.1.0.RELEASE` 改造 `pub/sub` 处理逻辑
-   
    > 主要是 `StringRedisTemplate` => `ReactiveStringRedisTemplate`，改**同步**为**异步**
-   
-5. 开发方向介绍
 
-   ~~`v1.0.5.RELEASE` 成为 `mqttx` 第一个 **LTS** 版本，`v1.0` 将基于它维护和更新。 为提升单机性能， `v1.1` 版本将全面异步化。后续 [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html) 协议支持可能会率先从 `v1.0` 开始。~~
+3. 开发方向介绍
 
    `mqttx` 建立两个分支：
 
    - v1.0：`com.jun.mqttx.service.impl` 同步接口
    - v1.1：`com.jun.mqttx.service.impl` 改为异步接口
 
-    [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html) 由 `v1.0` 开始支持。
-
-6. 交流群
+4. 交流群
 
 <img src="https://s1.ax1x.com/2020/10/10/0ytoSx.jpg" alt="群二维码" height="300" />
 
@@ -336,23 +336,24 @@
 | 配置                                     | 默认值                        | 说明                                                         |
 | ---------------------------------------- | ----------------------------- | ------------------------------------------------------------ |
 | `mqttx.version`                          | 取自 `pom.xml`               | 版本                                                         |
-| `mqttx.brokerId`                         | `1`                             | 应用标志, 唯一                                               |
+| `mqttx.brokerId`                         | 取自 `pom.xml`                | 应用标志, 唯一                                               |
 | `mqttx.heartbeat`                        | `60s`                         | 初始心跳，会被 conn 消息中的 keepalive 重置                  |
 | `mqttx.host`                             | `0.0.0.0`                       | 监听地址                                                     |
 | `mqttx.soBacklog`                        | `512`                           | tcp 连接处理队列                                             |
 | `mqttx.enableTopicSubPubSecure`          | `false`                         | 客户订阅/发布主题安全功能，开启后将限制客户端发布/订阅的主题 |
 | `mqttx.enableInnerCache`                 | `true`                          | 发布消息每次都需要查询 redis 来获取订阅的客户端列表。开启此功能后，将在内存中建立一个主题-客户端关系映射, 应用直接访问内存中的数据即可 |
-| `mqttx.enableTestMode` | `false` | 测试模式开关，开启后系统进入测试模式 |
+| `mqttx.enableTestMode` | `false` | 测试模式开关，开启后系统进入测试模式; <br/>**注意：测试模式会禁用集群功能** |
 | `mqttx.redis.clusterSessionHashKey`      | `mqttx.session.key`             | redis map key；用于集群的会话存储                          |
-| `mqttx.redis.topicPrefix`                | `mqttx:topic:`                  | 主题前缀； topic <==> client 映射关系保存                  |
+| `mqttx.redis.topicPrefix`                | `mqttx:topic:`                  | 主题前缀； topic <==> client 映射关系保存               |
 | `mqttx.redis.retainMessagePrefix`        | `mqttx:retain:`                 | 保留消息前缀, 保存 retain 消息                            |
 | `mqttx.redis.pubMsgSetPrefix`            | `mqttx:client:pubmsg:`          | client pub消息 redis set 前缀； 保存 pubmsg，当收到 puback 获取 pubrec 后删除 |
-| `mqttx.redis.pubRelMsgSetPrefix`         | `mqttx:client:pubrelmsg:`       | client pubRel 消息 redis set 前缀；保存 pubrel 消息，收到 pubcom 消息删除 |
-| `mqttx.redis.topicSetKey`                | `mqttx:alltopic`                | topic 集合，redis set key 值；保存所有的主题                 |
+| `mqttx.redis.pubRelMsgSetPrefix`         | `mqttx:client:pubrelmsg:`       | client pubRel 消息 redis set 前缀；保存 pubrel 消息 flag，收到 pubcom 消息删除 |
+| `mqttx.redis.topicSetKey`                | `mqttx:alltopic`                | topic 集合，redis set key 值；保存全部主题               |
 | `mqttx.cluster.enable`                   | `false`                         | 集群开关                                                     |
 | `mqttx.cluster.innerCacheConsistancyKey` | `mqttx:cache_consistence`       | 应用启动后，先查询 redis 中无此 key 值，然后在检查一致性     |
+| `mqttx.cluster.type` | `redis` | 集群消息中间件类型 |
 | `mqttx.ssl.enable`                       | `false`                         | ssl 开关                                                     |
-| `mqttx.ssl.client-auth` | `false` | 客户端证书校验 |
+| `mqttx.ssl.client-auth` | `NONE` | 客户端证书校验 |
 | `mqttx.ssl.keyStoreLocation`             | `classpath: tls/mqttx.keystore` | keyStore 位置                                                |
 | `mqttx.ssl.keyStorePassword`             | `123456`             | keyStore 密码                                                |
 | `mqttx.ssl.keyStoreType`                 | `pkcs12`                        | keyStore 类别                                                |

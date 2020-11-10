@@ -29,7 +29,7 @@ public class ClientSubOrUnsubMsg {
     private List<String> topics;
 
     /**
-     * Defined in {@link com.jun.mqttx.service.impl.SubscriptionServiceImpl}
+     * Defined in {@link com.jun.mqttx.service.impl.DefaultSubscriptionServiceImpl}
      * <ol>
      *     <li>1 -> 订阅</li>
      *     <li>2 -> 解除客户订阅</li>
