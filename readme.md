@@ -303,7 +303,7 @@
 
 1. bug fix and optimization，这个会一直继续的，不过主要靠使用和学习 `mqttx` 的同学反馈问题给我（没反馈我就当没有呗~摊手.jpg）
 
-   >  这个其实非常重要的，但截至到目前也少有同学找我反馈问题，我一个人终究力量有限。
+   >  **项目将长期维护**
 
 2. [benchmark](#63-benchmark) 表明 mqttx 性能还有提升的可能，我将在 `v1.1.0.RELEASE` 改造 `pub/sub` 处理逻辑
 
@@ -316,7 +316,16 @@
    - v1.0：`com.jun.mqttx.service.impl` 同步接口
    - v1.1：`com.jun.mqttx.service.impl` 改为异步接口
 
-4. 交流群
+   项目已经进入稳定版本，在易用性及性能上都达到了一定的水准，后面的更新迭代将大幅放缓
+
+   > 除开 v1.0 分支外，其它分支已经做了一部分工作了，不过我最近在学习 `golang` ，v1.1 的开发就暂时搁置吧╮(╯▽╰)╭
+
+4. 开发者最近动态
+
+   1. 最近在学习 `golang`， 开了一个项目 [MQTT-GO](https://github.com/Amazingwujun/mqtt-go)，写完后对比一下 `MQTTX` 看看哪个性能比较牛逼o(*￣▽￣*)ブ
+   2. `MQTTX` 项目已经进入稳定版本，在易用性及性能上都达到了一定的水平，项目正式进入维护期！
+
+5. 交流群
 
 <img src="https://s1.ax1x.com/2020/10/10/0ytoSx.jpg" alt="群二维码" height="300" />
 
