@@ -11,3 +11,21 @@ mqttx:
   version: @version@
   broker-id: @broker.id@
 
+# 暴露 metrics 端点给 prometheus
+management:
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+      jmx:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+      base-path: /metrics
+
+server:
+  port: 18080

@@ -78,6 +78,23 @@
             <artifactId>fastjson</artifactId>
             <version>${fastjson.version}</version>
         </dependency>
+
+        <!--   适配监控系统需求     -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+        </dependency>
+
     </dependencies>
 
     <profiles>
