@@ -323,6 +323,9 @@
 4. 开发者最近动态
 
    1. 最近在学习 `golang`， 开了一个项目 [MQTT-GO](https://github.com/Amazingwujun/mqtt-go)，写完后对比一下 `MQTTX` 看看哪个性能比较牛逼o(*￣▽￣*)ブ
+
+      > 协议解析部分完成了，golang 可真是简单粗暴啊😄
+
    2. `MQTTX` 项目已经进入稳定版本，在易用性及性能上都达到了一定的水平，项目正式进入维护期！
 
 5. 交流群
@@ -380,6 +383,7 @@
 | `mqttx.message-bridge.topics` | `null` | 需要桥接消息的主题列表 |
 
 ### 6.2 版本说明
+**prometheus** 分支为 ***MQTTX*** 整合监控系统 **[Prometheus](https://prometheus.io/)** 的代码，有需要的用户可参考该分支代码.
 
 #### 6.2.1 v1.0
 
