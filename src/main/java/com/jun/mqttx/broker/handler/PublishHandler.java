@@ -52,11 +52,10 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
     /** 共享主题轮询策略 */
     private final ShareStrategy shareStrategy;
     /** 消息桥接开关 */
-    private final boolean enableMessageBridge;
+    private final Boolean enableMessageBridge;
     /** 需要桥接消息的主题 */
     private Set<String> bridgeTopics;
     private KafkaTemplate<String, byte[]> kafkaTemplate;
-
     /** 共享订阅轮询，存储轮询参数 */
     private Map<String, AtomicInteger> roundMap;
 
@@ -277,6 +276,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
 
         // 集群消息不做保存，传播消息的 broker 已经保存过了
         if ((qos == MqttQoS.EXACTLY_ONCE || qos == MqttQoS.AT_LEAST_ONCE) && !isInternalMessage) {
+            pubMsg.setQoS(qos.value());
             if (isCleanSession(ctx)) {
                 // 如果 cleanSession = 1，消息直接关联会话，不需要持久化
                 getSession(ctx).savePubMsg(messageId, pubMsg);
