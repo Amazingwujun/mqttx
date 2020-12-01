@@ -107,6 +107,9 @@ public class MqttxConfig {
 
         /** 非 cleanSession messageId 获取前缀 */
         private String messageIdPrefix = "mqttx:messageId:";
+
+        /** client topic集合，redis set prefix值 */
+        private String clientTopicSetPrefix = "mqttx:client:topicset:";
     }
 
     /**

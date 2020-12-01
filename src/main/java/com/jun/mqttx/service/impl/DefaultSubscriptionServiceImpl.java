@@ -32,27 +32,21 @@ import java.util.stream.Collectors;
 @Service
 public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Watcher {
 
-    /**
-     * 按顺序 -> 订阅，解除订阅，删除 topic
-     */
+    //@formatter:off
+
+    /** 按顺序 -> 订阅，解除订阅，删除 topic */
     private static final int SUB = 1, UN_SUB = 2, DEL_TOPIC = 3;
     private final StringRedisTemplate stringRedisTemplate;
     private final IInternalMessagePublishService internalMessagePublishService;
-    /**
-     * 订阅主题前缀
-     */
-    private final String topicPrefix;
-    /**
-     * 主题集合
-     */
-    private final String topicSetKey;
+    /** client订阅主题, 订阅主题前缀, 主题集合 */
+    private final String clientTopicsPrefix, topicSetKey, topicPrefix;
     private final boolean enableInnerCache, enableCluster, enableTestMode;
     private final int brokerId;
-    /**
-     * 内部缓存，{@link this#enableInnerCache} == true 时使用
-     */
+    /** 内部缓存，{@link this#enableInnerCache} == true 时使用 */
     private Set<String> allTopics;
     private Map<String, ConcurrentHashMap.KeySetView<ClientSub, Boolean>> topicClientMap;
+
+    //@formatter:on
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     public DefaultSubscriptionServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig,
@@ -61,6 +55,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
 
         this.stringRedisTemplate = stringRedisTemplate;
         this.internalMessagePublishService = internalMessagePublishService;
+        this.clientTopicsPrefix = mqttxConfig.getRedis().getClientTopicSetPrefix();
         this.topicPrefix = mqttxConfig.getRedis().getTopicPrefix();
         this.topicSetKey = mqttxConfig.getRedis().getTopicSetKey();
 
@@ -83,7 +78,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
     }
 
     /**
-     * 目前topic仅支持全字符匹配
+     * 订阅主题
      *
      * @param clientSub 客户订阅信息
      */
@@ -96,12 +91,15 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         if (enableTestMode) {
             subscribeWithCache(clientSub);
         } else {
-            // 保存topic <---> client 映射
+            // 保存 topic -> client
             stringRedisTemplate.opsForHash()
                     .put(topicPrefix + topic, clientId, String.valueOf(qos));
 
             // 将topic保存到redis set集合中
             stringRedisTemplate.opsForSet().add(topicSetKey, topic);
+
+            // 保存 client -> topics
+            stringRedisTemplate.opsForSet().add(clientTopicsPrefix + clientId, topic);
 
             if (enableInnerCache) {
                 subscribeWithCache(clientSub);
@@ -191,7 +189,8 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         if (enableTestMode) {
             keys = allTopics;
         } else {
-            keys = stringRedisTemplate.opsForSet().members(topicSetKey);
+            keys = stringRedisTemplate.opsForSet().members(clientTopicsPrefix + clientId);
+            stringRedisTemplate.delete(clientTopicsPrefix + clientId);
         }
 
         if (CollectionUtils.isEmpty(keys)) {
