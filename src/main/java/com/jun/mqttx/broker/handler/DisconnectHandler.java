@@ -3,6 +3,7 @@ package com.jun.mqttx.broker.handler;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
 import com.jun.mqttx.broker.BrokerHandler;
+import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.constants.InternalMessageEnum;
 import com.jun.mqttx.consumer.Watcher;
 import com.jun.mqttx.entity.InternalMessage;
@@ -27,13 +28,14 @@ public final class DisconnectHandler extends AbstractMqttSessionHandler implemen
 
     private final ConnectHandler connectHandler;
 
-    public DisconnectHandler(ConnectHandler connectHandler) {
+    public DisconnectHandler(ConnectHandler connectHandler, MqttxConfig config) {
+        super(config.getEnableTestMode(), config.getCluster().getEnable());
         this.connectHandler = connectHandler;
     }
 
     @Override
     public void process(ChannelHandlerContext ctx, MqttMessage msg) {
-        if (clearSession(ctx)) {
+        if (cleanSession(ctx)) {
             connectHandler.actionOnCleanSession(clientId(ctx));
         }
 

@@ -17,6 +17,12 @@ public abstract class AbstractMqttSessionHandler implements MqttMessageHandler {
 
     public static final String AUTHORIZED_PUB_TOPICS = "authorizedPubTopics";
     public static final String AUTHORIZED_SUB_TOPICS = "authorizedSubTopics";
+    final boolean enableTestMode, enableCluster;
+
+    public AbstractMqttSessionHandler(boolean enableTestMode, boolean enableCluster) {
+        this.enableTestMode = enableTestMode;
+        this.enableCluster = enableCluster;
+    }
 
     /**
      * 生成消息ID
@@ -33,8 +39,9 @@ public abstract class AbstractMqttSessionHandler implements MqttMessageHandler {
      * 生成消息ID
      *
      * @see #nextMessageId(Channel)
+     * @see com.jun.mqttx.service.ISessionService#nextMessageId(String)
      */
-    int nextMessageId(Channel channel){
+    int nextMessageId(Channel channel) {
         Session session = (Session) channel.attr(AttributeKey.valueOf(Session.KEY)).get();
         return session.increaseAndGetMessageId();
     }
@@ -51,12 +58,12 @@ public abstract class AbstractMqttSessionHandler implements MqttMessageHandler {
     }
 
     /**
-     * 获取当前会话的 clearSession
+     * 获取当前会话的 cleanSession flag
      *
      * @param ctx {@link ChannelHandlerContext}
-     * @return true if clearSession = 1
+     * @return true if cleanSession = 1
      */
-    boolean clearSession(ChannelHandlerContext ctx) {
+    boolean cleanSession(ChannelHandlerContext ctx) {
         Session session = getSession(ctx);
         return session.getCleanSession();
     }
@@ -110,6 +117,16 @@ public abstract class AbstractMqttSessionHandler implements MqttMessageHandler {
     }
 
     /**
+     * 获取客户会话
+     *
+     * @param channel {@link Channel}
+     * @return {@link Session}
+     */
+    Session getSession(Channel channel) {
+        return (Session) channel.attr(AttributeKey.valueOf(Session.KEY)).get();
+    }
+
+    /**
      * 返回当前连接使用的协议版本
      *
      * @param ctx {@link ChannelHandlerContext}
@@ -117,5 +134,14 @@ public abstract class AbstractMqttSessionHandler implements MqttMessageHandler {
      */
     MqttVersion version(ChannelHandlerContext ctx) {
         return getSession(ctx).getVersion();
+    }
+
+    /**
+     * 判断 broker 是否进入了集群模式
+     *
+     * @return true if mqttx broker enter cluster mode
+     */
+    boolean isClusterMode() {
+        return enableCluster && !enableTestMode;
     }
 }

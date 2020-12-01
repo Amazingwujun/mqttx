@@ -37,8 +37,7 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
 
     public final static ConcurrentHashMap<String, ChannelId> CLIENT_MAP = new ConcurrentHashMap<>(100000);
     private static final String NONE_ID_PREFIX = "NONE_ID_";
-    final private boolean enableTestMode, enableCluster, enableTopicSubPubSecure;
-
+    final private boolean enableTopicSubPubSecure;
     private final int brokerId;
     /** 认证服务 */
     private final IAuthenticationService authenticationService;
@@ -55,9 +54,11 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
 
     //@formatter:on
 
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     public ConnectHandler(IAuthenticationService authenticationService, ISessionService sessionService,
                           ISubscriptionService subscriptionService, IPublishMessageService publishMessageService,
                           IPubRelMessageService pubRelMessageService, MqttxConfig config, @Nullable IInternalMessagePublishService internalMessagePublishService) {
+        super(config.getEnableTestMode(), config.getCluster().getEnable());
         Assert.notNull(authenticationService, "authentication can't be null");
         Assert.notNull(sessionService, "sessionService can't be null");
         Assert.notNull(subscriptionService, "subscriptionService can't be null");
@@ -65,18 +66,15 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         Assert.notNull(pubRelMessageService, "pubRelMessageService can't be null");
         Assert.notNull(config, "mqttxConfig can't be null");
 
-        MqttxConfig.Cluster cluster = config.getCluster();
         this.authenticationService = authenticationService;
         this.sessionService = sessionService;
         this.subscriptionService = subscriptionService;
         this.publishMessageService = publishMessageService;
         this.pubRelMessageService = pubRelMessageService;
-        this.enableCluster = cluster.getEnable();
-        this.enableTestMode = config.getEnableTestMode();
         this.brokerId = config.getBrokerId();
         this.enableTopicSubPubSecure = config.getEnableTopicSubPubSecure();
 
-        if (enableCluster && !enableTestMode) {
+        if (isClusterMode()) {
             this.internalMessagePublishService = internalMessagePublishService;
             Assert.notNull(internalMessagePublishService, "internalMessagePublishService can't be null");
         }
@@ -149,7 +147,7 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         // 关闭之前可能存在的tcp链接
         // [MQTT-3.1.4-2] If the ClientId represents a Client already connected to the Server then the Server MUST
         // disconnect the existing Client
-        if (enableCluster && !enableTestMode) {
+        if (isClusterMode()) {
             internalMessagePublishService.publish(
                     new InternalMessage<>(clientId, System.currentTimeMillis(), brokerId),
                     InternalMessageEnum.DISCONNECT.getChannel()
@@ -198,14 +196,10 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         // Server on receipt of a DISCONNECT Packet.
         boolean willFlag = variableHeader.isWillFlag();
         if (willFlag) {
-            MqttPublishMessage mqttPublishMessage = MqttMessageBuilders.publish()
-                    .messageId(nextMessageId(ctx))
-                    .retained(variableHeader.isWillRetain())
-                    .topicName(payload.willTopic())
-                    .payload(Unpooled.wrappedBuffer(payload.willMessageInBytes()))
-                    .qos(MqttQoS.valueOf(variableHeader.willQos()))
-                    .build();
-            session.setWillMessage(mqttPublishMessage);
+            PubMsg pubMsg = PubMsg.of(variableHeader.willQos(), payload.willTopic(),
+                    variableHeader.isWillRetain(), payload.willMessageInBytes());
+            pubMsg.setWillFlag(true);
+            session.setWillMessage(pubMsg);
         }
 
         // 返回连接响应
@@ -230,6 +224,9 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         if (!clearSession) {
             List<PubMsg> pubMsgList = publishMessageService.search(clientId);
             pubMsgList.forEach(pubMsg -> {
+                // fixedHeader dup flag 置为 true
+                pubMsg.setDup(true);
+
                 String topic = pubMsg.getTopic();
                 // 订阅权限判定
                 if (enableTopicSubPubSecure && !hasAuthToSubTopic(ctx, topic)) {
@@ -243,18 +240,10 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
                         Unpooled.wrappedBuffer(pubMsg.getPayload())
                 );
 
-                if (enableCluster && !enableTestMode) {
-                    // 集群消息发布
-                    internalMessagePublishService.publish(
-                            new InternalMessage<>(pubMsg, System.currentTimeMillis(), brokerId),
-                            InternalMessageEnum.PUB.getChannel()
-                    );
-                }
-
                 ctx.writeAndFlush(mqttMessage);
             });
 
-            List<Integer> pubRelList = pubRelMessageService.search(clientId);
+            List<Integer> pubRelList = pubRelMessageService.searchOut(clientId);
             pubRelList.forEach(messageId -> {
                 MqttMessage mqttMessage = MqttMessageFactory.newMessage(
                         // pubRel 的 fixHeader 是固定死了的 [0,1,1,0,0,0,1,0]
@@ -278,7 +267,7 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
     }
 
     /**
-     * 当 conn cleanSession = 1,清理会话状态.会话状态有如下状态组成:
+     * 当 conn cleanSession = 1,清理会话状态.会话状态由下列状态组成:
      * <ul>
      *     <li>The existence of a Session, even if the rest of the Session state is empty.</li>
      *     <li>The Client’s subscriptions.</li>

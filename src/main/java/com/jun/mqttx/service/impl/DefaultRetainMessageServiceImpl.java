@@ -45,7 +45,7 @@ public class DefaultRetainMessageServiceImpl implements IRetainMessageService {
     }
 
     @Override
-    public List<PubMsg> searchListBySubTopic(String newSubTopic) {
+    public List<PubMsg> searchListByTopicFilter(String newSubTopic) {
         if (enableTestMode) {
             return pubMsgStore.entrySet().stream()
                     .filter(stringPubMsgEntry -> TopicUtils.match(stringPubMsgEntry.getKey(), newSubTopic))

@@ -1,5 +1,6 @@
 package com.jun.mqttx.broker.handler;
 
+import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.service.IPubRelMessageService;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttMessage;
@@ -17,7 +18,8 @@ public class PubComHandler extends AbstractMqttSessionHandler {
 
     private final IPubRelMessageService pubRelMessageService;
 
-    public PubComHandler(IPubRelMessageService pubRelMessageService) {
+    public PubComHandler(IPubRelMessageService pubRelMessageService, MqttxConfig config) {
+        super(config.getEnableTestMode(), config.getCluster().getEnable());
         this.pubRelMessageService = pubRelMessageService;
     }
 
@@ -29,7 +31,7 @@ public class PubComHandler extends AbstractMqttSessionHandler {
             getSession(ctx).removePubRelMsg(messageId);
         } else {
             String clientId = clientId(ctx);
-            pubRelMessageService.remove(clientId, messageId);
+            pubRelMessageService.removeOut(clientId, messageId);
         }
     }
 

@@ -5,6 +5,7 @@ import com.alibaba.fastjson.TypeReference;
 import com.jun.mqttx.broker.handler.AbstractMqttSessionHandler;
 import com.jun.mqttx.broker.handler.ConnectHandler;
 import com.jun.mqttx.broker.handler.MessageDelegatingHandler;
+import com.jun.mqttx.broker.handler.PublishHandler;
 import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.constants.InternalMessageEnum;
 import com.jun.mqttx.consumer.Watcher;
@@ -52,20 +53,19 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
 
     /** channel 群组 */
     public static final ChannelGroup CHANNELS = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
-
-    private final MessageDelegatingHandler messageDelegatingHandler;
-    private final ISessionService sessionService;
-    private final ISubscriptionService subscriptionService;
-
-    private final boolean enableSysTopic;
-
     /** 历史最大连接数量 */
     public static final AtomicInteger MAX_ACTIVE_SIZE = new AtomicInteger(0);
     /** broker 启动时间 */
     public static final long START_TIME = System.currentTimeMillis();
+    private final MessageDelegatingHandler messageDelegatingHandler;
+    private final ISessionService sessionService;
+    private final ISubscriptionService subscriptionService;
+    private final PublishHandler publishHandler;
+    private final boolean enableSysTopic;
     //@formatter:on
 
-    public BrokerHandler(MqttxConfig config, MessageDelegatingHandler messageDelegatingHandler, ISessionService sessionService, ISubscriptionService subscriptionService) {
+    public BrokerHandler(MqttxConfig config, MessageDelegatingHandler messageDelegatingHandler,
+                         ISessionService sessionService, ISubscriptionService subscriptionService, PublishHandler publishHandler) {
         Assert.notNull(messageDelegatingHandler, "messageDelegatingHandler can't be null");
         Assert.notNull(sessionService, "sessionService can't be null");
         Assert.notNull(subscriptionService, "subscriptionService can't be null");
@@ -73,6 +73,7 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
         this.messageDelegatingHandler = messageDelegatingHandler;
         this.sessionService = sessionService;
         this.subscriptionService = subscriptionService;
+        this.publishHandler = publishHandler;
         this.enableSysTopic = config.getSysTopic().getEnable();
     }
 
@@ -124,7 +125,7 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
             // 发布遗嘱消息
             Optional.of(session)
                     .map(Session::getWillMessage)
-                    .ifPresent(msg -> messageDelegatingHandler.handle(ctx, msg));
+                    .ifPresent(msg -> publishHandler.publish(msg, ctx, false));
 
             ConnectHandler.CLIENT_MAP.remove(session.getClientId());
             if (Boolean.FALSE.equals(session.getCleanSession())) {

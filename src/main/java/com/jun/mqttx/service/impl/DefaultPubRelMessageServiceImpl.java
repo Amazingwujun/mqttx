@@ -20,10 +20,10 @@ import java.util.stream.Collectors;
 @Component
 public class DefaultPubRelMessageServiceImpl implements IPubRelMessageService {
 
+    private static final String IN = "_IN";
+    private static final String OUT = "_OUT";
     private final StringRedisTemplate stringRedisTemplate;
-
     private final String pubRelMsgSetPrefix;
-
     private final boolean enableTestMode;
     private Map<String, Set<Integer>> clientMsgStore;
 
@@ -39,49 +39,71 @@ public class DefaultPubRelMessageServiceImpl implements IPubRelMessageService {
     }
 
     @Override
-    public void save(String clientId, int messageId) {
+    public void saveOut(String clientId, int messageId) {
         if (enableTestMode) {
-            clientMsgStore.computeIfAbsent(clientId, s -> ConcurrentHashMap.newKeySet()).add(messageId);
+            clientMsgStore.computeIfAbsent(outKey(clientId), s -> ConcurrentHashMap.newKeySet()).add(messageId);
             return;
         }
 
         stringRedisTemplate.opsForSet()
-                .add(pubRelMsgSetPrefix + clientId, String.valueOf(messageId));
+                .add(outKey(clientId), String.valueOf(messageId));
     }
 
     @Override
-    public boolean isDupMsg(String clientId, int messageId) {
+    public void saveIn(String clientId, int messageId) {
+        if (enableTestMode) {
+            clientMsgStore.computeIfAbsent(inKey(clientId), s -> ConcurrentHashMap.newKeySet()).add(messageId);
+            return;
+        }
+
+        stringRedisTemplate.opsForSet()
+                .add(inKey(clientId), String.valueOf(messageId));
+    }
+
+    @Override
+    public boolean isInMsgDup(String clientId, int messageId) {
         if (enableTestMode) {
             return clientMsgStore
-                    .computeIfAbsent(clientId, s -> ConcurrentHashMap.newKeySet())
+                    .computeIfAbsent(inKey(clientId), s -> ConcurrentHashMap.newKeySet())
                     .contains(messageId);
         }
 
         Boolean member = stringRedisTemplate.opsForSet()
-                .isMember(key(clientId), String.valueOf(messageId));
+                .isMember(inKey(clientId), String.valueOf(messageId));
         return Boolean.TRUE.equals(member);
     }
 
     @Override
-    public void remove(String clientId, int messageId) {
+    public void removeIn(String clientId, int messageId) {
         if (enableTestMode) {
-            clientMsgStore.computeIfAbsent(clientId, s -> ConcurrentHashMap.newKeySet()).remove(messageId);
+            clientMsgStore.computeIfAbsent(inKey(clientId), s -> ConcurrentHashMap.newKeySet()).remove(messageId);
             return;
         }
 
         stringRedisTemplate.opsForSet()
-                .remove(pubRelMsgSetPrefix + clientId, String.valueOf(messageId));
+                .remove(inKey(clientId), String.valueOf(messageId));
     }
 
     @Override
-    public List<Integer> search(String clientId) {
+    public void removeOut(String clientId, int messageId) {
+        if (enableTestMode) {
+            clientMsgStore.computeIfAbsent(outKey(clientId), s -> ConcurrentHashMap.newKeySet()).remove(messageId);
+            return;
+        }
+
+        stringRedisTemplate.opsForSet()
+                .remove(outKey(clientId), String.valueOf(messageId));
+    }
+
+    @Override
+    public List<Integer> searchOut(String clientId) {
         if (enableTestMode) {
             return new ArrayList<>(
-                    clientMsgStore.computeIfAbsent(clientId, s -> ConcurrentHashMap.newKeySet())
+                    clientMsgStore.computeIfAbsent(outKey(clientId), s -> ConcurrentHashMap.newKeySet())
             );
         }
 
-        Set<String> members = stringRedisTemplate.opsForSet().members(key(clientId));
+        Set<String> members = stringRedisTemplate.opsForSet().members(outKey(clientId));
         if (CollectionUtils.isEmpty(members)) {
             //noinspection unchecked
             return Collections.EMPTY_LIST;
@@ -95,14 +117,20 @@ public class DefaultPubRelMessageServiceImpl implements IPubRelMessageService {
     @Override
     public void clear(String clientId) {
         if (enableTestMode) {
-            clientMsgStore.remove(clientId);
+            clientMsgStore.remove(outKey(clientId));
+            clientMsgStore.remove(inKey(clientId));
             return;
         }
 
-        stringRedisTemplate.delete(key(clientId));
+        stringRedisTemplate.delete(inKey(clientId));
+        stringRedisTemplate.delete(outKey(clientId));
     }
 
-    private String key(String clientId) {
-        return pubRelMsgSetPrefix + clientId;
+    private String inKey(String clientId) {
+        return pubRelMsgSetPrefix + clientId + OUT;
+    }
+
+    private String outKey(String clientId) {
+        return pubRelMsgSetPrefix + clientId + IN;
     }
 }

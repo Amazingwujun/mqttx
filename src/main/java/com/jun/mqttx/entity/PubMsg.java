@@ -2,6 +2,7 @@ package com.jun.mqttx.entity;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * 发布的消息
@@ -11,7 +12,14 @@ import lombok.Data;
  */
 @Data
 @AllArgsConstructor
+@NoArgsConstructor
 public class PubMsg {
+    //@formatter:off
+
+    /**
+     * 共享主题钦定的客户端 id, 如果此字段不为空，表明消息只能发给指定的 client
+     */
+    private String appointedClientId;
 
     /**
      * <ol>
@@ -31,5 +39,17 @@ public class PubMsg {
 
     private boolean retain;
 
+    /** 消息是否为遗嘱消息 */
+    private boolean willFlag;
+
+    /** 是否为 dup 消息 */
+    private boolean dup;
+
     private byte[] payload;
+
+    //@formatter:on
+
+    public static PubMsg of(int qos, String topic, boolean retain, byte[] payload) {
+        return new PubMsg(null, qos, 0, topic, retain, false, false, payload);
+    }
 }

@@ -1,5 +1,6 @@
 package com.jun.mqttx.broker.handler;
 
+import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.service.IPubRelMessageService;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
@@ -16,7 +17,8 @@ public class PubRelHandler extends AbstractMqttSessionHandler {
 
     private final IPubRelMessageService pubRelMessageService;
 
-    public PubRelHandler(IPubRelMessageService pubRelMessageService) {
+    public PubRelHandler(IPubRelMessageService pubRelMessageService, MqttxConfig config) {
+        super(config.getEnableTestMode(), config.getCluster().getEnable());
         this.pubRelMessageService = pubRelMessageService;
 
         Assert.notNull(pubRelMessageService, "pubRelMessageService can't be null");
@@ -29,7 +31,7 @@ public class PubRelHandler extends AbstractMqttSessionHandler {
         if (isCleanSession(ctx)) {
             getSession(ctx).removePubRelMsg(messageId);
         } else {
-            pubRelMessageService.remove(clientId(ctx), messageId);
+            pubRelMessageService.removeIn(clientId(ctx), messageId);
         }
 
         MqttMessage mqttMessage = MqttMessageFactory.newMessage(

@@ -72,13 +72,12 @@ public class BrokerInitializer implements DisposableBean {
     private final SslUtils sslUtils;
     /** broker handler */
     private final BrokerHandler brokerHandler;
+    /** websocket 开关 */
+    private final Boolean enableWebsocket, enableSysTopic;
+    private final ProbeHandler probeHandler;
     /** reactor 线程，提供给 socket, websocket 使用 */
     private EventLoopGroup boss, work;
     private SslContext sslContext;
-    /** websocket 开关 */
-    private final Boolean enableWebsocket, enableSysTopic;
-
-    private final ProbeHandler probeHandler;
 
     //@formatter:on
 

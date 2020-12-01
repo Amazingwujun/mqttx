@@ -39,4 +39,12 @@ public interface ISessionService {
      * @return true if session exist
      */
     boolean hasKey(String clientId);
+
+    /**
+     * 获取 client 的下一个 messageId
+     *
+     * @param clientId 客户端ID
+     * @return next message id
+     */
+    int nextMessageId(String clientId);
 }

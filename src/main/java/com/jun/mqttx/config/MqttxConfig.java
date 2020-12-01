@@ -104,6 +104,9 @@ public class MqttxConfig {
 
         /** topic集合，redis set key值 */
         private String topicSetKey = "mqttx:alltopic";
+
+        /** 非 cleanSession messageId 获取前缀 */
+        private String messageIdPrefix = "mqttx:messageId:";
     }
 
     /**

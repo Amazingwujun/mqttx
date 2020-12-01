@@ -30,7 +30,7 @@ public class MessageDelegatingHandler {
      *     <li>{@link MqttMessageType#PUBLISH}</li>
      *     <li>{@link MqttMessageType#PUBACK}</li>
      *     <li>{@link MqttMessageType#PUBREC}</li>
-     *     <li>{@link MqttMessageType#PUBREC}</li>
+     *     <li>{@link MqttMessageType#PUBREL}</li>
      *     <li>{@link MqttMessageType#PUBCOMP}</li>
      *     <li>{@link MqttMessageType#SUBSCRIBE}</li>
      *     <li>{@link MqttMessageType#UNSUBSCRIBE}</li>

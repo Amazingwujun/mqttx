@@ -1,5 +1,6 @@
 package com.jun.mqttx.broker.handler;
 
+import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.service.IPublishMessageService;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttMessage;
@@ -17,7 +18,8 @@ public class PubAckHandler extends AbstractMqttSessionHandler {
 
     private final IPublishMessageService publishMessageService;
 
-    public PubAckHandler(IPublishMessageService publishMessageService) {
+    public PubAckHandler(IPublishMessageService publishMessageService, MqttxConfig config) {
+        super(config.getEnableTestMode(), config.getCluster().getEnable());
         this.publishMessageService = publishMessageService;
     }
 

@@ -1,5 +1,6 @@
 package com.jun.mqttx.broker.handler;
 
+import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.entity.Session;
 import com.jun.mqttx.service.IPubRelMessageService;
 import com.jun.mqttx.service.IPublishMessageService;
@@ -18,7 +19,9 @@ public class PubRecHandler extends AbstractMqttSessionHandler {
     private final IPubRelMessageService pubRelMessageService;
     private final IPublishMessageService publishMessageService;
 
-    public PubRecHandler(IPubRelMessageService pubRelMessageService, IPublishMessageService publishMessageService) {
+    public PubRecHandler(IPubRelMessageService pubRelMessageService, IPublishMessageService publishMessageService,
+                         MqttxConfig config) {
+        super(config.getEnableTestMode(), config.getCluster().getEnable());
         this.pubRelMessageService = pubRelMessageService;
         this.publishMessageService = publishMessageService;
     }
@@ -28,7 +31,7 @@ public class PubRecHandler extends AbstractMqttSessionHandler {
         // 移除消息
         MqttMessageIdVariableHeader mqttMessageIdVariableHeader = (MqttMessageIdVariableHeader) msg.variableHeader();
         int messageId = mqttMessageIdVariableHeader.messageId();
-        if (clearSession(ctx)) {
+        if (cleanSession(ctx)) {
             Session session = getSession(ctx);
             session.removePubMsg(messageId);
             session.savePubRelMsg(messageId);
@@ -37,7 +40,7 @@ public class PubRecHandler extends AbstractMqttSessionHandler {
             publishMessageService.remove(clientId, messageId);
 
             // 保存 pubRec
-            pubRelMessageService.save(clientId, messageId);
+            pubRelMessageService.saveOut(clientId, messageId);
         }
 
         MqttMessage mqttMessage = MqttMessageFactory.newMessage(

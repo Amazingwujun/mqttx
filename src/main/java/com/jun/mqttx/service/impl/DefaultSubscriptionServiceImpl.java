@@ -36,28 +36,23 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
      * 按顺序 -> 订阅，解除订阅，删除 topic
      */
     private static final int SUB = 1, UN_SUB = 2, DEL_TOPIC = 3;
-
     private final StringRedisTemplate stringRedisTemplate;
     private final IInternalMessagePublishService internalMessagePublishService;
-
+    /**
+     * 订阅主题前缀
+     */
+    private final String topicPrefix;
+    /**
+     * 主题集合
+     */
+    private final String topicSetKey;
+    private final boolean enableInnerCache, enableCluster, enableTestMode;
+    private final int brokerId;
     /**
      * 内部缓存，{@link this#enableInnerCache} == true 时使用
      */
     private Set<String> allTopics;
     private Map<String, ConcurrentHashMap.KeySetView<ClientSub, Boolean>> topicClientMap;
-
-    /**
-     * 订阅主题前缀
-     */
-    private final String topicPrefix;
-
-    /**
-     * 主题集合
-     */
-    private final String topicSetKey;
-
-    private final boolean enableInnerCache, enableCluster, enableTestMode;
-    private final int brokerId;
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     public DefaultSubscriptionServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig,

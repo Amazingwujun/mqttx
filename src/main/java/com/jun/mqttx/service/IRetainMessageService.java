@@ -13,12 +13,12 @@ import java.util.List;
 public interface IRetainMessageService {
 
     /**
-     * 搜索匹配 newSubTopic 的 retain 消息列表
+     * 搜索匹配 topicFilter 的 retain 消息列表
      *
      * @param newSubTopic 客户端新订阅主题
      * @return 匹配的消息列表
      */
-    List<PubMsg> searchListBySubTopic(String newSubTopic);
+    List<PubMsg> searchListByTopicFilter(String newSubTopic);
 
     /**
      * 存储当前 topic 的 retain 消息

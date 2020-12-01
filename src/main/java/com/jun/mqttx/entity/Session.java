@@ -1,6 +1,5 @@
 package com.jun.mqttx.entity;
 
-import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.handler.codec.mqtt.MqttVersion;
 import lombok.Data;
 
@@ -41,7 +40,7 @@ public class Session {
     private transient Set<Integer> pubRelMsgStore;
 
     /** 遗嘱消息 */
-    private transient MqttPublishMessage willMessage;
+    private transient PubMsg willMessage;
 
     /** 用于生成 msgId */
     private int messageId = -1;
@@ -146,5 +145,9 @@ public class Session {
         if (cleanSession) {
             pubRelMsgStore.remove(messageId);
         }
+    }
+
+    public boolean isDupMsg(int messageId) {
+        return pubRelMsgStore.contains(messageId);
     }
 }

@@ -4,7 +4,6 @@ import com.jun.mqttx.broker.BrokerHandler;
 import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.entity.BrokerStatus;
 import com.jun.mqttx.entity.ClientSub;
-import com.jun.mqttx.entity.PubMsg;
 import com.jun.mqttx.service.IRetainMessageService;
 import com.jun.mqttx.service.ISubscriptionService;
 import com.jun.mqttx.utils.TopicUtils;
@@ -38,27 +37,30 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
     private final boolean enableTopicPubSubSecure;
     private final IRetainMessageService retainMessageService;
     private final ISubscriptionService subscriptionService;
+    private final PublishHandler publishHandler;
     private final boolean enableSysTopic;
+    private final String version;
     private long interval;
     private MqttQoS sysTopicQos;
-    private final String version;
     /** 定时任务执行器 */
     private ScheduledExecutorService fixRateExecutor;
 
     //@formatter:on
 
     public SubscribeHandler(IRetainMessageService retainMessageService, ISubscriptionService subscriptionService,
-                            MqttxConfig mqttxConfig) {
+                            PublishHandler publishHandler, MqttxConfig config) {
+        super(config.getEnableTestMode(), config.getCluster().getEnable());
         this.retainMessageService = retainMessageService;
+        this.publishHandler = publishHandler;
         this.subscriptionService = subscriptionService;
-        this.enableTopicPubSubSecure = mqttxConfig.getEnableTopicSubPubSecure();
+        this.enableTopicPubSubSecure = config.getEnableTopicSubPubSecure();
 
-        this.version = mqttxConfig.getVersion();
-        this.enableSysTopic = mqttxConfig.getSysTopic().getEnable();
+        this.version = config.getVersion();
+        this.enableSysTopic = config.getSysTopic().getEnable();
         if (enableSysTopic) {
             SubscribeHandler.SYS_CHANNELS = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
-            this.interval = mqttxConfig.getSysTopic().getInterval().getSeconds();
-            this.sysTopicQos = MqttQoS.valueOf(mqttxConfig.getSysTopic().getQos());
+            this.interval = config.getSysTopic().getInterval().getSeconds();
+            this.sysTopicQos = MqttQoS.valueOf(config.getSysTopic().getQos());
             fixRateExecutor = Executors.newSingleThreadScheduledExecutor();
             initSystemStatePublishTimer();
         }
@@ -120,18 +122,9 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
         // on each matching topic name MUST be sent to the subscriber [MQTT-3.3.1-6]
         // 获取所有存在保留消息的 topic, 当 TopicUtils.match(topic, newSubTopic) = true 时，将保留消息发送给客户端
         mqttTopicSubscriptions.forEach(mqttTopicSubscription -> {
-            String newSubTopic = mqttTopicSubscription.topicName();
-            for (PubMsg pubMsg : retainMessageService.searchListBySubTopic(newSubTopic)) {
-                MqttPublishMessage mpm = MqttMessageBuilders.publish()
-                        .qos(MqttQoS.valueOf(pubMsg.getQoS()))
-                        .retained(true)
-                        .topicName(newSubTopic)
-                        .messageId(nextMessageId(ctx))
-                        .payload(Unpooled.wrappedBuffer(pubMsg.getPayload()))
-                        .build();
-
-                ctx.writeAndFlush(mpm);
-            }
+            String topicFilter = mqttTopicSubscription.topicName();
+            retainMessageService.searchListByTopicFilter(topicFilter)
+                    .forEach(pubMsg -> publishHandler.publish(pubMsg, ctx, false));
         });
     }
 
@@ -237,7 +230,7 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
                 ctx.writeAndFlush(timeResponse);
                 break;
             }
-            case TopicUtils.BROKER_RECEIVED_MSG:{
+            case TopicUtils.BROKER_RECEIVED_MSG: {
                 byte[] received = BrokerStatus.builder()
                         .receivedMsg(ProbeHandler.IN_MSG_SIZE.intValue())
                         .build().toUtf8Bytes();
@@ -253,7 +246,7 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
 
                 break;
             }
-            case TopicUtils.BROKER_SEND_MSG:{
+            case TopicUtils.BROKER_SEND_MSG: {
                 byte[] send = BrokerStatus.builder()
                         .receivedMsg(ProbeHandler.OUT_MSG_SIZE.intValue())
                         .build().toUtf8Bytes();
