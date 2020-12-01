@@ -34,7 +34,7 @@ public class PubRecHandler extends AbstractMqttSessionHandler {
         if (cleanSession(ctx)) {
             Session session = getSession(ctx);
             session.removePubMsg(messageId);
-            session.savePubRelMsg(messageId);
+            session.savePubRelOutMsg(messageId);
         } else {
             String clientId = clientId(ctx);
             publishMessageService.remove(clientId, messageId);

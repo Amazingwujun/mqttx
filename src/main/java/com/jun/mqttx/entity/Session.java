@@ -36,8 +36,11 @@ public class Session {
     /** 用于 cleanSession 连接，负责存储 qos > 0 的消息 */
     private transient Map<Integer, PubMsg> pubMsgStore;
 
-    /** @see #pubMsgStore */
-    private transient Set<Integer> pubRelMsgStore;
+    /** @see com.jun.mqttx.service.IPubRelMessageService */
+    private transient Set<Integer> outPubRelMsgStore;
+
+    /** @see com.jun.mqttx.service.IPubRelMessageService */
+    private transient Set<Integer> inPubRelMsgStore;
 
     /** 遗嘱消息 */
     private transient PubMsg willMessage;
@@ -75,7 +78,8 @@ public class Session {
         session.setVersion(version);
         if (cleanSession) {
             session.setPubMsgStore(new HashMap<>());
-            session.setPubRelMsgStore(new HashSet<>());
+            session.setOutPubRelMsgStore(new HashSet<>());
+            session.setInPubRelMsgStore(new HashSet<>());
         }
         return session;
     }
@@ -130,9 +134,20 @@ public class Session {
      *
      * @param messageId 消息id
      */
-    public void savePubRelMsg(int messageId) {
+    public void savePubRelInMsg(int messageId) {
         if (cleanSession) {
-            pubRelMsgStore.add(messageId);
+            inPubRelMsgStore.add(messageId);
+        }
+    }
+
+    /**
+     * 保存 {@link PubRelMsg}
+     *
+     * @param messageId 消息id
+     */
+    public void savePubRelOutMsg(int messageId) {
+        if (cleanSession) {
+            outPubRelMsgStore.add(messageId);
         }
     }
 
@@ -141,13 +156,24 @@ public class Session {
      *
      * @param messageId 消息id
      */
-    public void removePubRelMsg(int messageId) {
+    public void removePubRelInMsg(int messageId) {
         if (cleanSession) {
-            pubRelMsgStore.remove(messageId);
+            inPubRelMsgStore.remove(messageId);
+        }
+    }
+
+    /**
+     * 移除 {@link PubRelMsg}
+     *
+     * @param messageId 消息id
+     */
+    public void removePubRelOutMsg(int messageId) {
+        if (cleanSession) {
+            outPubRelMsgStore.remove(messageId);
         }
     }
 
     public boolean isDupMsg(int messageId) {
-        return pubRelMsgStore.contains(messageId);
+        return outPubRelMsgStore.contains(messageId);
     }
 }

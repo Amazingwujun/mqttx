@@ -28,7 +28,7 @@ public class PubComHandler extends AbstractMqttSessionHandler {
         MqttMessageIdVariableHeader mqttMessageIdVariableHeader = (MqttMessageIdVariableHeader) msg.variableHeader();
         int messageId = mqttMessageIdVariableHeader.messageId();
         if (isCleanSession(ctx)) {
-            getSession(ctx).removePubRelMsg(messageId);
+            getSession(ctx).removePubRelOutMsg(messageId);
         } else {
             String clientId = clientId(ctx);
             pubRelMessageService.removeOut(clientId, messageId);

@@ -208,8 +208,12 @@
 
 共享订阅是 `mqtt5` 协议规定的内容，很多 mq(例如 `kafka`) 都有实现。
 1. `mqttx.share-topic.enable`: 功能开关，默认 `true` 
+
 2. 格式: `$share/{ShareName}/{filter}`, `$share` 为前缀, `ShareName` 为共享订阅名, `filter` 就是非共享订阅主题过滤器。
+
 3. 目前支持 `hash`, `random`, `round` 三种规则
+
+   > `hash` 选出的 **client** 会随着**订阅客户端数量**及**发送消息客户端 `clientId`** 变化而变化
 
 下图展示了共享主题与常规主题之间的差异:
 
@@ -348,27 +352,29 @@
 | 配置                                     | 默认值                        | 说明                                                         |
 | ---------------------------------------- | ----------------------------- | ------------------------------------------------------------ |
 | `mqttx.version`                          | 取自 `pom.xml`               | 版本                                                         |
-| `mqttx.brokerId`                         | 取自 `pom.xml`                | 应用标志, 唯一                                               |
+| `mqttx.broker-id`                       | 取自 `pom.xml`                | 应用标志, 唯一                                               |
 | `mqttx.heartbeat`                        | `60s`                         | 初始心跳，会被 conn 消息中的 keepalive 重置                  |
 | `mqttx.host`                             | `0.0.0.0`                       | 监听地址                                                     |
-| `mqttx.soBacklog`                        | `512`                           | tcp 连接处理队列                                             |
-| `mqttx.enableTopicSubPubSecure`          | `false`                         | 客户订阅/发布主题安全功能，开启后将限制客户端发布/订阅的主题 |
-| `mqttx.enableInnerCache`                 | `true`                          | 发布消息每次都需要查询 redis 来获取订阅的客户端列表。开启此功能后，将在内存中建立一个主题-客户端关系映射, 应用直接访问内存中的数据即可 |
-| `mqttx.enableTestMode` | `false` | 测试模式开关，开启后系统进入测试模式; <br/>**注意：测试模式会禁用集群功能** |
-| `mqttx.redis.clusterSessionHashKey`      | `mqttx.session.key`             | redis map key；用于集群的会话存储                          |
-| `mqttx.redis.topicPrefix`                | `mqttx:topic:`                  | 主题前缀； topic <==> client 映射关系保存               |
-| `mqttx.redis.retainMessagePrefix`        | `mqttx:retain:`                 | 保留消息前缀, 保存 retain 消息                            |
-| `mqttx.redis.pubMsgSetPrefix`            | `mqttx:client:pubmsg:`          | client pub消息 redis set 前缀； 保存 pubmsg，当收到 puback 获取 pubrec 后删除 |
-| `mqttx.redis.pubRelMsgSetPrefix`         | `mqttx:client:pubrelmsg:`       | client pubRel 消息 redis set 前缀；保存 pubrel 消息 flag，收到 pubcom 消息删除 |
-| `mqttx.redis.topicSetKey`                | `mqttx:alltopic`                | topic 集合，redis set key 值；保存全部主题               |
+| `mqttx.so-backlog`                      | `512`                           | tcp 连接处理队列                                             |
+| `mqttx.enable-topic-sub-pub-secure`  | `false`                         | 客户订阅/发布主题安全功能，开启后将限制客户端发布/订阅的主题 |
+| `mqttx.enable-inner-cache` | `true`                          | 发布消息每次都需要查询 redis 来获取订阅的客户端列表。开启此功能后，将在内存中建立一个主题-客户端关系映射, 应用直接访问内存中的数据即可 |
+| `mqttx.enable-test-mode` | `false` | 测试模式开关，开启后系统进入测试模式; <br/>**注意：测试模式会禁用集群功能** |
+| `mqttx.redis.cluster-session-hash-key` | `mqttx.session.key`             | redis map key；用于集群的会话存储                          |
+| `mqttx.redis.topic-prefix`              | `mqttx:topic:`                  | 主题前缀； topic <==> client 映射关系保存               |
+| `mqttx.redis.retain-message-prefix`    | `mqttx:retain:`                 | 保留消息前缀, 保存 retain 消息                            |
+| `mqttx.redis.pub-msg-set-prefix`      | `mqttx:client:pubmsg:`          | client pub消息 redis set 前缀； 保存 pubmsg，当收到 puback 获取 pubrec 后删除 |
+| `mqttx.redis.pub-rel-msg-set-prefix` | `mqttx:client:pubrelmsg:`       | client pubRel 消息 redis set 前缀；保存 pubrel 消息 flag，收到 pubcom 消息删除 |
+| `mqttx.redis.topic-set-key`            | `mqttx:alltopic`                | topic 集合，redis set key 值；保存全部主题               |
+| `mqttx.redis.message-id-prefix` | `mqttx:messageId:` | 非 `cleanSession` client 的 `messageId`, 使用 `redis INCR` 指令 |
+| `mqttx.redis.client-topic-set-prefix` | `mqttx:client:topicset:` | client 订阅的主题 redis set 前缀; 保存 client 订阅的全部主题 |
 | `mqttx.cluster.enable`                   | `false`                         | 集群开关                                                     |
-| `mqttx.cluster.innerCacheConsistancyKey` | `mqttx:cache_consistence`       | 应用启动后，先查询 redis 中无此 key 值，然后在检查一致性     |
+| `mqttx.cluster.inner-cache-consistancy-key` | `mqttx:cache_consistence`       | 应用启动后，先查询 redis 中无此 key 值，然后在检查一致性     |
 | `mqttx.cluster.type` | `redis` | 集群消息中间件类型 |
 | `mqttx.ssl.enable`                       | `false`                         | ssl 开关                                                     |
 | `mqttx.ssl.client-auth` | `NONE` | 客户端证书校验 |
-| `mqttx.ssl.keyStoreLocation`             | `classpath: tls/mqttx.keystore` | keyStore 位置                                                |
-| `mqttx.ssl.keyStorePassword`             | `123456`             | keyStore 密码                                                |
-| `mqttx.ssl.keyStoreType`                 | `pkcs12`                        | keyStore 类别                                                |
+| `mqttx.ssl.key-store-location`         | `classpath: tls/mqttx.keystore` | keyStore 位置                                                |
+| `mqttx.ssl.key-store-password`         | `123456`             | keyStore 密码                                                |
+| `mqttx.ssl.key-store-type`             | `pkcs12`                        | keyStore 类别                                                |
 | `mqttx.socket.enable`                    | `true`                          | socket 开关                                                  |
 | `mqttx.socket.port`                      | `1883`                          | socket 监听端口                                              |
 | `mqttx.websocket.enable`                 | `false`                         | websocket 开关                                               |
@@ -381,6 +387,8 @@
 | `mqttx.sys-topic.qos` | `0` | 主题 qos |
 | `mqttx.message-bridge.enable` | `false` | 消息桥接功能开关 |
 | `mqttx.message-bridge.topics` | `null` | 需要桥接消息的主题列表 |
+
+
 
 ### 6.2 版本说明
 **prometheus** 分支为 ***MQTTX*** 整合监控系统 **[Prometheus](https://prometheus.io/)** 的代码，有需要的用户可参考该分支代码.

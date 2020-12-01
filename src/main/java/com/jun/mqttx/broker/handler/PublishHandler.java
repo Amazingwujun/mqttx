@@ -78,7 +78,6 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         Assert.notNull(config, "mqttxConfig can't be null");
         Assert.notNull(stringRedisTemplate, "stringRedisTemplate can't be null");
 
-        MqttxConfig.Cluster cluster = config.getCluster();
         MqttxConfig.ShareTopic shareTopic = config.getShareTopic();
         MqttxConfig.MessageBridge messageBridge = config.getMessageBridge();
         this.sessionService = sessionService;
@@ -101,7 +100,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
             Assert.notEmpty(bridgeTopics, "消息桥接主题列表不能为空!!!");
         }
 
-        if (enableCluster && !enableTestMode) {
+        if (isClusterMode()) {
             this.internalMessagePublishService = internalMessagePublishService;
             Assert.notNull(internalMessagePublishService, "internalMessagePublishService can't be null");
         }
@@ -162,7 +161,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                 if (isCleanSession(ctx)) {
                     Session session = getSession(ctx);
                     if (!session.isDupMsg(packetId)) {
-                        session.savePubRelMsg(packetId);
+                        session.savePubRelInMsg(packetId);
                     }
                 } else {
                     if (!pubRelMessageService.isInMsgDup(clientId(ctx), packetId)) {
