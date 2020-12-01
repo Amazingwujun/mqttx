@@ -218,7 +218,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         }
 
         // 将消息推送给集群中的broker
-        if (isClusterMode()) {
+        if (isClusterMode() && !isClusterMessage) {
             internalMessagePublish(pubMsg);
         }
 
