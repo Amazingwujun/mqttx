@@ -212,7 +212,7 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
             // 连接被强制断开
             Session session = (Session) ctx.channel().attr(AttributeKey.valueOf(Session.KEY)).get();
             if (session != null) {
-                log.error("client:{} 连接出现异常", session.getClientId());
+                log.error("client:{} 连接被强制断开", session.getClientId());
             }
         } else {
             log.error("未知异常", cause);

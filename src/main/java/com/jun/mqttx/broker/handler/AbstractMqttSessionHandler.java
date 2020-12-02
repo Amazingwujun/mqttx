@@ -60,11 +60,11 @@ public abstract class AbstractMqttSessionHandler implements MqttMessageHandler {
     /**
      * 获取当前会话的 cleanSession flag
      *
-     * @param ctx {@link ChannelHandlerContext}
+     * @param channel {@link Channel}
      * @return true if cleanSession = 1
      */
-    boolean cleanSession(ChannelHandlerContext ctx) {
-        Session session = getSession(ctx);
+    boolean isCleanSession(Channel channel) {
+        Session session = getSession(channel);
         return session.getCleanSession();
     }
 

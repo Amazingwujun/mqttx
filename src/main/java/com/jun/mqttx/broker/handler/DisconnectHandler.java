@@ -35,7 +35,7 @@ public final class DisconnectHandler extends AbstractMqttSessionHandler implemen
 
     @Override
     public void process(ChannelHandlerContext ctx, MqttMessage msg) {
-        if (cleanSession(ctx)) {
+        if (isCleanSession(ctx)) {
             connectHandler.actionOnCleanSession(clientId(ctx));
         }
 

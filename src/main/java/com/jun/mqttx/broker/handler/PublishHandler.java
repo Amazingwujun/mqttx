@@ -257,8 +257,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         // 4. channel != null && !cleanSession => 将消息持久化到 redis, 并发送 publish message 给 client（messageId redis increment 指令）
 
         // 1. channel == null && cleanSession
-        boolean cleanSession = isCleanSession(clientId);
-        if (channel == null && cleanSession) {
+        if (channel == null && isCleanSession(clientId)) {
             return;
         }
 
@@ -278,6 +277,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         int messageId;
 
         // 3. channel != null && cleanSession
+        boolean cleanSession = isCleanSession(channel);
         if (cleanSession) {
             messageId = nextMessageId(channel);
             getSession(channel).savePubMsg(messageId, pubMsg);

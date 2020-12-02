@@ -31,7 +31,7 @@ public class PubRecHandler extends AbstractMqttSessionHandler {
         // 移除消息
         MqttMessageIdVariableHeader mqttMessageIdVariableHeader = (MqttMessageIdVariableHeader) msg.variableHeader();
         int messageId = mqttMessageIdVariableHeader.messageId();
-        if (cleanSession(ctx)) {
+        if (isCleanSession(ctx)) {
             Session session = getSession(ctx);
             session.removePubMsg(messageId);
             session.savePubRelOutMsg(messageId);

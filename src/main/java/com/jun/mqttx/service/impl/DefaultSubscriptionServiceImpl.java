@@ -190,12 +190,12 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
             keys = allTopics;
         } else {
             keys = stringRedisTemplate.opsForSet().members(clientTopicsPrefix + clientId);
-            stringRedisTemplate.delete(clientTopicsPrefix + clientId);
         }
-
         if (CollectionUtils.isEmpty(keys)) {
             return;
         }
+        stringRedisTemplate.delete(clientTopicsPrefix + clientId);
+
         unsubscribe(clientId, new ArrayList<>(keys));
     }
 
