@@ -161,6 +161,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                 if (isCleanSession(ctx)) {
                     Session session = getSession(ctx);
                     if (!session.isDupMsg(packetId)) {
+                        publish(pubMsg, ctx, false);
                         session.savePubRelInMsg(packetId);
                     }
                 } else {
