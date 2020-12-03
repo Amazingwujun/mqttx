@@ -30,6 +30,7 @@
     - [6.3 Benchmark](#63-benchmark)
       - [6.3.1 CleanSessionTrue](#631-cleansessiontrue)
       - [6.3.2 CleanSessionFalse](#632-cleansessionfalse)
+    - [6.4 代码质量分析](#64-代码质量分析)
 
 ## 1 介绍
 
@@ -537,4 +538,14 @@ Result : broker=tcp://localhost:1883, clients=1000, totalCount=1000000, duration
 | `1000`       | 发布消息 | `1024byte`   | `1000`         | 一百万   | `2`  | `215.6s` | `4637`  |
 
 **资源消耗：`cpu: 45%`, `mem 440 MB`**
+
+
+
+### 6.4 代码质量分析
+
+结果取自 [mqttx:  (gitee.com)](https://gitee.com/amazingJun/mqttx) **sonarQube**
+
+[![sonar](https://s3.ax1x.com/2020/12/02/D57mlR.png)](https://imgchr.com/i/D57mlR)
+
+- 漏洞是我将 `keyStore` 密码硬编码写到了配置代码，方便用户测试 `TLS` ，用户可自行替换。
 
