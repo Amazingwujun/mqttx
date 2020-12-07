@@ -295,9 +295,9 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
      *
      * @param clientId 客户ID
      */
-    void actionOnCleanSession(String clientId) {
+    private void actionOnCleanSession(String clientId) {
         sessionService.clear(clientId);
-        subscriptionService.clearClientSubscriptions(clientId);
+        subscriptionService.clearClientSubscriptions(clientId, false);
         publishMessageService.clear(clientId);
         pubRelMessageService.clear(clientId);
     }

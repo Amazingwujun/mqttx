@@ -57,7 +57,7 @@ public class UnsubscribeHandler extends AbstractMqttSessionHandler {
         }
 
         // 非系统主题
-        subscriptionService.unsubscribe(clientId(ctx), collect);
+        subscriptionService.unsubscribe(clientId(ctx), isCleanSession(ctx), collect);
 
         // response
         MqttMessage mqttMessage = MqttMessageFactory.newMessage(

@@ -24,7 +24,6 @@ import com.jun.mqttx.constants.InternalMessageEnum;
 import com.jun.mqttx.consumer.Watcher;
 import com.jun.mqttx.entity.InternalMessage;
 import com.jun.mqttx.entity.Session;
-import com.jun.mqttx.service.ISubscriptionService;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundInvoker;
 import io.netty.handler.codec.mqtt.MqttMessage;
@@ -43,19 +42,18 @@ import java.util.Optional;
 @Handler(type = MqttMessageType.DISCONNECT)
 public final class DisconnectHandler extends AbstractMqttSessionHandler implements Watcher {
 
-    private ISubscriptionService subscriptionService;
-
-    public DisconnectHandler(ISubscriptionService subscriptionService, MqttxConfig config) {
+    public DisconnectHandler(MqttxConfig config) {
         super(config.getEnableTestMode(), config.getCluster().getEnable());
-        this.subscriptionService = subscriptionService;
     }
 
+    /**
+     * 处理 disconnect 报文
+     *
+     * @param ctx 见 {@link ChannelHandlerContext}
+     * @param msg 解包后的数据
+     */
     @Override
     public void process(ChannelHandlerContext ctx, MqttMessage msg) {
-        if (isCleanSession(ctx)) {
-            actionOnCleanSession(clientId(ctx));
-        }
-
         // [MQTT-3.1.2-8]
         // If the Will Flag is set to 1 this indicates that, if the Connect request is accepted, a Will Message MUST be
         // stored on the Server and associated with the Network Connection. The Will Message MUST be published when the
@@ -80,9 +78,5 @@ public final class DisconnectHandler extends AbstractMqttSessionHandler implemen
     @Override
     public boolean support(String channel) {
         return InternalMessageEnum.DISCONNECT.getChannel().equals(channel);
-    }
-
-    private void actionOnCleanSession(String clientId) {
-        subscriptionService.clearClientSubscriptions(clientId);
     }
 }

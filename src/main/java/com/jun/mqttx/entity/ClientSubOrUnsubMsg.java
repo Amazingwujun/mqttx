@@ -39,6 +39,8 @@ public class ClientSubOrUnsubMsg {
 
     private String topic;
 
+    private boolean cleanSession;
+
     /**
      * 当 {@code type} == 2, topics 不能为空
      */

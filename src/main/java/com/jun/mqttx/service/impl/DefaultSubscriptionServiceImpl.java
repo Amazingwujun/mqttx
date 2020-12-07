@@ -23,7 +23,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * 主题订阅服务
+ * 主题订阅服务.
+ * 为了优化 cleanSession = 1 会话的性能，所有与之相关的状态均保存在内存当中.
  *
  * @author Jun
  * @since 1.0.4
@@ -34,6 +35,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
 
     //@formatter:off
 
+    private static final int ASSUME_COUNT = 100_000;
     /** 按顺序 -> 订阅，解除订阅，删除 topic */
     private static final int SUB = 1, UN_SUB = 2, DEL_TOPIC = 3;
     private final StringRedisTemplate stringRedisTemplate;
@@ -42,9 +44,23 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
     private final String clientTopicsPrefix, topicSetKey, topicPrefix;
     private final boolean enableInnerCache, enableCluster, enableTestMode;
     private final int brokerId;
-    /** 内部缓存，{@link this#enableInnerCache} == true 时使用 */
-    private Set<String> allTopics;
-    private Map<String, ConcurrentHashMap.KeySetView<ClientSub, Boolean>> topicClientMap;
+
+
+    /*                                              cleanSession = 1                                                   */
+
+    /** cleanSession = 1 的主题集合，存储于内存中 */
+    private final Set<String> inMemTopics = ConcurrentHashMap.newKeySet(ASSUME_COUNT);
+    /** cleanSession = 0 的主 topic -> clients 关系集合 */
+    private final Map<String, ConcurrentHashMap.KeySetView<ClientSub,Boolean>> inMemTopicClientsMap = new ConcurrentHashMap<>(ASSUME_COUNT);
+    /** cleanSession = 0 的主 client -> topics 关系集合 */
+    private final Map<String, ConcurrentHashMap.KeySetView<String,Boolean>> inMemClientTopicsMap = new ConcurrentHashMap<>(ASSUME_COUNT);
+
+    /*                                              cleanSession = 0                                                   */
+
+    /** cleanSession = 0 的主题集合。内部缓存，{@link this#enableInnerCache} == true 时使用 */
+    private final Set<String> inDiskTopics = ConcurrentHashMap.newKeySet(ASSUME_COUNT);
+    /** cleanSession = 0 的主 topic -> clients 关系集合 */
+    private final Map<String, ConcurrentHashMap.KeySetView<ClientSub, Boolean>> inDiskTopicClientsMap = new ConcurrentHashMap<>(ASSUME_COUNT);
 
     //@formatter:on
 
@@ -63,13 +79,9 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         this.enableCluster = cluster.getEnable();
         this.enableInnerCache = mqttxConfig.getEnableInnerCache();
         this.enableTestMode = mqttxConfig.getEnableTestMode();
-        if (enableInnerCache) {
-            allTopics = ConcurrentHashMap.newKeySet();
-            topicClientMap = new ConcurrentHashMap<>();
-            if (!enableTestMode) {
-                // 非测试模式，初始化缓存
-                initInnerCache(stringRedisTemplate);
-            }
+        if (enableInnerCache && !enableTestMode) {
+            // 非测试模式，初始化缓存
+            initInnerCache(stringRedisTemplate);
         }
         this.brokerId = mqttxConfig.getBrokerId();
 
@@ -87,28 +99,40 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         String topic = clientSub.getTopic();
         String clientId = clientSub.getClientId();
         int qos = clientSub.getQos();
+        boolean cleanSession = clientSub.isCleanSession();
 
         if (enableTestMode) {
             subscribeWithCache(clientSub);
         } else {
-            // 保存 topic -> client
-            stringRedisTemplate.opsForHash()
-                    .put(topicPrefix + topic, clientId, String.valueOf(qos));
-
-            // 将topic保存到redis set集合中
-            stringRedisTemplate.opsForSet().add(topicSetKey, topic);
-
-            // 保存 client -> topics
-            stringRedisTemplate.opsForSet().add(clientTopicsPrefix + clientId, topic);
-
-            if (enableInnerCache) {
-                subscribeWithCache(clientSub);
-
-                // 发布集群广播
-                if (enableCluster) {
-                    InternalMessage<ClientSub> im = new InternalMessage<>(clientSub, System.currentTimeMillis(), brokerId);
-                    internalMessagePublishService.publish(im, InternalMessageEnum.SUB_UNSUB.getChannel());
+            // 保存订阅关系
+            // 1. 保存 topic -> client 映射
+            // 2. 将topic保存到redis set 集合中
+            // 3. 保存 client -> topics
+            if (cleanSession) {
+                inMemTopicClientsMap
+                        .computeIfAbsent(topic, s -> ConcurrentHashMap.newKeySet())
+                        .add(clientSub);
+                inMemTopics.add(topic);
+                inMemClientTopicsMap
+                        .computeIfAbsent(clientId, s -> ConcurrentHashMap.newKeySet())
+                        .add(topic);
+            } else {
+                stringRedisTemplate.opsForHash()
+                        .put(topicPrefix + topic, clientId, String.valueOf(qos));
+                stringRedisTemplate.opsForSet().add(topicSetKey, topic);
+                stringRedisTemplate.opsForSet().add(clientTopicsPrefix + clientId, topic);
+                if (enableInnerCache) {
+                    subscribeWithCache(clientSub);
                 }
+            }
+
+            if (enableCluster) {
+                InternalMessage<ClientSubOrUnsubMsg> im = new InternalMessage<>(
+                        new ClientSubOrUnsubMsg(clientId, qos, topic, cleanSession, null, SUB),
+                        System.currentTimeMillis(),
+                        brokerId
+                );
+                internalMessagePublishService.publish(im, InternalMessageEnum.SUB_UNSUB.getChannel());
             }
         }
     }
@@ -116,11 +140,12 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
     /**
      * 解除订阅
      *
-     * @param clientId 客户id
-     * @param topics   主题列表
+     * @param clientId     客户id
+     * @param cleanSession clientId 关联会话 cleanSession 状态
+     * @param topics       主题列表
      */
     @Override
-    public void unsubscribe(String clientId, List<String> topics) {
+    public void unsubscribe(String clientId, boolean cleanSession, List<String> topics) {
         if (CollectionUtils.isEmpty(topics)) {
             return;
         }
@@ -128,18 +153,27 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         if (enableTestMode) {
             unsubscribeWithCache(clientId, topics);
         } else {
-            topics.forEach(topic -> stringRedisTemplate.opsForHash().delete(topicPrefix + topic, clientId));
-
-            // 启用内部缓存机制
-            if (enableInnerCache) {
-                unsubscribeWithCache(clientId, topics);
-
-                // 集群广播
-                if (enableCluster) {
-                    ClientSubOrUnsubMsg clientSubOrUnsubMsg = new ClientSubOrUnsubMsg(clientId, 0, null, topics, UN_SUB);
-                    InternalMessage<ClientSubOrUnsubMsg> im = new InternalMessage<>(clientSubOrUnsubMsg, System.currentTimeMillis(), brokerId);
-                    internalMessagePublishService.publish(im, InternalMessageEnum.SUB_UNSUB.getChannel());
+            if (cleanSession) {
+                topics.forEach(topic -> {
+                    ConcurrentHashMap.KeySetView<ClientSub, Boolean> clientSubs = inMemTopicClientsMap.get(topic);
+                    if (!CollectionUtils.isEmpty(clientSubs)) {
+                        clientSubs.removeIf(clientSub -> Objects.equals(clientId, clientSub.getClientId()));
+                    }
+                });
+                Optional.ofNullable(inMemClientTopicsMap.get(clientId)).ifPresent(t -> t.removeAll(topics));
+            } else {
+                topics.forEach(topic -> stringRedisTemplate.opsForHash().delete(topicPrefix + topic, clientId));
+                stringRedisTemplate.opsForSet().remove(clientTopicsPrefix + clientId, topics.toArray());
+                if (enableInnerCache) {
+                    unsubscribeWithCache(clientId, topics);
                 }
+            }
+
+            // 集群广播
+            if (enableCluster) {
+                ClientSubOrUnsubMsg clientSubOrUnsubMsg = new ClientSubOrUnsubMsg(clientId, 0, null, cleanSession, topics, UN_SUB);
+                InternalMessage<ClientSubOrUnsubMsg> im = new InternalMessage<>(clientSubOrUnsubMsg, System.currentTimeMillis(), brokerId);
+                internalMessagePublishService.publish(im, InternalMessageEnum.SUB_UNSUB.getChannel());
             }
         }
     }
@@ -161,13 +195,13 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         }
 
         // 未启用内部缓存机制，直接通过 redis 抓取
-        Set<String> allTopic = stringRedisTemplate.opsForSet().members(topicSetKey);
-        if (CollectionUtils.isEmpty(allTopic)) {
+        Set<String> redisTopics = stringRedisTemplate.opsForSet().members(topicSetKey);
+        if (CollectionUtils.isEmpty(redisTopics)) {
             return Collections.EMPTY_LIST;
         }
 
         List<ClientSub> clientSubList = new ArrayList<>();
-        allTopic.stream()
+        redisTopics.stream()
                 .filter(e -> TopicUtils.match(topic, e))
                 .forEach(e -> {
                     Map<Object, Object> entries = stringRedisTemplate.opsForHash().entries(topicPrefix + e);
@@ -175,8 +209,18 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
                         entries.forEach((k, v) -> {
                             String key = (String) k;
                             String val = (String) v;
-                            clientSubList.add(new ClientSub(key, Integer.parseInt(val), e));
+                            clientSubList.add(ClientSub.of(key, Integer.parseInt(val), e, false));
                         });
+                    }
+                });
+
+        // cleanSession 的主题
+        inMemTopics.stream()
+                .filter(e -> TopicUtils.match(topic, e))
+                .forEach(e -> {
+                    ConcurrentHashMap.KeySetView<ClientSub, Boolean> clientSubs = inMemTopicClientsMap.get(topic);
+                    if (!CollectionUtils.isEmpty(clientSubs)) {
+                        clientSubList.addAll(clientSubs);
                     }
                 });
 
@@ -184,19 +228,26 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
     }
 
     @Override
-    public void clearClientSubscriptions(String clientId) {
+    public void clearClientSubscriptions(String clientId, boolean cleanSession) {
         Set<String> keys;
         if (enableTestMode) {
-            keys = allTopics;
+            keys = inDiskTopics;
+            unsubscribe(clientId, true, new ArrayList<>(keys));
         } else {
-            keys = stringRedisTemplate.opsForSet().members(clientTopicsPrefix + clientId);
+            if (cleanSession) {
+                keys = inMemClientTopicsMap.remove(clientId);
+                if (CollectionUtils.isEmpty(keys)) {
+                    return;
+                }
+            } else {
+                keys = stringRedisTemplate.opsForSet().members(clientTopicsPrefix + clientId);
+                if (CollectionUtils.isEmpty(keys)) {
+                    return;
+                }
+                stringRedisTemplate.delete(clientTopicsPrefix + clientId);
+            }
+            unsubscribe(clientId, cleanSession, new ArrayList<>(keys));
         }
-        if (CollectionUtils.isEmpty(keys)) {
-            return;
-        }
-        stringRedisTemplate.delete(clientTopicsPrefix + clientId);
-
-        unsubscribe(clientId, new ArrayList<>(keys));
     }
 
     /**
@@ -206,7 +257,18 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
      */
     @Override
     public void removeTopic(String topic) {
+        inMemTopics.remove(topic);
+        Optional.ofNullable(inMemTopicClientsMap.remove(topic))
+                .ifPresent(e -> e.forEach(
+                        clientSub -> Optional.
+                                ofNullable(inMemClientTopicsMap.get(clientSub.getClientId()))
+                                .ifPresent(t -> t.remove(topic)))
+                );
         stringRedisTemplate.opsForSet().remove(topicSetKey, topic);
+
+        // 抓取订阅主题的全部 clientId, 通过 clientId 移除所有其订阅的 topic
+        Set<Object> keys = stringRedisTemplate.opsForHash().keys(topicPrefix + topic);
+        keys.forEach(t -> stringRedisTemplate.opsForSet().remove(clientTopicsPrefix + t, topic));
         stringRedisTemplate.delete(topicPrefix + topic);
 
         if (enableInnerCache) {
@@ -214,7 +276,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
 
             // 集群广播
             if (enableCluster) {
-                ClientSubOrUnsubMsg clientSubOrUnsubMsg = new ClientSubOrUnsubMsg(null, 0, topic, null, DEL_TOPIC);
+                ClientSubOrUnsubMsg clientSubOrUnsubMsg = new ClientSubOrUnsubMsg(null, 0, topic, false, null, DEL_TOPIC);
                 InternalMessage<ClientSubOrUnsubMsg> im = new InternalMessage<>(clientSubOrUnsubMsg, System.currentTimeMillis(), brokerId);
                 internalMessagePublishService.publish(im, InternalMessageEnum.SUB_UNSUB.getChannel());
             }
@@ -222,35 +284,81 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
     }
 
     @Override
-    public void clearClientSub(String clientId, List<String> authorizedSub) {
-        List<String> collect = allTopics
+    public void clearUnAuthorizedClientSub(String clientId, List<String> authorizedSub) {
+        List<String> collect = inDiskTopics
                 .stream()
                 .filter(topic -> !authorizedSub.contains(topic))
                 .collect(Collectors.toList());
 
-        unsubscribe(clientId, collect);
+        unsubscribe(clientId, false, collect);
+        unsubscribe(clientId, true, collect);
     }
+
 
     @Override
     public void action(String msg) {
-        if (enableInnerCache) {
-            InternalMessage<ClientSubOrUnsubMsg> im = JSON.parseObject(msg, new TypeReference<InternalMessage<ClientSubOrUnsubMsg>>() {
-            });
-            ClientSubOrUnsubMsg data = im.getData();
-            int type = data.getType();
-            switch (type) {
-                case SUB:
-                    subscribeWithCache(new ClientSub(data.getClientId(), data.getQos(), data.getTopic()));
-                    break;
-                case UN_SUB:
-                    unsubscribeWithCache(data.getClientId(), data.getTopics());
-                    break;
-                case DEL_TOPIC:
-                    removeTopicWithCache(data.getTopic());
-                    break;
-                default:
-                    log.error("非法的 ClientSubOrUnsubMsg type:" + type);
+        InternalMessage<ClientSubOrUnsubMsg> im = JSON.parseObject(msg, new TypeReference<InternalMessage<ClientSubOrUnsubMsg>>() {
+        });
+        ClientSubOrUnsubMsg data = im.getData();
+        final int type = data.getType();
+        final String clientId = data.getClientId();
+        final String topic = data.getTopic();
+        final boolean cleanSession = data.isCleanSession();
+        switch (type) {
+            case SUB: {
+                ClientSub clientSub = ClientSub.of(clientId, data.getQos(), topic, cleanSession);
+                if (cleanSession) {
+                    inMemTopicClientsMap
+                            .computeIfAbsent(topic, s -> ConcurrentHashMap.newKeySet())
+                            .add(clientSub);
+                    inMemTopics.add(topic);
+                    inMemClientTopicsMap
+                            .computeIfAbsent(clientId, s -> ConcurrentHashMap.newKeySet())
+                            .add(topic);
+                } else {
+                    if (enableInnerCache) {
+                        subscribeWithCache(ClientSub.of(clientId, data.getQos(), topic, false));
+                    }
+                }
+
+                break;
             }
+            case UN_SUB: {
+                if (data.isCleanSession()) {
+                    data.getTopics().forEach(t -> {
+                        ConcurrentHashMap.KeySetView<ClientSub, Boolean> clientSubs = inMemTopicClientsMap.get(t);
+                        if (!CollectionUtils.isEmpty(clientSubs)) {
+                            clientSubs.removeIf(clientSub -> Objects.equals(clientId, clientSub.getClientId()));
+                        }
+                    });
+                    Optional.ofNullable(inMemClientTopicsMap.get(clientId)).ifPresent(t -> t.removeAll(data.getTopics()));
+                } else {
+                    if (enableInnerCache) {
+                        unsubscribeWithCache(clientId, data.getTopics());
+                    }
+                }
+
+                break;
+            }
+            case DEL_TOPIC: {
+                // 移除内存中的数据
+                inMemTopics.remove(topic);
+                Optional.ofNullable(inMemTopicClientsMap.remove(topic))
+                        .ifPresent(e -> e.forEach(
+                                clientSub -> Optional.
+                                        ofNullable(inMemClientTopicsMap.get(clientId))
+                                        .ifPresent(t -> t.remove(topic)))
+                        );
+                stringRedisTemplate.opsForSet().remove(topicSetKey, topic);
+
+                // 移除缓存中的数据
+                if (enableInnerCache) {
+                    removeTopicWithCache(topic);
+                }
+                break;
+            }
+            default:
+                log.error("非法的 ClientSubOrUnsubMsg type:" + type);
         }
     }
 
@@ -270,7 +378,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
 
         final Set<String> allTopic = redisTemplate.opsForSet().members(topicSetKey);
         if (!CollectionUtils.isEmpty(allTopic)) {
-            allTopics.addAll(allTopic);
+            inDiskTopics.addAll(allTopic);
 
             allTopic.forEach(topic -> {
                 Map<Object, Object> entries = redisTemplate.opsForHash().entries(topicPrefix + topic);
@@ -278,9 +386,9 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
                     entries.forEach((k, v) -> {
                         String key = (String) k;
                         String val = (String) v;
-                        topicClientMap
+                        inDiskTopicClientsMap
                                 .computeIfAbsent(topic, s -> ConcurrentHashMap.newKeySet())
-                                .add(new ClientSub(key, Integer.parseInt(val), topic));
+                                .add(ClientSub.of(key, Integer.parseInt(val), topic, false));
                     });
                 }
             });
@@ -301,14 +409,23 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         // result
         List<ClientSub> clientSubList = new ArrayList<>();
 
-        for (String t : allTopics) {
+        for (String t : inDiskTopics) {
             if (TopicUtils.match(topic, t)) {
-                ConcurrentHashMap.KeySetView<ClientSub, Boolean> clientSubs = topicClientMap.get(t);
+                ConcurrentHashMap.KeySetView<ClientSub, Boolean> clientSubs = inDiskTopicClientsMap.get(t);
                 if (!CollectionUtils.isEmpty(clientSubs)) {
                     clientSubList.addAll(clientSubs);
                 }
             }
         }
+        for (String t : inMemTopics) {
+            if (TopicUtils.match(topic, t)) {
+                ConcurrentHashMap.KeySetView<ClientSub, Boolean> clientSubs = inMemTopicClientsMap.get(t);
+                if (!CollectionUtils.isEmpty(clientSubs)) {
+                    clientSubList.addAll(clientSubs);
+                }
+            }
+        }
+
         return clientSubList;
     }
 
@@ -318,8 +435,8 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
      * @param topic 主题
      */
     private void removeTopicWithCache(String topic) {
-        allTopics.remove(topic);
-        topicClientMap.remove(topic);
+        inDiskTopics.remove(topic);
+        inDiskTopicClientsMap.remove(topic);
     }
 
     /**
@@ -330,7 +447,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
      */
     private void unsubscribeWithCache(String clientId, List<String> topics) {
         for (String topic : topics) {
-            ConcurrentHashMap.KeySetView<ClientSub, Boolean> clientSubs = topicClientMap.get(topic);
+            ConcurrentHashMap.KeySetView<ClientSub, Boolean> clientSubs = inDiskTopicClientsMap.get(topic);
             if (clientSubs != null) {
                 clientSubs.removeIf(clientSub -> Objects.equals(clientId, clientSub.getClientId()));
             }
@@ -345,10 +462,10 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
     private void subscribeWithCache(ClientSub clientSub) {
         String topic = clientSub.getTopic();
 
-        allTopics.add(topic);
+        inDiskTopics.add(topic);
 
         // 保存客户端订阅内容
-        ConcurrentHashMap.KeySetView<ClientSub, Boolean> subMap = topicClientMap.computeIfAbsent(topic, k -> ConcurrentHashMap.newKeySet());
+        ConcurrentHashMap.KeySetView<ClientSub, Boolean> subMap = inDiskTopicClientsMap.computeIfAbsent(topic, k -> ConcurrentHashMap.newKeySet());
         subMap.add(clientSub);
     }
 }

@@ -41,7 +41,7 @@ public interface ISubscriptionService {
      * @param clientId 客户id
      * @param topics   主题列表
      */
-    void unsubscribe(String clientId, List<String> topics);
+    void unsubscribe(String clientId, boolean cleanSession, List<String> topics);
 
     /**
      * 获取订阅了 topic 的客户id
@@ -54,9 +54,10 @@ public interface ISubscriptionService {
     /**
      * 移除客户订阅
      *
-     * @param clientId 客户ID
+     * @param clientId     客户ID
+     * @param cleanSession 清理类型，true 清理 cleanSession = 1, false清理 cleanSession = 0
      */
-    void clearClientSubscriptions(String clientId);
+    void clearClientSubscriptions(String clientId, boolean cleanSession);
 
     /**
      * 移除指定 topic
@@ -71,5 +72,5 @@ public interface ISubscriptionService {
      * @param clientId      客户端ID
      * @param authorizedSub 客户端被允许订阅的 topic 集合
      */
-    void clearClientSub(String clientId, List<String> authorizedSub);
+    void clearUnAuthorizedClientSub(String clientId, List<String> authorizedSub);
 }

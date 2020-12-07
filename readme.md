@@ -80,7 +80,7 @@
 1. 不支持 `ssl`
 2. 开启了 `websocket`, 可通过 http://tools.emqx.io/ 测试，仅需将域名修改为：`119.45.158.51`(端口、地址不变)
 3. 支持共享订阅功能
-4. 部署版本 `v1.0.5.BETA`
+4. 部署版本 `v1.0.6.RELEASE`
 
 ![websocket](https://s1.ax1x.com/2020/09/05/wV578J.png)
 

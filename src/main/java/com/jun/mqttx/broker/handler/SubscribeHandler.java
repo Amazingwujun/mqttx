@@ -119,7 +119,7 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
                     if (enableSysTopic && TopicUtils.isSys(topic)) {
                         sysTopicSubscribeHandle(topic, ctx);
                     } else {
-                        ClientSub clientSub = new ClientSub(clientId, qos, topic);
+                        ClientSub clientSub = ClientSub.of(clientId, qos, topic, isCleanSession(ctx));
                         subscriptionService.subscribe(clientSub);
                     }
                 }

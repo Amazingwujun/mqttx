@@ -211,7 +211,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
     public void publish(final PubMsg pubMsg, ChannelHandlerContext ctx, boolean isClusterMessage) {
         if (StringUtils.hasText(pubMsg.getAppointedClientId())) {
             // 指定了客户端的消息
-            publish0(new ClientSub(pubMsg.getAppointedClientId(), pubMsg.getQoS(), pubMsg.getTopic()), pubMsg, isClusterMessage);
+            publish0(ClientSub.of(pubMsg.getAppointedClientId(), pubMsg.getQoS(), pubMsg.getTopic(), false), pubMsg, isClusterMessage);
             return;
         }
 

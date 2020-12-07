@@ -131,8 +131,7 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
      * @param ctx {@link ChannelHandlerContext}
      */
     @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        super.channelInactive(ctx);
+    public void channelInactive(ChannelHandlerContext ctx) {
         // 获取当前会话
         Session session = (Session) ctx.channel().attr(AttributeKey.valueOf(Session.KEY)).get();
 
@@ -144,7 +143,12 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
                     .ifPresent(msg -> publishHandler.publish(msg, ctx, false));
 
             ConnectHandler.CLIENT_MAP.remove(session.getClientId());
-            if (Boolean.FALSE.equals(session.getCleanSession())) {
+            if (Boolean.TRUE.equals(session.getCleanSession())) {
+                // 当 cleanSession = 1，清理会话状态。
+                // MQTTX 为了提升性能，将 session/pub/pubRel 等信息保存在内存中，这部分信息关联 {@link io.netty.channel.Channel} 无需 clean 由 GC 自动回收.
+                // 订阅信息则不同，此类信息通过常驻内存，需要明确调用清理的 API
+                subscriptionService.clearClientSubscriptions(session.getClientId(), true);
+            } else {
                 sessionService.save(session);
             }
         }
@@ -293,7 +297,7 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
 
         // 移除 cache&redis 中客户端订阅的 topic
         if (!CollectionUtils.isEmpty(authorizedSub)) {
-            subscriptionService.clearClientSub(clientId, authorizedSub);
+            subscriptionService.clearUnAuthorizedClientSub(clientId, authorizedSub);
         }
     }
 

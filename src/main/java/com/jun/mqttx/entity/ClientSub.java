@@ -16,7 +16,6 @@
 
 package com.jun.mqttx.entity;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 
 /**
@@ -26,14 +25,22 @@ import lombok.Data;
  * @since 1.0.4
  */
 @Data
-@AllArgsConstructor
 public class ClientSub implements Comparable<ClientSub> {
 
+    public boolean cleanSession;
     private String clientId;
-
     private int qos;
-
     private String topic;
+
+    public static ClientSub of(String clientId, int qos, String topic, boolean cleanSession) {
+        ClientSub clientSub = new ClientSub();
+        clientSub.setClientId(clientId);
+        clientSub.setQos(qos);
+        clientSub.setTopic(topic);
+        clientSub.setCleanSession(cleanSession);
+
+        return clientSub;
+    }
 
     /**
      * 共享订阅发布机制需要有序的集合,对象按 {@link ClientSub#clientId#hashCode()} 排序.
