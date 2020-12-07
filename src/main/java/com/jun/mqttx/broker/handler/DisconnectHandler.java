@@ -24,6 +24,7 @@ import com.jun.mqttx.constants.InternalMessageEnum;
 import com.jun.mqttx.consumer.Watcher;
 import com.jun.mqttx.entity.InternalMessage;
 import com.jun.mqttx.entity.Session;
+import com.jun.mqttx.service.ISubscriptionService;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundInvoker;
 import io.netty.handler.codec.mqtt.MqttMessage;
@@ -42,17 +43,17 @@ import java.util.Optional;
 @Handler(type = MqttMessageType.DISCONNECT)
 public final class DisconnectHandler extends AbstractMqttSessionHandler implements Watcher {
 
-    private final ConnectHandler connectHandler;
+    private ISubscriptionService subscriptionService;
 
-    public DisconnectHandler(ConnectHandler connectHandler, MqttxConfig config) {
+    public DisconnectHandler(ISubscriptionService subscriptionService, MqttxConfig config) {
         super(config.getEnableTestMode(), config.getCluster().getEnable());
-        this.connectHandler = connectHandler;
+        this.subscriptionService = subscriptionService;
     }
 
     @Override
     public void process(ChannelHandlerContext ctx, MqttMessage msg) {
         if (isCleanSession(ctx)) {
-            connectHandler.actionOnCleanSession(clientId(ctx));
+            actionOnCleanSession(clientId(ctx));
         }
 
         // [MQTT-3.1.2-8]
@@ -79,5 +80,9 @@ public final class DisconnectHandler extends AbstractMqttSessionHandler implemen
     @Override
     public boolean support(String channel) {
         return InternalMessageEnum.DISCONNECT.getChannel().equals(channel);
+    }
+
+    private void actionOnCleanSession(String clientId) {
+        subscriptionService.clearClientSubscriptions(clientId);
     }
 }
