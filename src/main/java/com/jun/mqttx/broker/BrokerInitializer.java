@@ -16,6 +16,8 @@
 
 package com.jun.mqttx.broker;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.jun.mqttx.broker.codec.MqttWebsocketCodec;
 import com.jun.mqttx.broker.handler.ProbeHandler;
 import com.jun.mqttx.config.MqttxConfig;
@@ -128,6 +130,9 @@ public class BrokerInitializer implements DisposableBean {
             throw new GlobalException("socket 或 websocket 服务最少存在一个");
         }
 
+        // 打印全部配置项
+        log.info(String.format("打印 MQTTX Broker 配置项:\n%s", JSON.toJSONString(mqttxConfig, SerializerFeature.PrettyFormat)));
+
         if (Epoll.isAvailable()) {
             log.info("Epoll 可用，启用: {}", EpollEventLoopGroup.class.getName());
         } else {
@@ -140,7 +145,7 @@ public class BrokerInitializer implements DisposableBean {
      * 启动服务.
      * <p>
      * 为优化性能，当 {@link Epoll#isAvailable()} = true , 启用 Native Epoll.
-     * 参考 <a href="https:// netty.io/wiki/native-transports.html">https:// netty.io/wiki/native-transports.html</a>
+     * 参考 <a href="https://netty.io/wiki/native-transports.html">https://netty.io/wiki/native-transports.html</a>
      * <p>
      * <pre>
      * Netty provides the following platform specific JNI transports:
