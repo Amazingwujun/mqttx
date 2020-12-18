@@ -20,10 +20,13 @@ import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.constants.ClusterTopic;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.common.TopicPartition;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.listener.ConsumerSeekAware;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -32,7 +35,9 @@ import java.util.List;
  * @since v1.0.6
  */
 @Slf4j
-public class KafkaInternalMessageSubscriber extends AbstractInnerChannel {
+public class KafkaInternalMessageSubscriber extends AbstractInnerChannel implements ConsumerSeekAware {
+
+    private volatile boolean onceFlag = false;
 
     public KafkaInternalMessageSubscriber(List<Watcher> watchers, MqttxConfig mqttxConfig) {
         super(watchers, mqttxConfig);
@@ -57,5 +62,19 @@ public class KafkaInternalMessageSubscriber extends AbstractInnerChannel {
         byte[] value = record.value();
         String topic = record.topic();
         dispatch(new String(value, StandardCharsets.UTF_8), topic);
+    }
+
+    /**
+     * 当 partition assignment 变化时，重置消费者的 offset 为 latest, 此举为避免集群消费者重新上线后消费之前的消息导致数据不一致的问题。
+     * 仅在项目初始化时执行一次此函数.
+     * <p>
+     * ps: redis pub/sub 客户端重连后只会收到最新的消息，而 kafka 会保存 consumer 消费的 offset, 该方法可在逻辑上使其行为一致。
+     */
+    @Override
+    public void onPartitionsAssigned(Map<TopicPartition, Long> assignments, ConsumerSeekCallback callback) {
+        if (!onceFlag) {
+            onceFlag = true;
+            callback.seekToEnd(assignments.keySet());
+        }
     }
 }

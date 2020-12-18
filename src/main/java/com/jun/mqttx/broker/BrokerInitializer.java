@@ -131,7 +131,7 @@ public class BrokerInitializer implements DisposableBean {
         }
 
         // 打印全部配置项
-        log.info(String.format("打印 MQTTX Broker 配置项:\n%s", JSON.toJSONString(mqttxConfig, SerializerFeature.PrettyFormat)));
+        log.info(String.format("MQTTX Broker 配置:\n%s", JSON.toJSONString(mqttxConfig, SerializerFeature.PrettyFormat)));
 
         if (Epoll.isAvailable()) {
             log.info("Epoll 可用，启用: {}", EpollEventLoopGroup.class.getName());
