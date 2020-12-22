@@ -224,7 +224,7 @@ public class TopicUtils {
             return true;
         }
         if (!sub.contains("#") && !sub.contains("+")) {
-            return Objects.equals(pub, sub);
+            return false;
         }
 
         boolean result = true;

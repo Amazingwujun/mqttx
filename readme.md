@@ -298,7 +298,7 @@
 消息桥接功能可方便的对接消息队列中间。
 
 1. `mqttx.message-bridge.enable`：开启消息桥接功能
-2. `mqttx.bridge-topics`：需要桥接消息的主题
+2. `mqttx.bridge-topics`：需要桥接消息的主题，主题必须符合 **kafka** 对 **topic** 的要求
 
 `mqttx` 收到客户端 ***发布*** 的消息后，先判断桥接功能是否开启，然后再判断主题是否是需要桥接消息的主题，最后发布消息到 ***MQ***。
 
