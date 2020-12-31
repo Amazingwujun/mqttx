@@ -21,6 +21,7 @@
     - [4.7 websocket 支持](#47-websocket-支持)
     - [4.8 系统主题](#48-系统主题)
     - [4.9 消息桥接支持](#49-消息桥接支持)
+    - [4.10 主题限流支持](#410-主题限流支持)
 - [5 开发者说](#5-开发者说)
 - [6 附表](#6-附表)
     - [6.1 配置项](#61-配置项)
@@ -304,6 +305,49 @@
 
 **仅支持单向桥接：device(client) => mqttx => MQ**
 
+#### 4.10 主题限流支持
+
+使用基于令牌桶算法的 `com.jun.mqttx.utils.RateLimiter` 对指定主题进行流量限制。
+
+> 令牌桶算法参见：https://stripe.com/blog/rate-limiters
+>
+> 简单解释一下令牌桶概念：有一个最大容量为 `capacity` 的令牌桶，该桶以一定的速率补充令牌（`replenish-rate`），每次调用接口时消耗一定量（`token-consumed-per-acquire`）的令牌，令牌数目足够则请求通过。
+
+**主题限流仅适用于 `qos` 等于 *0*  的消息**。
+
+配置举例：
+
+```yml
+mqttx:
+  rate-limiter:
+    enable: true
+    topic-rate-limits:
+    # 例一
+      - topic: "/test/a"
+        capacity: 9
+        replenish-rate: 4
+        token-consumed-per-acquire: 3
+    # 例二
+      - topic: "/test/b"
+        capacity: 5
+        replenish-rate: 5
+        token-consumed-per-acquire: 2
+```
+
+- `capacity`: 桶容量
+- `replenish-rate`: 令牌填充速率
+- `token-consumed-per-acquire`: 每次请求消耗令牌数量
+
+`QPS` 计算公式：
+
+1. 最大并发数：公式为 `QPS = capacity ÷ token-consumed-per-acquire`
+   1. 示例一：`9 ÷ 3 = 3`
+   2. 示例二：`4 ÷ 3 ≈ 1.3`
+2. 最大持续并发数：公式 `QPS = replenish-rate ÷ token-consumed-per-acquire`
+   1. 示例一：`6 ÷ 2 = 3`
+   2. 示例二：`5 ÷ 2 = 2.5`
+
+
 ## 5 开发者说
 
 1. bug fix and optimization，这个会一直继续的，不过主要靠使用和学习 `mqttx` 的同学反馈问题给我（没反馈我就当没有呗~摊手.jpg）
@@ -388,6 +432,8 @@
 | `mqttx.sys-topic.qos` | `0` | 主题 qos |
 | `mqttx.message-bridge.enable` | `false` | 消息桥接功能开关 |
 | `mqttx.message-bridge.topics` | `null` | 需要桥接消息的主题列表 |
+| `mqttx.rate-limiter.enable` | `false` | 主题限流开关，由于限流时间单位为**秒**，所以限流器最大限流能力为 |
+| `mqttx.rate-limiter.token-rate-limit` |  | 参见 [主题限流支持](#410-主题限流支持) 配置举例说明 |
 
 
 

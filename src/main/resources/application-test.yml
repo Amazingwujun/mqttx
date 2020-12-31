@@ -38,3 +38,17 @@ logging:
 #      - "/bridge/topic"
 #      - "mqttx/love"
 #    enable: true
+
+# 3 开启限流器配置示例
+#mqttx:
+#  rate-limiter:
+#    enable: true
+#    topic-rate-limits:
+#      - topic: "/test/a"
+#        capacity: 9
+#        replenish-rate: 4
+#        token-consumed-per-acquire: 3
+#      - topic: "/test/b"
+#        capacity: 5
+#        replenish-rate: 5
+#        token-consumed-per-acquire: 2

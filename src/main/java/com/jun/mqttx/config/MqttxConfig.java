@@ -17,6 +17,7 @@
 package com.jun.mqttx.config;
 
 import com.jun.mqttx.constants.ShareStrategy;
+import com.jun.mqttx.entity.TopicRateLimit;
 import io.netty.handler.ssl.ClientAuth;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -93,6 +94,8 @@ public class MqttxConfig {
     private SysTopic sysTopic = new SysTopic();
 
     private MessageBridge messageBridge = new MessageBridge();
+
+    private RateLimiter rateLimiter = new RateLimiter();
 
     /**
      * redis 配置
@@ -253,5 +256,18 @@ public class MqttxConfig {
 
         /** 需要桥接消息的主题, 不允许通配符 */
         private Set<String> topics = null;
+    }
+
+    /**
+     * 主题限流配置
+     */
+    @Data
+    public static class RateLimiter{
+
+        /** 开关 */
+        private Boolean enable = false;
+
+        /** 限流主题配置 */
+        private Set<TopicRateLimit> topicRateLimits;
     }
 }

@@ -29,6 +29,7 @@ import com.jun.mqttx.entity.PubMsg;
 import com.jun.mqttx.entity.Session;
 import com.jun.mqttx.exception.AuthorizationException;
 import com.jun.mqttx.service.*;
+import com.jun.mqttx.utils.RateLimiter;
 import com.jun.mqttx.utils.TopicUtils;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -42,10 +43,8 @@ import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.time.Instant;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -67,7 +66,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
     private final IPublishMessageService publishMessageService;
     private final IPubRelMessageService pubRelMessageService;
     private final int brokerId;
-    private final boolean enableTopicSubPubSecure, enableShareTopic;
+    private final boolean enableTopicSubPubSecure, enableShareTopic, enableRateLimiter;
     /** 共享主题轮询策略 */
     private final ShareStrategy shareStrategy;
     /** 消息桥接开关 */
@@ -78,8 +77,11 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
     private KafkaTemplate<String, byte[]> kafkaTemplate;
     /** 共享订阅轮询，存储轮询参数 */
     private Map<String, AtomicInteger> roundMap;
+    /** 主题限流器 */
+    private final Map<String, RateLimiter> rateLimiterMap = new HashMap<>();
 
     //@formatter:on
+
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     public PublishHandler(IPublishMessageService publishMessageService, IRetainMessageService retainMessageService,
@@ -96,6 +98,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
 
         MqttxConfig.ShareTopic shareTopic = config.getShareTopic();
         MqttxConfig.MessageBridge messageBridge = config.getMessageBridge();
+        MqttxConfig.RateLimiter rateLimiter = config.getRateLimiter();
         this.sessionService = sessionService;
         this.publishMessageService = publishMessageService;
         this.retainMessageService = retainMessageService;
@@ -104,6 +107,18 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         this.brokerId = config.getBrokerId();
         this.enableTopicSubPubSecure = config.getEnableTopicSubPubSecure();
         this.enableShareTopic = shareTopic.getEnable();
+        if (!CollectionUtils.isEmpty(rateLimiter.getTopicRateLimits()) && rateLimiter.getEnable()) {
+            enableRateLimiter = true;
+            rateLimiter.getTopicRateLimits()
+                    .forEach(
+                            topicRateLimit -> rateLimiterMap.put(
+                                    topicRateLimit.getTopic(),
+                                    new RateLimiter(topicRateLimit.getCapacity(), topicRateLimit.getReplenishRate(), topicRateLimit.getTokenConsumedPerAcquire())
+                            )
+                    );
+        } else {
+            enableRateLimiter = false;
+        }
         this.shareStrategy = shareTopic.getShareSubStrategy();
         if (round == shareStrategy) {
             roundMap = new ConcurrentHashMap<>();
@@ -153,6 +168,19 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         // 这里提供 kafka 的实现，需要对接其它 MQ 的同学可自行修改.
         if (enableMessageBridge && bridgeTopics.contains(topic)) {
             kafkaTemplate.send(topic, data);
+        }
+
+        // 限流判定, 满足如下四个条件即被限流：
+        // 1 限流器开启
+        // 2 qos = 0
+        // 3 该主题配置了限流器
+        // 4 令牌获取失败
+        // 被限流的消息就会被直接丢弃
+        if (enableRateLimiter &&
+                mqttQoS == MqttQoS.AT_MOST_ONCE.value() &&
+                rateLimiterMap.containsKey(topic) &&
+                !rateLimiterMap.get(topic).acquire(Instant.now().getEpochSecond())) {
+            return;
         }
 
         // 组装消息
