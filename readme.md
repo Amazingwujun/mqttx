@@ -342,9 +342,9 @@ mqttx:
 
 1. 最大并发数：公式为 `QPS = capacity ÷ token-consumed-per-acquire`
    1. 示例一：`9 ÷ 3 = 3`
-   2. 示例二：`4 ÷ 3 ≈ 1.3`
+   2. 示例二：`5 ÷ 2 = 2.5`
 2. 最大持续并发数：公式 `QPS = replenish-rate ÷ token-consumed-per-acquire`
-   1. 示例一：`6 ÷ 2 = 3`
+   1. 示例一：`4 ÷ 3 ≈ 1.3`
    2. 示例二：`5 ÷ 2 = 2.5`
 
 
