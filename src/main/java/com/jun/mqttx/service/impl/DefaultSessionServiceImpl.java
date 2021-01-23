@@ -1,11 +1,11 @@
 package com.jun.mqttx.service.impl;
 
-import com.alibaba.fastjson.JSON;
 import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.entity.Session;
 import com.jun.mqttx.service.ISessionService;
 import com.jun.mqttx.utils.MessageIdUtils;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import com.jun.mqttx.utils.Serializer;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
@@ -24,14 +24,16 @@ public class DefaultSessionServiceImpl implements ISessionService {
 
     private final String clusterSessionHashKey;
     private final String messageIdPrefix;
-    private final StringRedisTemplate stringRedisTemplate;
-
+    private final RedisTemplate<String, byte[]> redisTemplate;
+    private final Serializer serializer;
     private final boolean enableTestMode;
     private Map<String, Session> sessionStore;
 
-    public DefaultSessionServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig) {
+    public DefaultSessionServiceImpl(RedisTemplate<String, byte[]> redisTemplate, Serializer serializer,
+                                     MqttxConfig mqttxConfig) {
         MqttxConfig.Redis redis = mqttxConfig.getRedis();
-        this.stringRedisTemplate = stringRedisTemplate;
+        this.redisTemplate = redisTemplate;
+        this.serializer = serializer;
         this.clusterSessionHashKey = redis.getClusterSessionHashKey();
         this.messageIdPrefix = redis.getMessageIdPrefix();
 
@@ -40,7 +42,7 @@ public class DefaultSessionServiceImpl implements ISessionService {
             sessionStore = new ConcurrentHashMap<>();
         }
 
-        Assert.notNull(stringRedisTemplate, "stringRedisTemplate can't be null");
+        Assert.notNull(redisTemplate, "stringRedisTemplate can't be null");
         Assert.hasText(clusterSessionHashKey, "clusterSessionHashKey can't be null");
     }
 
@@ -51,8 +53,8 @@ public class DefaultSessionServiceImpl implements ISessionService {
             return;
         }
 
-        stringRedisTemplate.opsForHash()
-                .put(clusterSessionHashKey, session.getClientId(), JSON.toJSONString(session));
+        redisTemplate.opsForHash()
+                .put(clusterSessionHashKey, session.getClientId(), serializer.serialize(session));
     }
 
     @Override
@@ -61,9 +63,9 @@ public class DefaultSessionServiceImpl implements ISessionService {
             return sessionStore.get(clientId);
         }
 
-        String sessionStr = (String) stringRedisTemplate.opsForHash().get(clusterSessionHashKey, clientId);
+        byte[] sessionStr = (byte[]) redisTemplate.opsForHash().get(clusterSessionHashKey, clientId);
         return Optional.ofNullable(sessionStr)
-                .map(e -> JSON.parseObject(e, Session.class))
+                .map(e -> serializer.deserialize(e, Session.class))
                 .orElse(null);
     }
 
@@ -74,8 +76,8 @@ public class DefaultSessionServiceImpl implements ISessionService {
             return;
         }
 
-        stringRedisTemplate.opsForHash().delete(clusterSessionHashKey, clientId);
-        stringRedisTemplate.delete(messageIdPrefix + clientId);
+        redisTemplate.opsForHash().delete(clusterSessionHashKey, clientId);
+        redisTemplate.delete(messageIdPrefix + clientId);
     }
 
     @Override
@@ -84,7 +86,7 @@ public class DefaultSessionServiceImpl implements ISessionService {
             return sessionStore.containsKey(clientId);
         }
 
-        return stringRedisTemplate.opsForHash().hasKey(clusterSessionHashKey, clientId);
+        return redisTemplate.opsForHash().hasKey(clusterSessionHashKey, clientId);
     }
 
     @SuppressWarnings("ConstantConditions")
@@ -93,9 +95,9 @@ public class DefaultSessionServiceImpl implements ISessionService {
         if (enableTestMode) {
             return MessageIdUtils.nextMessageId(clientId);
         }
-        int messageId = Math.toIntExact(stringRedisTemplate.opsForValue().increment(messageIdPrefix + clientId));
+        int messageId = Math.toIntExact(redisTemplate.opsForValue().increment(messageIdPrefix + clientId));
         if (messageId == 0) {
-            messageId = Math.toIntExact(stringRedisTemplate.opsForValue().increment(messageIdPrefix + clientId));
+            messageId = Math.toIntExact(redisTemplate.opsForValue().increment(messageIdPrefix + clientId));
         }
 
         return messageId;

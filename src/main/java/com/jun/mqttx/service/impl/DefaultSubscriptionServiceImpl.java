@@ -10,6 +10,8 @@ import com.jun.mqttx.entity.ClientSubOrUnsubMsg;
 import com.jun.mqttx.entity.InternalMessage;
 import com.jun.mqttx.service.IInternalMessagePublishService;
 import com.jun.mqttx.service.ISubscriptionService;
+import com.jun.mqttx.utils.JsonSerializer;
+import com.jun.mqttx.utils.Serializer;
 import com.jun.mqttx.utils.TopicUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -18,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 
+import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -39,6 +42,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
     /** 按顺序 -> 订阅，解除订阅，删除 topic */
     private static final int SUB = 1, UN_SUB = 2, DEL_TOPIC = 3;
     private final StringRedisTemplate stringRedisTemplate;
+    private final Serializer serializer;
     private final IInternalMessagePublishService internalMessagePublishService;
     /** client订阅主题, 订阅主题前缀, 主题集合 */
     private final String clientTopicsPrefix, topicSetKey, topicPrefix;
@@ -65,11 +69,12 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
     //@formatter:on
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
-    public DefaultSubscriptionServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig,
+    public DefaultSubscriptionServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig, Serializer serializer,
                                           @Nullable IInternalMessagePublishService internalMessagePublishService) {
         Assert.notNull(stringRedisTemplate, "stringRedisTemplate can't be null");
 
         this.stringRedisTemplate = stringRedisTemplate;
+        this.serializer = serializer;
         this.internalMessagePublishService = internalMessagePublishService;
         this.clientTopicsPrefix = mqttxConfig.getRedis().getClientTopicSetPrefix();
         this.topicPrefix = mqttxConfig.getRedis().getTopicPrefix();
@@ -296,9 +301,15 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
 
 
     @Override
-    public void action(String msg) {
-        InternalMessage<ClientSubOrUnsubMsg> im = JSON.parseObject(msg, new TypeReference<InternalMessage<ClientSubOrUnsubMsg>>() {
-        });
+    public void action(byte[] msg) {
+        InternalMessage<ClientSubOrUnsubMsg> im;
+        if (serializer instanceof JsonSerializer) {
+            im = ((JsonSerializer) serializer).deserialize(msg, new TypeReference<InternalMessage<ClientSubOrUnsubMsg>>() {
+            });
+        }else {
+            //noinspection unchecked
+            im = serializer.deserialize(msg, InternalMessage.class);
+        }
         ClientSubOrUnsubMsg data = im.getData();
         final int type = data.getType();
         final String clientId = data.getClientId();

@@ -16,7 +16,6 @@
 
 package com.jun.mqttx.broker.handler;
 
-import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
 import com.jun.mqttx.broker.BrokerHandler;
 import com.jun.mqttx.config.MqttxConfig;
@@ -24,6 +23,8 @@ import com.jun.mqttx.constants.InternalMessageEnum;
 import com.jun.mqttx.consumer.Watcher;
 import com.jun.mqttx.entity.InternalMessage;
 import com.jun.mqttx.entity.Session;
+import com.jun.mqttx.utils.JsonSerializer;
+import com.jun.mqttx.utils.Serializer;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundInvoker;
 import io.netty.handler.codec.mqtt.MqttMessage;
@@ -42,8 +43,11 @@ import java.util.Optional;
 @Handler(type = MqttMessageType.DISCONNECT)
 public final class DisconnectHandler extends AbstractMqttSessionHandler implements Watcher {
 
-    public DisconnectHandler(MqttxConfig config) {
+    private final Serializer serializer;
+
+    public DisconnectHandler(Serializer serializer, MqttxConfig config) {
         super(config.getEnableTestMode(), config.getCluster().getEnable());
+        this.serializer = serializer;
     }
 
     /**
@@ -66,9 +70,16 @@ public final class DisconnectHandler extends AbstractMqttSessionHandler implemen
     }
 
     @Override
-    public void action(String msg) {
-        InternalMessage<String> im = JSON.parseObject(msg, new TypeReference<InternalMessage<String>>() {
-        });
+    public void action(byte[] msg) {
+        InternalMessage<String> im;
+        if (serializer instanceof JsonSerializer) {
+            im = ((JsonSerializer) serializer).deserialize(msg, new TypeReference<InternalMessage<String>>() {
+            });
+        } else {
+            //noinspection unchecked
+            im = serializer.deserialize(msg, InternalMessage.class);
+        }
+
         Optional.ofNullable(im.getData())
                 .map(ConnectHandler.CLIENT_MAP::get)
                 .map(BrokerHandler.CHANNELS::find)

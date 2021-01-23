@@ -16,6 +16,7 @@
 
 package com.jun.mqttx.config;
 
+import com.jun.mqttx.constants.SerializeStrategy;
 import com.jun.mqttx.constants.ShareStrategy;
 import com.jun.mqttx.entity.TopicRateLimit;
 import io.netty.handler.ssl.ClientAuth;
@@ -76,9 +77,13 @@ public class MqttxConfig {
     private Boolean enableTestMode = false;
 
     /**
-     * 有时候 client 会发表消息给自己（client 订阅了自己发布的主题），默认情形 mqttx 将过滤该消息.
+     * 序列化策略选择:
+     * <ol>
+     *     <li>{@link SerializeStrategy#JSON}: 默认项(兼容早期版本)</li>
+     *     <li>{@link SerializeStrategy#KRYO}: 优选项，性能领先 json</li>
+     * </ol>
      */
-    private Boolean ignoreClientSelfPub = true;
+    private String serializeStrategy = SerializeStrategy.JSON;
 
     /*--------------------------------------------
     |                 模块配置项                   |
@@ -134,6 +139,12 @@ public class MqttxConfig {
 
         /** client topic集合，redis set prefix值 */
         private String clientTopicSetPrefix = "mqttx:client:topicset:";
+
+        /** pubMsg 消息集合，用于存储消息 */
+        private String msgPayLoadKey = "mqttx:msg:payload";
+
+        /** 每个payload 关联的订阅用户 */
+        private String msgPayLoadClientsSetKey = "mqttx:msg:payload:clients:";
     }
 
     /**

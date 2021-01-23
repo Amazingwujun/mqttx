@@ -32,7 +32,7 @@ public interface Watcher {
      *
      * @param msg 集群消息
      */
-    void action(String msg);
+    void action(byte[] msg);
 
     /**
      * Watcher 支持的 channel 类别

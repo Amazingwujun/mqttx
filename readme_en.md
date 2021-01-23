@@ -1,62 +1,68 @@
 # MQTTX Project
 
- ![license](https://img.shields.io/github/license/tensorflow/tensorflow.svg) ![language](https://img.shields.io/badge/language-java-orange.svg)
+![license](https://img.shields.io/github/license/tensorflow/tensorflow.svg) ![language](https://img.shields.io/badge/language-java-orange.svg)
 
 [中文](./readme.md) | English
 
 - [1 Introduction](#1-introduction)
-  - [1.1 Quick Start](#11-quick-start)
-  - [1.2 Project dependencies](#12-project-dependencies)
-  - [1.3 Online Examples](#13-online-examples)
+    - [1.1 Quick Start](#11-quick-start)
+    - [1.2 Project dependencies](#12-project-dependencies)
+    - [1.3 Online Examples](#13-online-examples)
 - [2 Architecture](#2-architecture)
-  - [2.1 Directory Structure](#21-directory-structure)
+    - [2.1 Directory Structure](#21-directory-structure)
 - [3 Containerized Deployment](#3-containerized-deployment)
 - [4 Function description](#4-function-description)
-  - [4.1 qos support](#41-qos-support)
-  - [4.2 topicFilter support](#42-topicfilter-support)
-  - [4.3 Cluster Support](#43-cluster-support)
-  - [4.4 ssl support](#44-ssl-support)
-  - [4.5 topic Security Support](#45-topic-security-support)
-  - [4.6 Shared theme support](#46-shared-theme-support)
-  - [4.7 websocket support](#47-websocket-support)
-  - [4.8 System Theme](#48-system-theme)
-  - [4.9 Message Bridge Support](#49-message-bridge-support)
+    - [4.1 qos support](#41-qos-support)
+    - [4.2 topicFilter support](#42-topicfilter-support)
+    - [4.3 Cluster Support](#43-cluster-support)
+    - [4.4 ssl support](#44-ssl-support)
+    - [4.5 topic Security Support](#45-topic-security-support)
+    - [4.6 Shared theme support](#46-shared-theme-support)
+    - [4.7 websocket support](#47-websocket-support)
+    - [4.8 System Theme](#48-system-theme)
+    - [4.9 Message Bridge Support](#49-message-bridge-support)
 - [5 The Developer says](#5-the-developer-says)
 - [6 Schedule](#6-schedule)
-  - [6.1 Configuration Items](#61-configuration-items)
-  - [6.2 Release Notes](#62-release-notes)
-    - [6.2.1 v1.0](#621-v10)
-    - [6.2.2 v1.1](#622-v11)
-  - [6.3 Benchmark](#63-benchmark)
-    - [6.3.1 CleanSessionTrue](#631-cleansessiontrue)
-    - [6.3.2 CleanSessionFalse](#632-cleansessionfalse)
+    - [6.1 Configuration Items](#61-configuration-items)
+    - [6.2 Release Notes](#62-release-notes)
+        - [6.2.1 v1.0](#621-v10)
+        - [6.2.2 v1.1](#622-v11)
+    - [6.3 Benchmark](#63-benchmark)
+        - [6.3.1 CleanSessionTrue](#631-cleansessiontrue)
+        - [6.3.2 CleanSessionFalse](#632-cleansessionfalse)
 
 ## 1 Introduction
 
-`Mqttx` is developed based on [MQTT v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) protocol and aims to provide  **Mqtt broker** with ***easy to use*** and ***superior performance***.
+`Mqttx` is developed based on [MQTT v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) protocol
+and aims to provide  **Mqtt broker** with ***easy to use*** and ***superior performance***.
 
 ### 1.1 Quick start
 
 1. Packing
-  - Test mode: run `mvnw -P test -DskipTests=true clean package`
-  - Development mode:
-     1. Start the `redis` instance
-     2. Run `mvnw -P dev -DskipTests=true clean package`
+
+- Test mode: run `mvnw -P test -DskipTests=true clean package`
+- Development mode:
+    1. Start the `redis` instance
+    2. Run `mvnw -P dev -DskipTests=true clean package`
+
 2. Run
-  - Run the command: `java -jar mqttx-1.0.5.BETA.jar`
+
+- Run the command: `java -jar mqttx-1.0.5.BETA.jar`
 
 *Quick start-test mode* Legend:
 
 <img src="https://s1.ax1x.com/2020/09/27/0kJp3F.gif" alt="Quick start" style="zoom: 80%;" />
 
 - Test mode
-  1. The cluster function is forcibly closed
-  2. The message is stored in memory instead of `redis`
+    1. The cluster function is forcibly closed
+    2. The message is stored in memory instead of `redis`
 
 - Development mode
     1. The message will be persisted to `redis`, the default connection is `localhost:6376` without password
 
-The so-called **test mode** and **development mode** are just for students to quickly start projects and test function tests. After being familiar with the project, students can modify ***[6.1 Configuration Item](#61-Configuration Item)*** to turn on or off the functions provided by `mqttx`.
+The so-called **test mode** and **development mode** are just for students to quickly start projects and test function
+tests. After being familiar with the project, students can modify ***[6.1 Configuration Item](#61-Configuration Item)***
+to turn on or off the functions provided by `mqttx`.
 
 > `mqttx` relies on `redis` to achieve message persistence, clustering and other functions. It can also be implemented using other middleware (`mysql`, `mongodb`, `kafka`, etc.), while `springboot` has `spring-boot-starter -***` and other pluggable components, convenient for everyone to modify the default implementation
 
@@ -66,16 +72,20 @@ The so-called **test mode** and **development mode** are just for students to qu
 - [x] kafka: Bridge message support
 
 other instructions:
+
 1. The project uses lombok, please install the corresponding plug-in to use ide
+
 > It is recommended to use [Intellij IDEA](https://www.jetbrains.com/idea/) for development tools :blush:
 >
 > Example: `idea` needs to install the plug-in `Lombok`, `settings> Build,Execution, Deployment> Compiler> Annotation Processor` to enable `Enable annotation processing`
 
-### 	1.3 Online Examples
+### 1.3 Online Examples
 
 A singleton service of `mqttx` is deployed in the cloud for functional testing:
+
 1. Does not support ssl
-2. Websocket is turned on, it can pass the http://tools.emqx.io/ test, only need to modify the domain name to: `119.45.158.51` (port and address remain unchanged)
+2. Websocket is turned on, it can pass the http://tools.emqx.io/ test, only need to modify the domain name
+   to: `119.45.158.51` (port and address remain unchanged)
 3. Support shared subscription function
 4. Deployment version `v1.0.5.BETA`
 
@@ -83,7 +93,8 @@ A singleton service of `mqttx` is deployed in the cloud for functional testing:
 
 ## 2 Architecture
 
-`mqttx` supports client authentication and topic publish/subscribe authentication functions. If you need to use it together, the recommended architecture is as follows:
+`mqttx` supports client authentication and topic publish/subscribe authentication functions. If you need to use it
+together, the recommended architecture is as follows:
 
 ![Architecture Diagram](https://s1.ax1x.com/2020/07/28/ak6KAO.png)
 
@@ -134,13 +145,15 @@ In order to facilitate the rapid deployment of the project, the introduction of 
 | ---- | ---- | ---- |
 | Support | Support | Support |
 
-In order to support qos1 and qos2, `redis` is introduced as the persistence layer. This part has been encapsulated as an interface, which can be replaced by itself (for example, using `mysql`).
+In order to support qos1 and qos2, `redis` is introduced as the persistence layer. This part has been encapsulated as an
+interface, which can be replaced by itself (for example, using `mysql`).
 
 #### 4.2 topicFilter support
 
 1. Support multi-level wildcard `#` and single-level wildcard `+`
 2. Topics ending with `/` are not supported, such as `a/b/`, please change to `a/b`.
-3. For other rules, see***[mqtt v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) 4.7 Topic Names and Topic Filters***
+3. For other rules, see***[mqtt v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) 4.7 Topic
+   Names and Topic Filters***
 
 > **mqttx** only verifies the subscription topicFilter. The publish topic is not checked for validity. You can enable [4.5 topic security support](#45-topic-security support) to limit the topics that the client can publish .
 
@@ -157,15 +170,20 @@ The verification tool class is: `com.jun.mqttx.utils.TopicUtils`
 
 #### 4.3 Cluster Support
 
-The project introduced `redis pub/sub` to distribute messages to support the cluster function. If you need to modify it to `kafka` or other `mq`, you need to modify the configuration class `ClusterConfig` and replace the implementation class `InternalMessageServiceImpl`.
+The project introduced `redis pub/sub` to distribute messages to support the cluster function. If you need to modify it
+to `kafka` or other `mq`, you need to modify the configuration class `ClusterConfig` and replace the implementation
+class `InternalMessageServiceImpl`.
 
 ![ak6nHK.png](https://s1.ax1x.com/2020/07/28/ak6nHK.png)
 
 1. `mqttx.cluster.enable`: function switch, default `false`
+
 > Versions prior to `v1.0.5.RELEASE` have bugs in cluster message processing and cannot be used.
+
 #### 4.4 ssl support
 
-To enable ssl, you should first have *ca* (self-signed or purchased), and then modify several configurations in the `application.yml` file:
+To enable ssl, you should first have *ca* (self-signed or purchased), and then modify several configurations in
+the `application.yml` file:
 
 1. `mqttx.ssl.enable`: function switch, default `false`, and control both `websocket` and `socket`
 2. `mqttx.ssl.key-store-location`: certificate address, based on `classpath`
@@ -182,7 +200,9 @@ To enable ssl, you should first have *ca* (self-signed or purchased), and then m
 In order to restrict client subscriptions to topic, add topic subscription & publishing authentication mechanism:
 
 1. `mqttx.enable-topic-sub-pub-secure`: function switch, default `false`
-2. The interface `AuhenticationService` needs to be implemented when using it. The returned object of this interface contains `authorizedSub, authorizedPub` to store the list of `topic` that the client is authorized to subscribe and publish.
+2. The interface `AuhenticationService` needs to be implemented when using it. The returned object of this interface
+   contains `authorizedSub, authorizedPub` to store the list of `topic` that the client is authorized to subscribe and
+   publish.
 3. The broker verifies the client permissions during message subscription and publishing
 
 Supported theme types:
@@ -193,9 +213,12 @@ Supported theme types:
 
 #### 4.6 Shared theme support
 
-Shared subscription is the content stipulated by the `mqtt5` protocol, and many mqs (such as `kafka`) have been implemented.
+Shared subscription is the content stipulated by the `mqtt5` protocol, and many mqs (such as `kafka`) have been
+implemented.
+
 1. `mqttx.share-topic.enable`: function switch, default `true`
-2. Format: `$share/{ShareName}/{filter}`, `$share` is the prefix, `ShareName` is the shared subscription name, and `filter` is the non-shared subscription topic filter.
+2. Format: `$share/{ShareName}/{filter}`, `$share` is the prefix, `ShareName` is the shared subscription name,
+   and `filter` is the non-shared subscription topic filter.
 3. Currently supports three rules: `hash`, `random`, and `round`
 
 The following image shows the difference between shared themes and regular themes:
@@ -204,17 +227,20 @@ The following image shows the difference between shared themes and regular theme
 
 `msg-a` message distribution strategy depends on the configuration item `mqttx.share-topic.share-sub-strategy`
 
-You can cooperate with the session of `cleanSession = 1`. After the client sharing the topic disconnects, the server will remove the subscription, so that the message of the shared topic will only be distributed to online clients.
+You can cooperate with the session of `cleanSession = 1`. After the client sharing the topic disconnects, the server
+will remove the subscription, so that the message of the shared topic will only be distributed to online clients.
 
-***CleanSession*** Introduction: `mqtt3.1.1` protocol stipulates that when `cleanSession = 1`, all states (excluding retained messages) associated with the session will be deleted after the connection is disconnected (`mqtt5` added The session timeout setting, interested students can find out).
-After `mqttx v1.0.5.BETA` version (included), the session messages of `cleanSession = 1` are stored in memory, which has extremely high performance.
+***CleanSession*** Introduction: `mqtt3.1.1` protocol stipulates that when `cleanSession = 1`, all states (excluding
+retained messages) associated with the session will be deleted after the connection is disconnected (`mqtt5` added The
+session timeout setting, interested students can find out). After `mqttx v1.0.5.BETA` version (included), the session
+messages of `cleanSession = 1` are stored in memory, which has extremely high performance.
 
 > If CleanSession is set to 1, the Client and Server **MUST** discard any previous Session and start a new one. This Session lasts as long as the Network Connection. State data associated with this Session **MUST NOT** be reused in any subsequent Session [MQTT-3.1.2-6].
 >
 > The Session state in the Client consists of:
 >
 >-QoS 1 and QoS 2 messages which have been sent to the Server, but have not been completely acknowledged.
->-QoS 2 messages which have been received from the Server, but have not been completely acknowledged.
+> -QoS 2 messages which have been received from the Server, but have not been completely acknowledged.
 >
 > The Session state in the Server consists of:
 >
@@ -225,18 +251,19 @@ After `mqttx v1.0.5.BETA` version (included), the session messages of `cleanSess
 >- QoS 2 messages which have been received from the Client, but have not been completely acknowledged.
 >- Optionally, QoS 0 messages pending transmission to the Client.
 
-
 #### 4.7 websocket support
 
 supported
 
 #### 4.8 System Theme
 
-The client can obtain the broker status by subscribing to system topics. Currently, the system supports the following topics:
+The client can obtain the broker status by subscribing to system topics. Currently, the system supports the following
+topics:
 
 | topic | repeat | comment |
 | -------------------------------- | ------- | ----------------------------------------------------------- |
-| `$SYS/broker/status` | `false` | Clients subscribing to this topic will periodically (`mqttx.sys-topic.interval`) receive the status of the broker, which covers the status values ​​of all topics below. <br/>**Note: After the client connection is disconnected, the subscription is cancelled** |
+| `$SYS/broker/status` | `false` | Clients subscribing to this topic will periodically (`mqttx.sys-topic.interval`) receive the status of the broker, which covers the status values ​​of all topics below. <br/>**
+Note: After the client connection is disconnected, the subscription is cancelled** |
 | `$SYS/broker/activeConnectCount` | `true` | Immediately return the current number of active connections |
 | `$SYS/broker/time` | `true` | Return the current timestamp immediately |
 | `$SYS/broker/version` | `true` | Return to `broker` version immediately |
@@ -278,38 +305,54 @@ The message bridging function can conveniently connect to the middle of the mess
 1. `mqttx.message-bridge.enable`: enable message bridge function
 2. `mqttx.bridge-topics`: Topics that need to bridge messages
 
-After `mqttx` receives the message from the client ***publishing***, it first judges whether the bridging function is enabled, and then judges whether the subject is the subject that needs to be bridged, and finally publishes the message to ***MQ***.
+After `mqttx` receives the message from the client ***publishing***, it first judges whether the bridging function is
+enabled, and then judges whether the subject is the subject that needs to be bridged, and finally publishes the message
+to ***MQ***.
 
 **Only supports one-way bridge: device(client) => mqttx => MQ**
 
 ## 5 The developer says
 
-1. In the cluster state, consider the function of integrating service registration, which is convenient for managing the cluster state. You may use `consul`. Do or not see my later thoughts.
+1. In the cluster state, consider the function of integrating service registration, which is convenient for managing the
+   cluster state. You may use `consul`. Do or not see my later thoughts.
 
    > Actually I want to introduce `SpringCloud`, but I feel that `springcloud` is a bit heavy, so I might open a branch to implement it.
 
-2. bug fix and optimization, this will continue, but mainly rely on the students who use and learn `mqttx` to feedback the problem to me (if there is no feedback, I will treat it as no ~ Tanshou.jpg)
+2. bug fix and optimization, this will continue, but mainly rely on the students who use and learn `mqttx` to feedback
+   the problem to me (if there is no feedback, I will treat it as no ~ Tanshou.jpg)
 
    > This is actually very important, but as of now, few students have come to me for feedback. I am a person with limited power after all.
 
-3. The [mqttx-admin](https://github.com/Amazingwujun/mqttx-admin) management platform based on `vue2.0`, `element-ui` is currently being developed. The function update of `mqttx` will be suspended for a while Time~~(Recently watching [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html))~~. During the project development process, it was discovered that some changes to `mqttx` were needed, but these changes should not be pushed to the mqttx master (for example, topic security authentication needs to cooperate with `mqttx-platform`, I may introduce [Retrofit](https:// square.github.io/retrofit/) to handle interface calls, in fact, you can use `feign`, I think these two are similar), I should open a business branch to handle this. By the way, writing projects with `javascript` is so cool, why didn't you think?
+3. The [mqttx-admin](https://github.com/Amazingwujun/mqttx-admin) management platform based on `vue2.0`, `element-ui` is
+   currently being developed. The function update of `mqttx` will be suspended for a while Time~~(Recently
+   watching [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html))~~. During the project
+   development process, it was discovered that some changes to `mqttx` were needed, but these changes should not be
+   pushed to the mqttx master (for example, topic security authentication needs to cooperate with `mqttx-platform`, I
+   may introduce [Retrofit](https:// square.github.io/retrofit/) to handle interface calls, in fact, you can use `feign`
+   , I think these two are similar), I should open a business branch to handle this. By the way, writing projects
+   with `javascript` is so cool, why didn't you think?
 
    > Originally, I needed to devote some energy to the derivative project of `mqttx-admin`, but later I found that `mqttx` still had too many things to do, and I had to change the plan.
 
-4. [benchmark](#63-benchmark) indicates that the performance of mqttx may be improved. I will modify the processing logic of `pub/sub` in `v1.1.0.RELEASE`
-   
+4. [benchmark](#63-benchmark) indicates that the performance of mqttx may be improved. I will modify the processing
+   logic of `pub/sub` in `v1.1.0.RELEASE`
+
    > Mainly `StringRedisTemplate` => `ReactiveStringRedisTemplate`, change **synchronous** to **asynchronous**
-   
+
 5. Introduction to development direction
 
-   ~~`v1.0.5.RELEASE` becomes the first **LTS** version of `mqttx`, and `v1.0` will be maintained and updated based on it. To improve stand-alone performance, the `v1.1` version will be fully asynchronous. Subsequent [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html) protocol support may be the first to start from `v1.0`. ~~
+   ~~`v1.0.5.RELEASE` becomes the first **LTS** version of `mqttx`, and `v1.0` will be maintained and updated based on
+   it. To improve stand-alone performance, the `v1.1` version will be fully asynchronous.
+   Subsequent [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html) protocol support may be
+   the first to start from `v1.0`. ~~
 
    `mqttx` creates two branches:
 
-   - v1.0: `com.jun.mqttx.service.impl` synchronization interface
-   - v1.1: `com.jun.mqttx.service.impl` changed to asynchronous interface
+    - v1.0: `com.jun.mqttx.service.impl` synchronization interface
+    - v1.1: `com.jun.mqttx.service.impl` changed to asynchronous interface
 
-    [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html) Supported from `v1.0`, no surprise is ` v1.0.6.RELEASE`.
+   [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html) Supported from `v1.0`, no surprise
+   is ` v1.0.6.RELEASE`.
 
 6. Exchange group
 
@@ -318,13 +361,15 @@ After `mqttx` receives the message from the client ***publishing***, it first ju
 ## 6 Schedule
 
 ### 6.1 Configuration items
+
 There are three configuration files in the `src/main/resources` directory:
 
 1. `application.yml`
 2. `application-dev.yml`
 3. `application-prod.yml`
 
-The purpose of the latter two configuration files is to distinguish configurations in different environments for easy management.
+The purpose of the latter two configuration files is to distinguish configurations in different environments for easy
+management.
 
 Configuration item description:
 
@@ -369,38 +414,37 @@ Configuration item description:
 #### 6.2.1 v1.0
 
 - **v1.0.6.RELEASE (under development)**
-  - [x] [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html) support
-  - [x] bug fixes and optimization
+    - [x] [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html) support
+    - [x] bug fixes and optimization
 - **v1.0.5.RELEASE**
-  - [x] Test mode support
-  - [x] `epoll` support, see [https://netty.io/wiki/native-transports.html](https://netty.io/wiki/native-transports.html)
-  - [x] Optimize the message processing mechanism of `cleanSession`
-  - [x] Message bridge
-  - [x] bug fixes and optimizations
+    - [x] Test mode support
+    - [x] `epoll` support,
+      see [https://netty.io/wiki/native-transports.html](https://netty.io/wiki/native-transports.html)
+    - [x] Optimize the message processing mechanism of `cleanSession`
+    - [x] Message bridge
+    - [x] bug fixes and optimizations
 - **v1.0.4.RELEASE**
-  - [x] websocket support
-  - [x] Cluster status self-check
-  - [x] bug fixes and optimization
+    - [x] websocket support
+    - [x] Cluster status self-check
+    - [x] bug fixes and optimization
 - **v1.0.3.RELEASE**
-  - [x] bug fix
+    - [x] bug fix
 - **v1.0.2.RELEASE**
-  - [x] Shared topics are added to the polling strategy
-  - [x] bug fixes and optimizations
+    - [x] Shared topics are added to the polling strategy
+    - [x] bug fixes and optimizations
 - **v1.0.1.RELEASE**
-  - [x] Cluster function support based on `redis`
-  - [x] Shared theme support
-  - [x] Theme permission function
-  - [x] bug fixes and optimization
+    - [x] Cluster function support based on `redis`
+    - [x] Shared theme support
+    - [x] Theme permission function
+    - [x] bug fixes and optimization
 - **v1.0.0.RELEASE**
-  - [x] `mqttv3.1.1` complete protocol implementation
+    - [x] `mqttv3.1.1` complete protocol implementation
 
 #### 6.2.2 v1.1
 
 - ***v1.1.0.RELEASE (under development)***
 
-  - [x] `redis` is implemented synchronously to asynchronous to improve performance
-
-  
+    - [x] `redis` is implemented synchronously to asynchronous to improve performance
 
 ### 6.3 Benchmark
 

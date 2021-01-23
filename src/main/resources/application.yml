@@ -10,4 +10,5 @@ spring:
 mqttx:
   version: @version@
   broker-id: @broker.id@
+  serialize-strategy: kryo
 

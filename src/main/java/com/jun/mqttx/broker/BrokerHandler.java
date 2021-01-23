@@ -16,7 +16,6 @@
 
 package com.jun.mqttx.broker;
 
-import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
 import com.jun.mqttx.broker.handler.AbstractMqttSessionHandler;
 import com.jun.mqttx.broker.handler.ConnectHandler;
@@ -32,6 +31,8 @@ import com.jun.mqttx.exception.AuthenticationException;
 import com.jun.mqttx.exception.AuthorizationException;
 import com.jun.mqttx.service.ISessionService;
 import com.jun.mqttx.service.ISubscriptionService;
+import com.jun.mqttx.utils.JsonSerializer;
+import com.jun.mqttx.utils.Serializer;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -66,7 +67,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Component
 public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> implements Watcher {
     //@formatter:off
-
     /** channel 群组 */
     public static final ChannelGroup CHANNELS = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
     /** 历史最大连接数量 */
@@ -77,19 +77,23 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
     private final ISessionService sessionService;
     private final ISubscriptionService subscriptionService;
     private final PublishHandler publishHandler;
+    private final Serializer serializer;
     private final boolean enableSysTopic;
     //@formatter:on
 
     public BrokerHandler(MqttxConfig config, MessageDelegatingHandler messageDelegatingHandler,
-                         ISessionService sessionService, ISubscriptionService subscriptionService, PublishHandler publishHandler) {
+                         ISessionService sessionService, ISubscriptionService subscriptionService,
+                         PublishHandler publishHandler, Serializer serializer) {
         Assert.notNull(messageDelegatingHandler, "messageDelegatingHandler can't be null");
         Assert.notNull(sessionService, "sessionService can't be null");
         Assert.notNull(subscriptionService, "subscriptionService can't be null");
+        Assert.notNull(serializer, "serializer can't be null");
 
         this.messageDelegatingHandler = messageDelegatingHandler;
         this.sessionService = sessionService;
         this.subscriptionService = subscriptionService;
         this.publishHandler = publishHandler;
+        this.serializer = serializer;
         this.enableSysTopic = config.getSysTopic().getEnable();
     }
 
@@ -281,9 +285,15 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
      * @param msg 集群消息
      */
     @Override
-    public void action(String msg) {
-        InternalMessage<Authentication> im = JSON.parseObject(msg, new TypeReference<InternalMessage<Authentication>>() {
-        });
+    public void action(byte[] msg) {
+        InternalMessage<Authentication> im;
+        if (serializer instanceof JsonSerializer) {
+            im = ((JsonSerializer) serializer).deserialize(msg, new TypeReference<InternalMessage<Authentication>>() {
+            });
+        } else {
+            //noinspection unchecked
+            im = serializer.deserialize(msg, InternalMessage.class);
+        }
         Authentication data = im.getData();
         // 目的是为了兼容 v1.0.2(含) 之前的版本
         String clientId = StringUtils.isEmpty(data.getClientId()) ? data.getUsername() : data.getClientId();

@@ -41,7 +41,7 @@ public class Session {
      *
      * @see MqttVersion
      */
-    private transient MqttVersion version;
+    private  MqttVersion version;
 
     /** 客户ID */
     private String clientId;
@@ -50,7 +50,7 @@ public class Session {
     private Boolean cleanSession;
 
     /** 用于 cleanSession 连接，负责存储 qos > 0 的消息 */
-    private transient Map<Integer, PubMsg> pubMsgStore;
+    private  Map<Integer, PubMsg> pubMsgStore;
 
     /** @see com.jun.mqttx.service.IPubRelMessageService */
     private transient Set<Integer> outPubRelMsgStore;

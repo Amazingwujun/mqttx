@@ -16,7 +16,6 @@
 
 package com.jun.mqttx.broker.handler;
 
-import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
 import com.jun.mqttx.broker.BrokerHandler;
 import com.jun.mqttx.config.MqttxConfig;
@@ -29,14 +28,15 @@ import com.jun.mqttx.entity.PubMsg;
 import com.jun.mqttx.entity.Session;
 import com.jun.mqttx.exception.AuthorizationException;
 import com.jun.mqttx.service.*;
+import com.jun.mqttx.utils.JsonSerializer;
 import com.jun.mqttx.utils.RateLimiter;
+import com.jun.mqttx.utils.Serializer;
 import com.jun.mqttx.utils.TopicUtils;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
@@ -80,6 +80,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
     private Map<String, AtomicInteger> roundMap;
     /** 主题限流器 */
     private final Map<String, RateLimiter> rateLimiterMap = new HashMap<>();
+    private final Serializer serializer;
 
     //@formatter:on
 
@@ -88,19 +89,19 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
     public PublishHandler(IPublishMessageService publishMessageService, IRetainMessageService retainMessageService,
                           ISubscriptionService subscriptionService, IPubRelMessageService pubRelMessageService, ISessionService sessionService,
                           @Nullable IInternalMessagePublishService internalMessagePublishService, MqttxConfig config,
-                          @Nullable KafkaTemplate<String, byte[]> kafkaTemplate, StringRedisTemplate stringRedisTemplate) {
+                          @Nullable KafkaTemplate<String, byte[]> kafkaTemplate, Serializer serializer) {
         super(config.getEnableTestMode(), config.getCluster().getEnable());
         Assert.notNull(publishMessageService, "publishMessageService can't be null");
         Assert.notNull(retainMessageService, "retainMessageService can't be null");
         Assert.notNull(subscriptionService, "publishMessageService can't be null");
         Assert.notNull(pubRelMessageService, "publishMessageService can't be null");
         Assert.notNull(config, "mqttxConfig can't be null");
-        Assert.notNull(stringRedisTemplate, "stringRedisTemplate can't be null");
 
         MqttxConfig.ShareTopic shareTopic = config.getShareTopic();
         MqttxConfig.MessageBridge messageBridge = config.getMessageBridge();
         MqttxConfig.RateLimiter rateLimiter = config.getRateLimiter();
         this.sessionService = sessionService;
+        this.serializer = serializer;
         this.publishMessageService = publishMessageService;
         this.retainMessageService = retainMessageService;
         this.subscriptionService = subscriptionService;
@@ -392,9 +393,14 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
     }
 
     @Override
-    public void action(String msg) {
-        InternalMessage<PubMsg> im = JSON.parseObject(msg, new TypeReference<InternalMessage<PubMsg>>() {
-        });
+    public void action(byte[] msg) {
+        InternalMessage<PubMsg> im;
+        if (serializer instanceof JsonSerializer) {
+            im = ((JsonSerializer) serializer).deserialize(msg, new TypeReference<InternalMessage<PubMsg>>() {
+            });
+        } else {
+            im = serializer.deserialize(msg, InternalMessage.class);
+        }
         PubMsg data = im.getData();
         publish(data, null, true);
     }

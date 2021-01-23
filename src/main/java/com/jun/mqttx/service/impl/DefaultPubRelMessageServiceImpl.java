@@ -2,7 +2,7 @@ package com.jun.mqttx.service.impl;
 
 import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.service.IPubRelMessageService;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
@@ -22,13 +22,13 @@ public class DefaultPubRelMessageServiceImpl implements IPubRelMessageService {
 
     private static final String IN = "_IN";
     private static final String OUT = "_OUT";
-    private final StringRedisTemplate stringRedisTemplate;
+    private final RedisTemplate<String, byte[]> redisTemplate;
     private final String pubRelMsgSetPrefix;
     private final boolean enableTestMode;
     private Map<String, Set<Integer>> clientMsgStore;
 
-    public DefaultPubRelMessageServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig) {
-        this.stringRedisTemplate = stringRedisTemplate;
+    public DefaultPubRelMessageServiceImpl(RedisTemplate<String, byte[]> redisTemplate, MqttxConfig mqttxConfig) {
+        this.redisTemplate = redisTemplate;
 
         this.pubRelMsgSetPrefix = mqttxConfig.getRedis().getPubRelMsgSetPrefix();
         this.enableTestMode = mqttxConfig.getEnableTestMode();
@@ -45,8 +45,8 @@ public class DefaultPubRelMessageServiceImpl implements IPubRelMessageService {
             return;
         }
 
-        stringRedisTemplate.opsForSet()
-                .add(outKey(clientId), String.valueOf(messageId));
+        redisTemplate.opsForSet()
+                .add(outKey(clientId), int2bytes(messageId));
     }
 
     @Override
@@ -56,8 +56,8 @@ public class DefaultPubRelMessageServiceImpl implements IPubRelMessageService {
             return;
         }
 
-        stringRedisTemplate.opsForSet()
-                .add(inKey(clientId), String.valueOf(messageId));
+        redisTemplate.opsForSet()
+                .add(inKey(clientId), int2bytes(messageId));
     }
 
     @Override
@@ -68,8 +68,8 @@ public class DefaultPubRelMessageServiceImpl implements IPubRelMessageService {
                     .contains(messageId);
         }
 
-        Boolean member = stringRedisTemplate.opsForSet()
-                .isMember(inKey(clientId), String.valueOf(messageId));
+        Boolean member = redisTemplate.opsForSet()
+                .isMember(inKey(clientId), int2bytes(messageId));
         return Boolean.TRUE.equals(member);
     }
 
@@ -80,8 +80,8 @@ public class DefaultPubRelMessageServiceImpl implements IPubRelMessageService {
             return;
         }
 
-        stringRedisTemplate.opsForSet()
-                .remove(inKey(clientId), String.valueOf(messageId));
+        redisTemplate.opsForSet()
+                .remove(inKey(clientId), (Object) int2bytes(messageId));
     }
 
     @Override
@@ -91,8 +91,8 @@ public class DefaultPubRelMessageServiceImpl implements IPubRelMessageService {
             return;
         }
 
-        stringRedisTemplate.opsForSet()
-                .remove(outKey(clientId), String.valueOf(messageId));
+        redisTemplate.opsForSet()
+                .remove(outKey(clientId), (Object) int2bytes(messageId));
     }
 
     @Override
@@ -103,14 +103,14 @@ public class DefaultPubRelMessageServiceImpl implements IPubRelMessageService {
             );
         }
 
-        Set<String> members = stringRedisTemplate.opsForSet().members(outKey(clientId));
+        Set<byte[]> members = redisTemplate.opsForSet().members(outKey(clientId));
         if (CollectionUtils.isEmpty(members)) {
             //noinspection unchecked
             return Collections.EMPTY_LIST;
         }
 
         return members.stream()
-                .map(Integer::parseInt)
+                .map(this::bytes2int)
                 .collect(Collectors.toList());
     }
 
@@ -122,8 +122,8 @@ public class DefaultPubRelMessageServiceImpl implements IPubRelMessageService {
             return;
         }
 
-        stringRedisTemplate.delete(inKey(clientId));
-        stringRedisTemplate.delete(outKey(clientId));
+        redisTemplate.delete(inKey(clientId));
+        redisTemplate.delete(outKey(clientId));
     }
 
     private String inKey(String clientId) {
@@ -132,5 +132,25 @@ public class DefaultPubRelMessageServiceImpl implements IPubRelMessageService {
 
     private String outKey(String clientId) {
         return pubRelMsgSetPrefix + clientId + IN;
+    }
+
+    private byte[] int2bytes(int msg) {
+        byte[] bytes = new byte[4];
+        for (int i = 0; i < bytes.length; i++) {
+            bytes[i] = (byte) ((msg >> (8 * (3 - i))) & 0xff);
+        }
+        return bytes;
+    }
+
+    private int bytes2int(byte[] msg) {
+        if (msg == null || msg.length != 4) {
+            throw new IllegalArgumentException(String.format("无法将数组 %s 转为 int", Arrays.toString(msg)));
+        }
+
+        int result = 0;
+        for (int i = 0; i < 4; i++) {
+            result += (msg[i] & 0xff) << (8 * i);
+        }
+        return result;
     }
 }

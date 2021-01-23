@@ -18,6 +18,7 @@ package com.jun.mqttx.consumer;
 
 import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.constants.ClusterTopic;
+import com.jun.mqttx.utils.Serializer;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.TopicPartition;
@@ -39,8 +40,8 @@ public class KafkaInternalMessageSubscriber extends AbstractInnerChannel impleme
 
     private volatile boolean onceFlag = false;
 
-    public KafkaInternalMessageSubscriber(List<Watcher> watchers, MqttxConfig mqttxConfig) {
-        super(watchers, mqttxConfig);
+    public KafkaInternalMessageSubscriber(List<Watcher> watchers, Serializer serializer, MqttxConfig mqttxConfig) {
+        super(watchers, serializer ,mqttxConfig);
     }
 
     /**
@@ -61,7 +62,7 @@ public class KafkaInternalMessageSubscriber extends AbstractInnerChannel impleme
     public void handlerMessage(ConsumerRecord<String, byte[]> record) {
         byte[] value = record.value();
         String topic = record.topic();
-        dispatch(new String(value, StandardCharsets.UTF_8), topic);
+        dispatch(value, topic);
     }
 
     /**

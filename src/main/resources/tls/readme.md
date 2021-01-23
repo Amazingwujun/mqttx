@@ -1,2 +1,1 @@
-mqttx.keystore 仅供测试使用
-keystore-password: 123456
+mqttx.keystore 仅供测试使用 keystore-password: 123456

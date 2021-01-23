@@ -1,11 +1,11 @@
 package com.jun.mqttx.service.impl;
 
-import com.alibaba.fastjson.JSON;
 import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.entity.PubMsg;
 import com.jun.mqttx.service.IRetainMessageService;
+import com.jun.mqttx.utils.Serializer;
 import com.jun.mqttx.utils.TopicUtils;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
@@ -23,18 +23,21 @@ import java.util.stream.Collectors;
 @Service
 public class DefaultRetainMessageServiceImpl implements IRetainMessageService {
 
-    /**
-     * redis retain message prefix
-     */
+    //@formatter:off
+    /** redis retain message prefix */
     private final String retainMessageHashKey;
-    private final StringRedisTemplate stringRedisTemplate;
+    private final RedisTemplate<String, byte[]> redisTemplate;
+    private final Serializer serializer;
     private final boolean enableTestMode;
     private Map<String, PubMsg> pubMsgStore;
+    //@formatter:on
 
-    public DefaultRetainMessageServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig) {
-        Assert.notNull(stringRedisTemplate, "stringRedisTemplate can't be null");
+    public DefaultRetainMessageServiceImpl(RedisTemplate<String, byte[]> redisTemplate, Serializer serializer,
+                                           MqttxConfig mqttxConfig) {
+        Assert.notNull(redisTemplate, "stringRedisTemplate can't be null");
 
-        this.stringRedisTemplate = stringRedisTemplate;
+        this.redisTemplate = redisTemplate;
+        this.serializer = serializer;
         this.retainMessageHashKey = mqttxConfig.getRedis().getRetainMessagePrefix();
         this.enableTestMode = mqttxConfig.getEnableTestMode();
         if (enableTestMode) {
@@ -53,14 +56,14 @@ public class DefaultRetainMessageServiceImpl implements IRetainMessageService {
                     .collect(Collectors.toList());
         }
 
-        List<Object> collect = stringRedisTemplate.opsForHash()
+        List<Object> collect = redisTemplate.opsForHash()
                 .keys(retainMessageHashKey)
                 .stream()
                 .filter(o -> TopicUtils.match((String) o, newSubTopic)).collect(Collectors.toList());
-        return stringRedisTemplate.opsForHash()
+        return redisTemplate.opsForHash()
                 .multiGet(retainMessageHashKey, collect)
                 .stream()
-                .map(o -> JSON.parseObject((String) o, PubMsg.class))
+                .map(o -> serializer.deserialize((byte[]) o, PubMsg.class))
                 .collect(Collectors.toList());
     }
 
@@ -71,7 +74,7 @@ public class DefaultRetainMessageServiceImpl implements IRetainMessageService {
             return;
         }
 
-        stringRedisTemplate.opsForHash().put(retainMessageHashKey, topic, JSON.toJSONString(pubMsg));
+        redisTemplate.opsForHash().put(retainMessageHashKey, topic, serializer.serialize(pubMsg));
     }
 
     @Override
@@ -81,7 +84,7 @@ public class DefaultRetainMessageServiceImpl implements IRetainMessageService {
             return;
         }
 
-        stringRedisTemplate.opsForHash().delete(retainMessageHashKey, topic);
+        redisTemplate.opsForHash().delete(retainMessageHashKey, topic);
     }
 
     @Override
@@ -90,7 +93,7 @@ public class DefaultRetainMessageServiceImpl implements IRetainMessageService {
             return pubMsgStore.get(topic);
         }
 
-        String pubMsg = (String) stringRedisTemplate.opsForHash().get(retainMessageHashKey, topic);
-        return JSON.parseObject(pubMsg, PubMsg.class);
+        byte[] pubMsg = (byte[]) redisTemplate.opsForHash().get(retainMessageHashKey, topic);
+        return serializer.deserialize(pubMsg, PubMsg.class);
     }
 }

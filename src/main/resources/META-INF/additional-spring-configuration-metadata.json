@@ -38,6 +38,17 @@
           "value": "kafka"
         }
       ]
+    },
+    {
+      "name": "mqttx.serialize-strategy",
+      "values": [
+        {
+          "value": "json"
+        },
+        {
+          "value": "kryo"
+        }
+      ]
     }
   ]
 }

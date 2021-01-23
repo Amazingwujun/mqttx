@@ -16,10 +16,10 @@
 
 package com.jun.mqttx.consumer;
 
-import com.alibaba.fastjson.JSON;
 import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.constants.InternalMessageEnum;
 import com.jun.mqttx.entity.InternalMessage;
+import com.jun.mqttx.utils.Serializer;
 import org.springframework.util.Assert;
 
 import java.util.List;
@@ -31,15 +31,17 @@ import java.util.List;
 public abstract class AbstractInnerChannel {
 
     private final int brokerId;
-
+    private final Serializer serializer;
     private final List<Watcher> watchers;
 
-    public AbstractInnerChannel(List<Watcher> watchers, MqttxConfig mqttxConfig) {
+    public AbstractInnerChannel(List<Watcher> watchers, Serializer serializer, MqttxConfig mqttxConfig) {
         Assert.notNull(watchers, "watchers can't be null");
         Assert.notNull(mqttxConfig, "mqttxConfig can't be null");
+        Assert.notNull(serializer, "serializer can't be null");
 
         this.watchers = watchers;
         this.brokerId = mqttxConfig.getBrokerId();
+        this.serializer = serializer;
     }
 
 
@@ -60,9 +62,9 @@ public abstract class AbstractInnerChannel {
      * @param channel 订阅频道
      */
     @SuppressWarnings("rawtypes")
-    public void dispatch(String message, String channel) {
+    public void dispatch(byte[] message, String channel) {
         // 同 broker 消息屏蔽
-        InternalMessage internalMessage = JSON.parseObject(message, InternalMessage.class);
+        InternalMessage internalMessage = serializer.deserialize(message, InternalMessage.class);
         if (brokerId == internalMessage.getBrokerId()) {
             return;
         }

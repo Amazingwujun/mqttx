@@ -17,6 +17,7 @@
 package com.jun.mqttx.consumer;
 
 import com.jun.mqttx.config.MqttxConfig;
+import com.jun.mqttx.utils.Serializer;
 
 import java.util.List;
 
@@ -28,8 +29,8 @@ import java.util.List;
  */
 public class DefaultInternalMessageSubscriber extends AbstractInnerChannel {
 
-    public DefaultInternalMessageSubscriber(List<Watcher> watchers, MqttxConfig mqttxConfig) {
-        super(watchers, mqttxConfig);
+    public DefaultInternalMessageSubscriber(List<Watcher> watchers, Serializer serializer, MqttxConfig mqttxConfig) {
+        super(watchers, serializer, mqttxConfig);
     }
 
     /**
@@ -38,7 +39,7 @@ public class DefaultInternalMessageSubscriber extends AbstractInnerChannel {
      * @param message 消息内容
      * @param channel 订阅频道
      */
-    public void handleMessage(String message, String channel) {
+    public void handleMessage(byte[] message, String channel) {
         dispatch(message, channel);
     }
 }

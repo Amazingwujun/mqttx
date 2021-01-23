@@ -1,6 +1,6 @@
-# MQTTX Project 
+# MQTTX Project
 
- ![license](https://img.shields.io/github/license/tensorflow/tensorflow.svg) ![language](https://img.shields.io/badge/language-java-orange.svg)
+![license](https://img.shields.io/github/license/tensorflow/tensorflow.svg) ![language](https://img.shields.io/badge/language-java-orange.svg)
 
 中文 | [English](./readme_en.md)
 
@@ -26,36 +26,37 @@
 - [6 附表](#6-附表)
     - [6.1 配置项](#61-配置项)
     - [6.2 版本说明](#62-版本说明)
-      - [6.2.1 v1.0](#621-v10)
-      - [6.2.2 v1.1](#622-v11)
+        - [6.2.1 v1.0](#621-v10)
+        - [6.2.2 v1.1](#622-v11)
     - [6.3 Benchmark](#63-benchmark)
-      - [6.3.1 CleanSessionTrue](#631-cleansessiontrue)
-      - [6.3.2 CleanSessionFalse](#632-cleansessionfalse)
+        - [6.3.1 CleanSessionTrue](#631-cleansessiontrue)
+        - [6.3.2 CleanSessionFalse](#632-cleansessionfalse)
     - [6.4 代码质量分析](#64-代码质量分析)
 
 ## 1 介绍
 
-`Mqttx` 基于 [MQTT v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) 协议开发，旨在提供 ***易于使用*** 且 ***性能优越*** 的 **mqtt broker**。
+`Mqttx` 基于 [MQTT v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) 协议开发，旨在提供 ***易于使用*** 且 ***
+性能优越*** 的 **mqtt broker**。
 
 ### 1.1 快速开始
 
 1. 打包
-   - 测试模式：运行  `mvnw -P test -DskipTests=true clean package`
+    - 测试模式：运行  `mvnw -P test -DskipTests=true clean package`
 
-   - 开发模式：
-     1. 启动 `redis` 实例
-     2. 运行 `mvnw -P dev -DskipTests=true clean package`
+    - 开发模式：
+        1. 启动 `redis` 实例
+        2. 运行 `mvnw -P dev -DskipTests=true clean package`
 2. 运行
-   
-   1. 运行命令：`java -jar mqttx-1.0.5.BETA.jar`
+
+    1. 运行命令：`java -jar mqttx-1.0.5.BETA.jar`
 
 *快速开始-测试模式* 图例：
 
 <img src="https://s1.ax1x.com/2020/09/27/0kJp3F.gif" alt="快速开始" style="zoom: 80%;" />
 
 - 测试模式
-  1. 集群功能被强制关闭
-  2. 消息保存在内存而不是 `redis`
+    1. 集群功能被强制关闭
+    2. 消息保存在内存而不是 `redis`
 
 - 开发模式
     1. 消息会持久化到 `redis`, 默认连接 `localhost:6376` 无密码
@@ -70,14 +71,17 @@
 - [x] **Kafka**：桥接消息支持，集群消息（可选功能）
 
 其它说明：
+
 1. 项目使用了 lombok，使用 ide 请安装对应的插件
+
 > 开发工具建议使用 [Intellij IDEA](https://www.jetbrains.com/idea/) :blush:
-> 
+>
 > 举例：`idea` 需要安装插件 `Lombok`, `settings > Build,Execution,Deployment > Compiler > Annotation Processor` 开启 `Enable annotation processing`
 
 ### 1.3 线上实例
 
 云端部署了一个 `mqttx` 单例服务，可供功能测试：
+
 1. 不支持 `ssl`
 2. 开启了 `websocket`, 可通过 http://tools.emqx.io/ 测试，仅需将域名修改为：`119.45.158.51`(端口、地址不变)
 3. 支持共享订阅功能
@@ -118,6 +122,7 @@
 └─resources                     # 资源文件（application.yml 在此文件夹）
     └─tls                       # ca 存放地址
 ```
+
 ## 3 容器化部署
 
 为了方便项目快速的部署，引进 docker
@@ -143,9 +148,10 @@
 
 1. 支持多级通配符 `#`与单级通配符 `+`
 2. 不支持以 `/`结尾的topic，比如 `a/b/`，请改为 `a/b`。
-3. 其它规则见 ***[mqtt v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) 4.7 Topic Names and Topic Filters***
+3. 其它规则见 ***[mqtt v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) 4.7 Topic Names and Topic
+   Filters***
 
->  **mqttx** 仅对订阅 topicFilter 进行校验，publish 的 topic 是没有做合法性检查的，可通过开启 [4.5 topic 安全支持](#45-topic-安全支持) 限制客户端可发布的 topic。
+> **mqttx** 仅对订阅 topicFilter 进行校验，publish 的 topic 是没有做合法性检查的，可通过开启 [4.5 topic 安全支持](#45-topic-安全支持) 限制客户端可发布的 topic。
 
 举例：
 
@@ -174,10 +180,11 @@
 
 注意事项：
 
- 1. `v1.0.5.RELEASE` 之前的版本集群功能存在 bug，无法使用。
+1. `v1.0.5.RELEASE` 之前的版本集群功能存在 bug，无法使用。
 
- 2. 如需使用 `kafka` 实现集群消息，需要手动修改配置 `application-*.yml`, 可参考 `application-dev.yml` 中的配置示例 ***3. kafka 集群***。
+2. 如需使用 `kafka` 实现集群消息，需要手动修改配置 `application-*.yml`, 可参考 `application-dev.yml` 中的配置示例 ***3. kafka 集群***。
 3. 测试模式开启后，集群功能 **强制** 关闭
+
 #### 4.4 ssl 支持
 
 开启 ssl 你首先应该有了 *ca*(自签名或购买)，然后修改 `application.yml` 文件中几个配置：
@@ -209,7 +216,8 @@
 #### 4.6 共享主题支持
 
 共享订阅是 `mqtt5` 协议规定的内容，很多 mq(例如 `kafka`) 都有实现。
-1. `mqttx.share-topic.enable`: 功能开关，默认 `true` 
+
+1. `mqttx.share-topic.enable`: 功能开关，默认 `true`
 
 2. 格式: `$share/{ShareName}/{filter}`, `$share` 为前缀, `ShareName` 为共享订阅名, `filter` 就是非共享订阅主题过滤器。
 
@@ -225,7 +233,8 @@
 
 可以配合 `cleanSession = 1` 的会话，共享主题的客户端断开连接后会被服务端移除订阅，这样共享主题的消息只会分发给在线的客户端。
 
-***CleanSession*** 介绍：`mqtt3.1.1` 协议规定当 `cleanSession = 1` 时，连接断开后与会话相关联的所有状态（不含 retained 消息）都会被删除（`mqtt5`  增加了会话超时设置，感兴趣的同学可以了解一下）。
+***CleanSession*** 介绍：`mqtt3.1.1` 协议规定当 `cleanSession = 1` 时，连接断开后与会话相关联的所有状态（不含 retained 消息）都会被删除（`mqtt5`
+增加了会话超时设置，感兴趣的同学可以了解一下）。
 `mqttx v1.0.5.BETA` 版本后(含)，`cleanSession = 1` 的会话消息保存在内存中，具备极高的性能.
 
 > If CleanSession is set to 1, the Client and Server **MUST** discard any previous Session and start a new one. This Session lasts as long as the Network Connection. State data associated with this Session **MUST NOT** be reused in any subsequent Session [MQTT-3.1.2-6].
@@ -233,7 +242,7 @@
 > The Session state in the Client consists of:
 >
 > - QoS 1 and QoS 2 messages which have been sent to the Server, but have not been completely acknowledged.
-> - QoS 2 messages which have been received from the Server, but have not been completely acknowledged. 
+> - QoS 2 messages which have been received from the Server, but have not been completely acknowledged.
 >
 > The Session state in the Server consists of:
 >
@@ -242,8 +251,7 @@
 > - QoS 1 and QoS 2 messages which have been sent to the Client, but have not been completely acknowledged.
 > - QoS 1 and QoS 2 messages pending transmission to the Client.
 > - QoS 2 messages which have been received from the Client, but have not been completely acknowledged.
-> - Optionally, QoS 0 messages pending transmission to the Client. 
-
+> - Optionally, QoS 0 messages pending transmission to the Client.
 
 #### 4.7 websocket 支持
 
@@ -255,7 +263,8 @@
 
 | topic                               | repeat  | comment                                                      |
 | ----------------------------------- | ------- | ------------------------------------------------------------ |
-| `$SYS/broker/status`                | `false` | 订阅此主题的客户端会定期（`mqttx.sys-topic.interval`）收到 broker 的状态，该状态涵盖下面所有主题的状态值. <br/>**注意：客户端连接断开后，订阅取消** |
+| `$SYS/broker/status`                | `false` | 订阅此主题的客户端会定期（`mqttx.sys-topic.interval`）收到 broker 的状态，该状态涵盖下面所有主题的状态值. <br/>**
+注意：客户端连接断开后，订阅取消** |
 | `$SYS/broker/activeConnectCount`    | `true`  | 立即返回当前的活动连接数量                                   |
 | `$SYS/broker/time`                  | `true`  | 立即返回当前时间戳                                           |
 | `$SYS/broker/version`               | `true`  | 立即返回 `broker` 版本                                       |
@@ -266,7 +275,7 @@
 
 > `repeat`:
 >
-> - `repeat = false` : 只需订阅一次，broker 会定时发布数据到此主题. 
+> - `repeat = false` : 只需订阅一次，broker 会定时发布数据到此主题.
 > - `repeat = true` : 订阅一次，broker 发布一次，可多次订阅.
 >
 > 注意：
@@ -341,18 +350,17 @@ mqttx:
 `QPS` 计算公式：
 
 1. 最大并发数：公式为 `QPS = capacity ÷ token-consumed-per-acquire`
-   1. 示例一：`9 ÷ 3 = 3`
-   2. 示例二：`5 ÷ 2 = 2.5`
+    1. 示例一：`9 ÷ 3 = 3`
+    2. 示例二：`5 ÷ 2 = 2.5`
 2. 最大持续并发数：公式 `QPS = replenish-rate ÷ token-consumed-per-acquire`
-   1. 示例一：`4 ÷ 3 ≈ 1.3`
-   2. 示例二：`5 ÷ 2 = 2.5`
-
+    1. 示例一：`4 ÷ 3 ≈ 1.3`
+    2. 示例二：`5 ÷ 2 = 2.5`
 
 ## 5 开发者说
 
 1. bug fix and optimization，这个会一直继续的，不过主要靠使用和学习 `mqttx` 的同学反馈问题给我（没反馈我就当没有呗~摊手.jpg）
 
-   >  **项目将长期维护**
+   > **项目将长期维护**
 
 2. [benchmark](#63-benchmark) 表明 mqttx 性能还有提升的可能，我将在 `v1.1.0.RELEASE` 改造 `pub/sub` 处理逻辑
 
@@ -362,8 +370,8 @@ mqttx:
 
    `mqttx` 建立两个分支：
 
-   - v1.0：`com.jun.mqttx.service.impl` 同步接口
-   - v1.1：`com.jun.mqttx.service.impl` 改为异步接口
+    - v1.0：`com.jun.mqttx.service.impl` 同步接口
+    - v1.1：`com.jun.mqttx.service.impl` 改为异步接口
 
    项目已经进入稳定版本，在易用性及性能上都达到了一定的水准，后面的更新迭代将大幅放缓
 
@@ -371,11 +379,11 @@ mqttx:
 
 4. 开发者最近动态
 
-   1. 最近在学习 `golang`， 开了一个项目 [MQTT-GO](https://github.com/Amazingwujun/mqtt-go)，写完后对比一下 `MQTTX` 看看哪个性能比较牛逼o(*￣▽￣*)ブ
+    1. 最近在学习 `golang`， 开了一个项目 [MQTT-GO](https://github.com/Amazingwujun/mqtt-go)，写完后对比一下 `MQTTX` 看看哪个性能比较牛逼o(*￣▽￣*)ブ
 
-      > 协议解析部分完成了，golang 可真是简单粗暴啊😄
+       > 协议解析部分完成了，golang 可真是简单粗暴啊😄
 
-   2. `MQTTX` 项目已经进入稳定版本，在易用性及性能上都达到了一定的水平，项目正式进入维护期！
+    2. `MQTTX` 项目已经进入稳定版本，在易用性及性能上都达到了一定的水平，项目正式进入维护期！
 
 5. 交流群
 
@@ -384,6 +392,7 @@ mqttx:
 ## 6 附表
 
 ### 6.1 配置项
+
 `src/main/resources` 目录下有三个配置文件：
 
 1. `application.yml`
@@ -436,49 +445,46 @@ mqttx:
 | `mqttx.rate-limiter.enable` | `false` | 主题限流开关，由于限流时间单位为**秒**，所以限流器最大限流能力为 |
 | `mqttx.rate-limiter.token-rate-limit` |  | 参见 [主题限流支持](#410-主题限流支持) 配置举例说明 |
 
-
-
 ### 6.2 版本说明
+
 **prometheus** 分支为 ***MQTTX*** 整合监控系统 **[Prometheus](https://prometheus.io/)** 的代码，有需要的用户可参考该分支代码.
 
 #### 6.2.1 v1.0
 
 - **v1.0.7.RELEASE(开发中)**
-  - [x] [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html) 支持
-  - [x] bug 修复及优化
+    - [x] [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html) 支持
+    - [x] bug 修复及优化
 - **v1.0.6.RELEASE**
-  - [x] `netty 4.1.52.Final` 这个版本的 MqttEncoder.java 处理 UnsubAck 响应消息会导致 NPE，直接影响功能，不得不提前结束此版本的开发
-  - [x] bug 修复
+    - [x] `netty 4.1.52.Final` 这个版本的 MqttEncoder.java 处理 UnsubAck 响应消息会导致 NPE，直接影响功能，不得不提前结束此版本的开发
+    - [x] bug 修复
 - **v1.0.5.RELEASE**
-  - [x] 测试模式支持
-  - [x] `epoll` 支持，见 [https://netty.io/wiki/native-transports.html](https://netty.io/wiki/native-transports.html)
-  - [x] 优化 `cleanSession` 消息处理机制
-  - [x] 消息桥接
-  - [x] bug 修复及优化
+    - [x] 测试模式支持
+    - [x] `epoll` 支持，见 [https://netty.io/wiki/native-transports.html](https://netty.io/wiki/native-transports.html)
+    - [x] 优化 `cleanSession` 消息处理机制
+    - [x] 消息桥接
+    - [x] bug 修复及优化
 - **v1.0.4.RELEASE**
-  - [x] websocket 支持
-  - [x] 集群状态自检
-  - [x] bug 修复及优化
+    - [x] websocket 支持
+    - [x] 集群状态自检
+    - [x] bug 修复及优化
 - **v1.0.3.RELEASE**
-  - [x] bug 修复
+    - [x] bug 修复
 - **v1.0.2.RELEASE**
-  - [x] 共享主题加入轮询策略
-  - [x] bug 修复及优化
+    - [x] 共享主题加入轮询策略
+    - [x] bug 修复及优化
 - **v1.0.1.RELEASE**
-  - [x] 基于 `redis` 的集群功能支持
-  - [x] 共享主题支持
-  - [x] 主题权限功能
-  - [x] bug 修复及优化
+    - [x] 基于 `redis` 的集群功能支持
+    - [x] 共享主题支持
+    - [x] 主题权限功能
+    - [x] bug 修复及优化
 - **v1.0.0.RELEASE**
-  - [x] `mqttv3.1.1` 完整协议实现
+    - [x] `mqttv3.1.1` 完整协议实现
 
 #### 6.2.2 v1.1
 
 - ***v1.1.0.RELEASE（开发中）***
-  
-  - [x] `redis` 同步转异步实现，提升性能
-  
-  
+
+    - [x] `redis` 同步转异步实现，提升性能
 
 ### 6.3 Benchmark
 
@@ -499,7 +505,7 @@ mqttx:
 1. 启用 `redis`
 2. `cleanSession` : ***true***
 
->  **实际上 `pub` 消息存储并未走 redis， 原因见 [共享主题](#46-共享主题支持) 中关于 `cleanSession` 的介绍**
+> **实际上 `pub` 消息存储并未走 redis， 原因见 [共享主题](#46-共享主题支持) 中关于 `cleanSession` 的介绍**
 
 执行 `java -jar -Xmx1g -Xms1g mqttx-1.0.5.BETA.jar`
 
@@ -585,8 +591,6 @@ Result : broker=tcp://localhost:1883, clients=1000, totalCount=1000000, duration
 | `1000`       | 发布消息 | `1024byte`   | `1000`         | 一百万   | `2`  | `215.6s` | `4637`  |
 
 **资源消耗：`cpu: 45%`, `mem 440 MB`**
-
-
 
 ### 6.4 代码质量分析
 

@@ -1,10 +1,10 @@
 package com.jun.mqttx.service.impl;
 
-import com.alibaba.fastjson.JSON;
 import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.entity.PubMsg;
 import com.jun.mqttx.service.IPublishMessageService;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import com.jun.mqttx.utils.Serializer;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
@@ -25,13 +25,16 @@ import java.util.stream.Collectors;
 @Service
 public class DefaultPublishMessageServiceImpl implements IPublishMessageService {
 
-    private final StringRedisTemplate stringRedisTemplate;
+    private final RedisTemplate<String, byte[]> redisTemplate;
+    private final Serializer serializer;
     private final String pubMsgSetPrefix;
     private final boolean enableTestMode;
     private Map<String, Map<Integer, PubMsg>> pubMsgStore;
 
-    public DefaultPublishMessageServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig) {
-        this.stringRedisTemplate = stringRedisTemplate;
+    public DefaultPublishMessageServiceImpl(RedisTemplate<String, byte[]> redisTemplate, Serializer serializer,
+                                            MqttxConfig mqttxConfig) {
+        this.redisTemplate = redisTemplate;
+        this.serializer = serializer;
 
         this.pubMsgSetPrefix = mqttxConfig.getRedis().getPubMsgSetPrefix();
         this.enableTestMode = mqttxConfig.getEnableTestMode();
@@ -50,8 +53,8 @@ public class DefaultPublishMessageServiceImpl implements IPublishMessageService 
             return;
         }
 
-        stringRedisTemplate.opsForHash().put(pubMsgSetPrefix + clientId,
-                String.valueOf(pubMsg.getMessageId()), JSON.toJSONString(pubMsg));
+        redisTemplate.opsForHash().put(pubMsgSetPrefix + clientId,
+                String.valueOf(pubMsg.getMessageId()), serializer.serialize(pubMsg));
     }
 
     @Override
@@ -61,7 +64,7 @@ public class DefaultPublishMessageServiceImpl implements IPublishMessageService 
             return;
         }
 
-        stringRedisTemplate.delete(pubMsgSetPrefix + clientId);
+        redisTemplate.delete(pubMsgSetPrefix + clientId);
     }
 
     @Override
@@ -71,7 +74,7 @@ public class DefaultPublishMessageServiceImpl implements IPublishMessageService 
             return;
         }
 
-        stringRedisTemplate.opsForHash().delete(
+        redisTemplate.opsForHash().delete(
                 key(clientId),
                 String.valueOf(messageId)
         );
@@ -88,14 +91,14 @@ public class DefaultPublishMessageServiceImpl implements IPublishMessageService 
             return values;
         }
 
-        List<Object> values = stringRedisTemplate.opsForHash().values(key(clientId));
+        List<Object> values = redisTemplate.opsForHash().values(key(clientId));
         if (CollectionUtils.isEmpty(values)) {
             // noinspection unchecked
             return Collections.EMPTY_LIST;
         }
 
         return values.stream()
-                .map(o -> JSON.parseObject((String) o, PubMsg.class))
+                .map(o -> serializer.deserialize((byte[]) o, PubMsg.class))
                 .collect(Collectors.toList());
     }
 
