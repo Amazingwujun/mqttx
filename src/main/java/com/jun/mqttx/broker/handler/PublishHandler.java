@@ -430,6 +430,6 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
      * @return true if session is cleanSession
      */
     private boolean isCleanSession(String clientId) {
-        return sessionService.hasKey(clientId);
+        return !sessionService.hasKey(clientId);
     }
 }
