@@ -120,7 +120,7 @@
 │              │  └─impl        # 默认实现
 │              └─utils          # 工具类
 └─resources                     # 资源文件（application.yml 在此文件夹）
-    ├─META-INF					# spring-configuration 辅助配置说明
+    ├─META-INF                  # spring-configuration 辅助配置说明
     └─tls                       # ca 存放地址
 ```
 
