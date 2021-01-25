@@ -46,6 +46,7 @@ import org.springframework.util.StringUtils;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -192,10 +193,10 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         // 响应
         switch (mqttQoS) {
             case 0: // at most once
-                publish(pubMsg, ctx, false);
+                publish(pubMsg, clientId(ctx), false);
                 break;
             case 1: // at least once
-                publish(pubMsg, ctx, false);
+                publish(pubMsg, clientId(ctx), false);
                 MqttMessage pubAck = MqttMessageFactory.newMessage(
                         new MqttFixedHeader(MqttMessageType.PUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
                         MqttMessageIdVariableHeader.from(packetId),
@@ -208,12 +209,12 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                 if (isCleanSession(ctx)) {
                     Session session = getSession(ctx);
                     if (!session.isDupMsg(packetId)) {
-                        publish(pubMsg, ctx, false);
+                        publish(pubMsg, clientId(ctx), false);
                         session.savePubRelInMsg(packetId);
                     }
                 } else {
                     if (!pubRelMessageService.isInMsgDup(clientId(ctx), packetId)) {
-                        publish(pubMsg, ctx, false);
+                        publish(pubMsg, clientId(ctx), false);
                         pubRelMessageService.saveIn(clientId(ctx), packetId);
                     }
                 }
@@ -237,11 +238,12 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
      * 消息发布
      *
      * @param pubMsg           publish message
+     * @param from 消息发布者的 id
      * @param isClusterMessage 标志消息源是集群还是客户端
      */
-    public void publish(final PubMsg pubMsg, ChannelHandlerContext ctx, boolean isClusterMessage) {
+    public void publish(final PubMsg pubMsg, String from, boolean isClusterMessage) {
         if (StringUtils.hasText(pubMsg.getAppointedClientId())) {
-            // 指定了客户端的消息
+            // 指定了客户端的消息, 应用于共享订阅进群消息分发
             publish0(ClientSub.of(pubMsg.getAppointedClientId(), pubMsg.getQoS(), pubMsg.getTopic(), false), pubMsg, isClusterMessage);
             return;
         }
@@ -257,13 +259,13 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         if (ignoreClientSelfPub) {
             clientList = clientList
                     .stream()
-                    .filter(clientSub -> !Objects.equals(clientSub.getClientId(), clientId(ctx)))
+                    .filter(clientSub -> !Objects.equals(clientSub.getClientId(), from))
                     .collect(Collectors.toList());
         }
 
         // 共享订阅
         if (enableShareTopic && TopicUtils.isShare(topic)) {
-            ClientSub luckyClient = chooseClient(clientList, clientId(ctx), topic);
+            ClientSub luckyClient = chooseClient(clientList, topic);
             pubMsg.setAppointedClientId(luckyClient.getClientId());
             publish0(luckyClient, pubMsg, isClusterMessage);
 
@@ -362,7 +364,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
      *
      * @param pubMsg retain message
      */
-    private void handleRetainMsg(PubMsg pubMsg) {
+    public void handleRetainMsg(PubMsg pubMsg) {
         byte[] payload = pubMsg.getPayload();
         String topic = pubMsg.getTopic();
         int qos = pubMsg.getQoS();
@@ -419,17 +421,16 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
      * </ol>
      *
      * @param clientSubList 接收客户端列表
-     * @param clientId      发送客户端ID
      * @return 按规则选择的客户端
      */
-    private ClientSub chooseClient(List<ClientSub> clientSubList, String clientId, String topic) {
+    private ClientSub chooseClient(List<ClientSub> clientSubList, String topic) {
         // 集合排序
         clientSubList.sort(ClientSub::compareTo);
 
         if (hash == shareStrategy) {
-            return clientSubList.get(clientId.hashCode() % clientSubList.size());
+            return clientSubList.get(topic.hashCode() % clientSubList.size());
         } else if (random == shareStrategy) {
-            int key = (int) (System.currentTimeMillis() + clientId.hashCode());
+            int key = ThreadLocalRandom.current().nextInt(0, clientSubList.size());
             return clientSubList.get(key % clientSubList.size());
         } else if (round == shareStrategy) {
             int i = roundMap.computeIfAbsent(topic, s -> new AtomicInteger(0)).getAndIncrement();

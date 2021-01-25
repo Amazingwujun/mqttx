@@ -83,7 +83,7 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
 
     public BrokerHandler(MqttxConfig config, MessageDelegatingHandler messageDelegatingHandler,
                          ISessionService sessionService, ISubscriptionService subscriptionService,
-                         PublishHandler publishHandler, Serializer serializer) {
+                         PublishHandler publishHandler, @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection") Serializer serializer) {
         Assert.notNull(messageDelegatingHandler, "messageDelegatingHandler can't be null");
         Assert.notNull(sessionService, "sessionService can't be null");
         Assert.notNull(subscriptionService, "subscriptionService can't be null");
@@ -141,17 +141,25 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
 
         // 会话状态处理
         if (session != null) {
+            final String clientId = session.getClientId();
+
             // 发布遗嘱消息
             Optional.of(session)
                     .map(Session::getWillMessage)
-                    .ifPresent(msg -> publishHandler.publish(msg, ctx, false));
+                    .ifPresent(msg -> {
+                        // 解决遗嘱消息无法 retain 的 bug
+                        if (msg.isRetain()) {
+                            publishHandler.handleRetainMsg(msg);
+                        }
+                        publishHandler.publish(msg, clientId, false);
+                    });
 
-            ConnectHandler.CLIENT_MAP.remove(session.getClientId());
+            ConnectHandler.CLIENT_MAP.remove(clientId);
             if (Boolean.TRUE.equals(session.getCleanSession())) {
                 // 当 cleanSession = 1，清理会话状态。
                 // MQTTX 为了提升性能，将 session/pub/pubRel 等信息保存在内存中，这部分信息关联 {@link io.netty.channel.Channel} 无需 clean 由 GC 自动回收.
                 // 订阅信息则不同，此类信息通过常驻内存，需要明确调用清理的 API
-                subscriptionService.clearClientSubscriptions(session.getClientId(), true);
+                subscriptionService.clearClientSubscriptions(clientId, true);
             } else {
                 sessionService.save(session);
             }

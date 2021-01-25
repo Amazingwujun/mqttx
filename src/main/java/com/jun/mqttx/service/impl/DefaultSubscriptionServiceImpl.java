@@ -1,6 +1,5 @@
 package com.jun.mqttx.service.impl;
 
-import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
 import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.constants.InternalMessageEnum;
@@ -20,7 +19,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 
-import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -306,7 +304,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         if (serializer instanceof JsonSerializer) {
             im = ((JsonSerializer) serializer).deserialize(msg, new TypeReference<InternalMessage<ClientSubOrUnsubMsg>>() {
             });
-        }else {
+        } else {
             //noinspection unchecked
             im = serializer.deserialize(msg, InternalMessage.class);
         }

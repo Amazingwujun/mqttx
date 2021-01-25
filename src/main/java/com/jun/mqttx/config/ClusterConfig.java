@@ -62,27 +62,30 @@ public class ClusterConfig {
 
     @Bean
     @ConditionalOnProperty(name = "mqttx.cluster.type", havingValue = REDIS, matchIfMissing = true)
-    public DefaultInternalMessageSubscriber defaultInternalMessageSubscriber(List<Watcher> watchers, Serializer serializer,
+    public DefaultInternalMessageSubscriber defaultInternalMessageSubscriber(List<Watcher> watchers,
+                                                                             @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection") Serializer serializer,
                                                                              MqttxConfig mqttxConfig) {
         return new DefaultInternalMessageSubscriber(watchers, serializer, mqttxConfig);
     }
 
     @Bean
     @ConditionalOnProperty(name = "mqttx.cluster.type", havingValue = KAFKA)
-    public KafkaInternalMessageSubscriber kafkaInternalMessageSubscriber(List<Watcher> watchers, Serializer serializer, MqttxConfig mqttxConfig) {
-        return new KafkaInternalMessageSubscriber(watchers, serializer,mqttxConfig);
+    public KafkaInternalMessageSubscriber kafkaInternalMessageSubscriber(List<Watcher> watchers,
+                                                                         @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection") Serializer serializer, MqttxConfig mqttxConfig) {
+        return new KafkaInternalMessageSubscriber(watchers, serializer, mqttxConfig);
     }
 
     @Bean
     @ConditionalOnProperty(name = "mqttx.cluster.type", havingValue = REDIS, matchIfMissing = true)
-    public IInternalMessagePublishService defaultInternalMessagePublishServiceImpl(RedisTemplate<String, byte[]> redisTemplate, Serializer serializer) {
+    public IInternalMessagePublishService defaultInternalMessagePublishServiceImpl(RedisTemplate<String, byte[]> redisTemplate,
+                                                                                   @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection") Serializer serializer) {
         return new DefaultInternalMessagePublishServiceImpl(redisTemplate, serializer);
     }
 
     @Bean
     @ConditionalOnProperty(name = "mqttx.cluster.type", havingValue = KAFKA)
     public IInternalMessagePublishService kafkaInternalMessagePublishServiceImpl(KafkaTemplate<String, byte[]> kafkaTemplate,
-                                                                                 Serializer serializer) {
+                                                                                 @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection") Serializer serializer) {
         return new KafkaInternalMessagePublishServiceImpl(kafkaTemplate, serializer);
     }
 

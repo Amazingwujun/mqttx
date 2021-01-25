@@ -29,7 +29,8 @@ public class DefaultSessionServiceImpl implements ISessionService {
     private final boolean enableTestMode;
     private Map<String, Session> sessionStore;
 
-    public DefaultSessionServiceImpl(RedisTemplate<String, byte[]> redisTemplate, Serializer serializer,
+    public DefaultSessionServiceImpl(RedisTemplate<String, byte[]> redisTemplate,
+                                     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection") Serializer serializer,
                                      MqttxConfig mqttxConfig) {
         MqttxConfig.Redis redis = mqttxConfig.getRedis();
         this.redisTemplate = redisTemplate;

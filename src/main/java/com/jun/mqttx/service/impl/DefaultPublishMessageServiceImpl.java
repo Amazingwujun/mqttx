@@ -31,7 +31,8 @@ public class DefaultPublishMessageServiceImpl implements IPublishMessageService 
     private final boolean enableTestMode;
     private Map<String, Map<Integer, PubMsg>> pubMsgStore;
 
-    public DefaultPublishMessageServiceImpl(RedisTemplate<String, byte[]> redisTemplate, Serializer serializer,
+    public DefaultPublishMessageServiceImpl(RedisTemplate<String, byte[]> redisTemplate,
+                                            @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection") Serializer serializer,
                                             MqttxConfig mqttxConfig) {
         this.redisTemplate = redisTemplate;
         this.serializer = serializer;

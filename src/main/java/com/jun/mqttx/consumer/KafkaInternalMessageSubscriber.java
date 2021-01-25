@@ -25,7 +25,6 @@ import org.apache.kafka.common.TopicPartition;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.listener.ConsumerSeekAware;
 
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -41,7 +40,7 @@ public class KafkaInternalMessageSubscriber extends AbstractInnerChannel impleme
     private volatile boolean onceFlag = false;
 
     public KafkaInternalMessageSubscriber(List<Watcher> watchers, Serializer serializer, MqttxConfig mqttxConfig) {
-        super(watchers, serializer ,mqttxConfig);
+        super(watchers, serializer, mqttxConfig);
     }
 
     /**

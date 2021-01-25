@@ -140,7 +140,7 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
         mqttTopicSubscriptions.forEach(mqttTopicSubscription -> {
             String topicFilter = mqttTopicSubscription.topicName();
             retainMessageService.searchListByTopicFilter(topicFilter)
-                    .forEach(pubMsg -> publishHandler.publish(pubMsg, ctx, false));
+                    .forEach(pubMsg -> publishHandler.publish(pubMsg, null, false));
         });
     }
 

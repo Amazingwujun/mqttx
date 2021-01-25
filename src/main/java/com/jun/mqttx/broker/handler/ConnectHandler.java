@@ -194,7 +194,7 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
             if (session == null) {
                 session = Session.of(clientId, false);
                 sessionService.save(session);
-            }else {
+            } else {
                 sessionPresent = true;
             }
         }
