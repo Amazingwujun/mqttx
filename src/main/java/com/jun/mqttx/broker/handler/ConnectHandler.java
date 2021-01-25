@@ -186,17 +186,16 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
 
         // 新建会话并保存会话，同时判断sessionPresent
         Session session;
-        boolean sessionPresent;
+        boolean sessionPresent = false;
         if (clearSession) {
-            sessionPresent = false;
             session = Session.of(clientId, true);
         } else {
-            sessionPresent = sessionService.hasKey(clientId);
-            if (sessionPresent) {
-                session = sessionService.find(clientId);
-            } else {
+            session = sessionService.find(clientId);
+            if (session == null) {
                 session = Session.of(clientId, false);
                 sessionService.save(session);
+            }else {
+                sessionPresent = true;
             }
         }
         CLIENT_MAP.put(clientId, ctx.channel().id());
