@@ -12,16 +12,18 @@ import java.io.ByteArrayOutputStream;
  */
 public class KryoSerializer implements Serializer {
 
-    private final FastThreadLocal<Kryo> holder = new FastThreadLocal<>();
+    private final FastThreadLocal<Kryo> holder = new FastThreadLocal<Kryo>(){
+        @Override
+        protected Kryo initialValue() {
+            Kryo kryo = new Kryo();
+            kryo.setRegistrationRequired(false);
+            return kryo;
+        }
+    };
 
     @Override
     public byte[] serialize(Object target) {
         Kryo kryo = holder.get();
-        if (kryo == null) {
-            kryo = new Kryo();
-            kryo.setRegistrationRequired(false);
-            holder.set(kryo);
-        }
 
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         Output output = new Output(bos);
@@ -33,11 +35,6 @@ public class KryoSerializer implements Serializer {
     @Override
     public <T> T deserialize(byte[] bytes, Class<T> clazz) {
         Kryo kryo = holder.get();
-        if (kryo == null) {
-            kryo = new Kryo();
-            kryo.setRegistrationRequired(false);
-            holder.set(kryo);
-        }
 
         //noinspection unchecked
         return (T) kryo.readClassAndObject(new Input(bytes));

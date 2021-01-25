@@ -120,6 +120,7 @@
 │              │  └─impl        # 默认实现
 │              └─utils          # 工具类
 └─resources                     # 资源文件（application.yml 在此文件夹）
+    ├─META-INF					# spring-configuration 辅助配置说明
     └─tls                       # ca 存放地址
 ```
 
@@ -354,6 +355,19 @@ mqttx:
 2. 最大持续并发数：公式 `QPS = replenish-rate ÷ token-consumed-per-acquire`
     1. 示例一：`4 ÷ 3 ≈ 1.3`
     2. 示例二：`5 ÷ 2 = 2.5`
+
+#### 4.11 消息持久化支持
+
+`mqttx` 的持久化依赖 `redis` , `mqttx` 会持久化 `cleanSession = true & qos > 0` 的消息, 消息被 `Serializer` 序列化为字节数组后存储在 `redis`。
+
+目前 `mqttx` 提供了两种实现：
+
+1. `JsonSerializer`
+2. `KryoSerializer`
+
+默认使用 `JsonSerializer`, 这是为了和之前的项目兼容；`v1.0.6.release` 版本后 `KryoSerializer` 将成为默认序列化实现。
+
+可通过配置 `mqttx.serialize-strategy` 修改序列化实现。
 
 ## 5 开发者说
 

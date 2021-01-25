@@ -82,10 +82,10 @@ public class ClusterConfig {
         return new DefaultInternalMessagePublishServiceImpl(redisTemplate, serializer);
     }
 
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Bean
     @ConditionalOnProperty(name = "mqttx.cluster.type", havingValue = KAFKA)
-    public IInternalMessagePublishService kafkaInternalMessagePublishServiceImpl(KafkaTemplate<String, byte[]> kafkaTemplate,
-                                                                                 @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection") Serializer serializer) {
+    public IInternalMessagePublishService kafkaInternalMessagePublishServiceImpl(KafkaTemplate<String, byte[]> kafkaTemplate, Serializer serializer) {
         return new KafkaInternalMessagePublishServiceImpl(kafkaTemplate, serializer);
     }
 
