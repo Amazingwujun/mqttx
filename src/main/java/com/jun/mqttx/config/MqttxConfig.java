@@ -75,6 +75,11 @@ public class MqttxConfig {
      */
     private Boolean enableTestMode = false;
 
+    /**
+     * 有时候 client 会发表消息给自己（client 订阅了自己发布的主题），默认情形 mqttx 将过滤该消息.
+     */
+    private Boolean ignoreClientSelfPub = true;
+
     /*--------------------------------------------
     |                 模块配置项                   |
     ============================================*/

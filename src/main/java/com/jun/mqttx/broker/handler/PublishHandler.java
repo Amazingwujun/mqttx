@@ -47,6 +47,7 @@ import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import static com.jun.mqttx.constants.ShareStrategy.*;
 
@@ -66,7 +67,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
     private final IPublishMessageService publishMessageService;
     private final IPubRelMessageService pubRelMessageService;
     private final int brokerId;
-    private final boolean enableTopicSubPubSecure, enableShareTopic, enableRateLimiter;
+    private final boolean enableTopicSubPubSecure, enableShareTopic, enableRateLimiter, ignoreClientSelfPub;
     /** 共享主题轮询策略 */
     private final ShareStrategy shareStrategy;
     /** 消息桥接开关 */
@@ -106,6 +107,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         this.pubRelMessageService = pubRelMessageService;
         this.brokerId = config.getBrokerId();
         this.enableTopicSubPubSecure = config.getEnableTopicSubPubSecure();
+        this.ignoreClientSelfPub = config.getIgnoreClientSelfPub();
         this.enableShareTopic = shareTopic.getEnable();
         if (!CollectionUtils.isEmpty(rateLimiter.getTopicRateLimits()) && rateLimiter.getEnable()) {
             enableRateLimiter = true;
@@ -248,6 +250,14 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         List<ClientSub> clientList = subscriptionService.searchSubscribeClientList(topic);
         if (CollectionUtils.isEmpty(clientList)) {
             return;
+        }
+
+        // 忽略 client 自身的订阅
+        if (ignoreClientSelfPub) {
+            clientList = clientList
+                    .stream()
+                    .filter(clientSub -> !Objects.equals(clientSub.getClientId(), clientId(ctx)))
+                    .collect(Collectors.toList());
         }
 
         // 共享订阅
