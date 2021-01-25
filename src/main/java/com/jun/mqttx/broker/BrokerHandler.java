@@ -151,7 +151,7 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
                         if (msg.isRetain()) {
                             publishHandler.handleRetainMsg(msg);
                         }
-                        publishHandler.publish(msg, clientId, false);
+                        publishHandler.publish(msg, ctx, false);
                     });
 
             ConnectHandler.CLIENT_MAP.remove(clientId);

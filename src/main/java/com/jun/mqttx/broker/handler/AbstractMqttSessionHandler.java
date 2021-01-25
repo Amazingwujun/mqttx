@@ -69,6 +69,9 @@ public abstract class AbstractMqttSessionHandler implements MqttMessageHandler {
      * @return clientId
      */
     String clientId(ChannelHandlerContext ctx) {
+        if (ctx == null) {
+            return null;
+        }
         Session session = getSession(ctx);
         return session.getClientId();
     }

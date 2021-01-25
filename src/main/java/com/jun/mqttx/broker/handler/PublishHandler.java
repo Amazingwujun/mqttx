@@ -193,10 +193,10 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         // 响应
         switch (mqttQoS) {
             case 0: // at most once
-                publish(pubMsg, clientId(ctx), false);
+                publish(pubMsg, ctx, false);
                 break;
             case 1: // at least once
-                publish(pubMsg, clientId(ctx), false);
+                publish(pubMsg, ctx, false);
                 MqttMessage pubAck = MqttMessageFactory.newMessage(
                         new MqttFixedHeader(MqttMessageType.PUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
                         MqttMessageIdVariableHeader.from(packetId),
@@ -209,12 +209,12 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                 if (isCleanSession(ctx)) {
                     Session session = getSession(ctx);
                     if (!session.isDupMsg(packetId)) {
-                        publish(pubMsg, clientId(ctx), false);
+                        publish(pubMsg, ctx, false);
                         session.savePubRelInMsg(packetId);
                     }
                 } else {
                     if (!pubRelMessageService.isInMsgDup(clientId(ctx), packetId)) {
-                        publish(pubMsg, clientId(ctx), false);
+                        publish(pubMsg, ctx, false);
                         pubRelMessageService.saveIn(clientId(ctx), packetId);
                     }
                 }
@@ -235,16 +235,31 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
     }
 
     /**
-     * 消息发布
+     * 消息发布，目前看来 {@link PubMsg} 的来源有如下几种：
+     * <ol>
+     *     <li>{@link MqttMessageType#PUBLISH} 消息</li>
+     *     <li>遗嘱消息</li>
+     *     <li>retain 消息被新订阅触发 </li>
+     *     <li>集群消息 {@link #action(byte[])}</li>
+     * </ol>
      *
      * @param pubMsg           publish message
-     * @param from 消息发布者的 id
+     * @param ctx              {@link ChannelHandlerContext}, 该上下文应该是发送消息 client 的上下文
      * @param isClusterMessage 标志消息源是集群还是客户端
      */
-    public void publish(final PubMsg pubMsg, String from, boolean isClusterMessage) {
+    public void publish(final PubMsg pubMsg, ChannelHandlerContext ctx, boolean isClusterMessage) {
+        // 指定了客户端的消息
         if (StringUtils.hasText(pubMsg.getAppointedClientId())) {
-            // 指定了客户端的消息, 应用于共享订阅进群消息分发
-            publish0(ClientSub.of(pubMsg.getAppointedClientId(), pubMsg.getQoS(), pubMsg.getTopic(), false), pubMsg, isClusterMessage);
+            final String clientId = pubMsg.getAppointedClientId();
+            if (isClusterMessage) {
+                // 集群内共享主题分发消息; 因为消息由集群中其它 broker 分发, 所以 cleanSession  的判断无法直接调用
+                // isCleanSession(ChannelHandlerContext ctx).
+                publish0(ClientSub.of(clientId, pubMsg.getQoS(), pubMsg.getTopic(), isCleanSession(clientId)), pubMsg, true);
+            } else {
+                // 新订阅触发 retain 消息, 见 SubscribeHandler 中关于 retain 消息的处理逻辑.
+                // 此时 ctx 为发送订阅消息 Client 的上下文
+                publish0(ClientSub.of(clientId, pubMsg.getQoS(), pubMsg.getTopic(), isCleanSession(ctx)), pubMsg, false);
+            }
             return;
         }
 
@@ -259,7 +274,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         if (ignoreClientSelfPub) {
             clientList = clientList
                     .stream()
-                    .filter(clientSub -> !Objects.equals(clientSub.getClientId(), from))
+                    .filter(clientSub -> !Objects.equals(clientSub.getClientId(), clientId(ctx)))
                     .collect(Collectors.toList());
         }
 
@@ -289,11 +304,12 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
      *
      * @param clientSub        {@link ClientSub}
      * @param pubMsg           待发布消息
-     * @param isClusterMessage 内部消息flag
+     * @param isClusterMessage 内部消息flag，设计上由其它集群分发过来的消息
      */
     private void publish0(ClientSub clientSub, PubMsg pubMsg, boolean isClusterMessage) {
         // clientId, channel, topic
         final String clientId = clientSub.getClientId();
+        final boolean isCleanSession = clientSub.isCleanSession();
         Channel channel = Optional.of(clientId)
                 .map(ConnectHandler.CLIENT_MAP::get)
                 .map(BrokerHandler.CHANNELS::find)
@@ -314,14 +330,14 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         // 4. channel != null && !cleanSession => 将消息持久化到 redis, 并发送 publish message 给 client（messageId redis increment 指令）
 
         // 1. channel == null && cleanSession
-        if (channel == null && isCleanSession(clientId)) {
+        if (channel == null && isCleanSession) {
             return;
         }
 
         // 2. channel == null && !cleanSession
         if (channel == null) {
-            int messageId = sessionService.nextMessageId(clientId);
             if ((qos == MqttQoS.EXACTLY_ONCE || qos == MqttQoS.AT_LEAST_ONCE) && !isClusterMessage) {
+                int messageId = sessionService.nextMessageId(clientId);
                 pubMsg.setQoS(qos.value());
                 pubMsg.setMessageId(messageId);
                 publishMessageService.save(clientId, pubMsg);
@@ -334,10 +350,13 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         int messageId;
 
         // 3. channel != null && cleanSession
-        boolean cleanSession = isCleanSession(channel);
-        if (cleanSession) {
+        if (isCleanSession) {
             messageId = nextMessageId(channel);
-            getSession(channel).savePubMsg(messageId, pubMsg);
+            // cleanSession 状态下不判断消息是否为集群
+            // 假设消息由集群内其它 broker 分发，而 cleanSession 状态下 broker 消息走的内存，为了实现 qos1,2 我们必须将消息保存到内存
+            if ((qos == MqttQoS.EXACTLY_ONCE || qos == MqttQoS.AT_LEAST_ONCE)) {
+                getSession(channel).savePubMsg(messageId, pubMsg);
+            }
         } else {
             // 4. channel != null && !cleanSession
             messageId = sessionService.nextMessageId(clientId);

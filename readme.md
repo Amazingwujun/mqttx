@@ -263,8 +263,7 @@
 
 | topic                               | repeat  | comment                                                      |
 | ----------------------------------- | ------- | ------------------------------------------------------------ |
-| `$SYS/broker/status`                | `false` | 订阅此主题的客户端会定期（`mqttx.sys-topic.interval`）收到 broker 的状态，该状态涵盖下面所有主题的状态值. <br/>**
-注意：客户端连接断开后，订阅取消** |
+| `$SYS/broker/status`                | `false` | 订阅此主题的客户端会定期（`mqttx.sys-topic.interval`）收到 broker 的状态，该状态涵盖下面所有主题的状态值. <br/> **注意：客户端连接断开后，订阅取消** |
 | `$SYS/broker/activeConnectCount`    | `true`  | 立即返回当前的活动连接数量                                   |
 | `$SYS/broker/time`                  | `true`  | 立即返回当前时间戳                                           |
 | `$SYS/broker/version`               | `true`  | 立即返回 `broker` 版本                                       |
@@ -287,9 +286,9 @@
 
 ```json
 {
-	"activeConnectCount": 2,
-	"timestamp": "2020-09-18 15:13:46",
-	"version": "1.0.5.ALPHA"
+  "activeConnectCount": 2,
+  "timestamp": "2020-09-18 15:13:46",
+  "version": "1.0.5.ALPHA"
 }
 ```
 
@@ -331,12 +330,12 @@ mqttx:
   rate-limiter:
     enable: true
     topic-rate-limits:
-    # 例一
+      # 例一
       - topic: "/test/a"
         capacity: 9
         replenish-rate: 4
         token-consumed-per-acquire: 3
-    # 例二
+      # 例二
       - topic: "/test/b"
         capacity: 5
         replenish-rate: 5
@@ -358,7 +357,7 @@ mqttx:
 
 ## 5 开发者说
 
-1. bug fix and optimization，这个会一直继续的，不过主要靠使用和学习 `mqttx` 的同学反馈问题给我（没反馈我就当没有呗~摊手.jpg）
+1. **bug fix and optimization**，这个会一直继续的，不过主要靠使用和学习 `mqttx` 的同学反馈问题给我（没反馈我就当没有呗~摊手.jpg）
 
    > **项目将长期维护**
 
@@ -414,6 +413,7 @@ mqttx:
 | `mqttx.enable-inner-cache` | `true`                          | 发布消息每次都需要查询 redis 来获取订阅的客户端列表。开启此功能后，将在内存中建立一个主题-客户端关系映射, 应用直接访问内存中的数据即可 |
 | `mqttx.enable-test-mode` | `false` | 测试模式开关，开启后系统进入测试模式; <br/>**注意：测试模式会禁用集群功能** |
 | `mqttx.ignore-client-self-pub` | `true` | 忽略 client 发送给自己的消息（当 client 发送消息给自己订阅的主题） |
+| `mqttx.serialize-strategy` | `json` | `broker` 采用的序列化策略，**集群策略*必须*一致**。 |
 | `mqttx.redis.cluster-session-hash-key` | `mqttx.session.key`             | redis map key；用于集群的会话存储                          |
 | `mqttx.redis.topic-prefix`              | `mqttx:topic:`                  | 主题前缀； topic <==> client 映射关系保存               |
 | `mqttx.redis.retain-message-prefix`    | `mqttx:retain:`                 | 保留消息前缀, 保存 retain 消息                            |
@@ -451,8 +451,14 @@ mqttx:
 
 #### 6.2.1 v1.0
 
-- **v1.0.7.RELEASE(开发中)**
+- **v1.0.8.RELEASE(待开发)**
     - [x] [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html) 支持
+    - [x] bug 修复及优化
+- **v1.0.7.RELEASE(开发中)**
+    - [x] 增加序列化框架 ***Kryo*** 的支持
+    - [x] 消息集中持久化到 `redis hmap` 数据结构中，`PubMsg` 仅保存 `hmap` 中的 `payloadId`, 该优化目的在于防止消息膨胀导致的 redis 内存耗用过大。（之前版本消息都是持久化到客户端各自的 `PubMsg`）
+    - [x] 修复新增订阅触发 `retain` 消息后，消息分发给全部订阅者的 bug
+    - [x] 修复遗嘱消息 `isWillRetain:true` 持久化的bug
     - [x] bug 修复及优化
 - **v1.0.6.RELEASE**
     - [x] `netty 4.1.52.Final` 这个版本的 MqttEncoder.java 处理 UnsubAck 响应消息会导致 NPE，直接影响功能，不得不提前结束此版本的开发
