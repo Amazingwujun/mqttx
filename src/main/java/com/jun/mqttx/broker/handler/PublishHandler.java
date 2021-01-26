@@ -351,19 +351,27 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
 
         // 3. channel != null && cleanSession
         if (isCleanSession) {
-            messageId = nextMessageId(channel);
             // cleanSession 状态下不判断消息是否为集群
             // 假设消息由集群内其它 broker 分发，而 cleanSession 状态下 broker 消息走的内存，为了实现 qos1,2 我们必须将消息保存到内存
             if ((qos == MqttQoS.EXACTLY_ONCE || qos == MqttQoS.AT_LEAST_ONCE)) {
+                messageId = nextMessageId(channel);
                 getSession(channel).savePubMsg(messageId, pubMsg);
+            } else {
+                // qos0
+                messageId = 0;
             }
         } else {
             // 4. channel != null && !cleanSession
-            messageId = sessionService.nextMessageId(clientId);
-            if ((qos == MqttQoS.EXACTLY_ONCE || qos == MqttQoS.AT_LEAST_ONCE) && !isClusterMessage) {
-                pubMsg.setQoS(qos.value());
-                pubMsg.setMessageId(messageId);
-                publishMessageService.save(clientId, pubMsg);
+            if (qos == MqttQoS.EXACTLY_ONCE || qos == MqttQoS.AT_LEAST_ONCE) {
+                messageId = sessionService.nextMessageId(clientId);
+                if (!isClusterMessage) {
+                    pubMsg.setQoS(qos.value());
+                    pubMsg.setMessageId(messageId);
+                    publishMessageService.save(clientId, pubMsg);
+                }
+            } else {
+                // qos0
+                messageId = 0;
             }
         }
 
@@ -420,6 +428,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
             im = ((JsonSerializer) serializer).deserialize(msg, new TypeReference<InternalMessage<PubMsg>>() {
             });
         } else {
+            //noinspection unchecked
             im = serializer.deserialize(msg, InternalMessage.class);
         }
         PubMsg data = im.getData();
