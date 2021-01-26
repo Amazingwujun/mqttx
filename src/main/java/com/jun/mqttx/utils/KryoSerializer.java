@@ -12,7 +12,7 @@ import java.io.ByteArrayOutputStream;
  */
 public class KryoSerializer implements Serializer {
 
-    private final FastThreadLocal<Kryo> holder = new FastThreadLocal<Kryo>(){
+    private final FastThreadLocal<Kryo> holder = new FastThreadLocal<Kryo>() {
         @Override
         protected Kryo initialValue() {
             Kryo kryo = new Kryo();

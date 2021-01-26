@@ -18,8 +18,19 @@ package com.jun.mqttx.entity;
 
 import lombok.Data;
 
+import java.util.Objects;
+
 /**
- * topic 订阅的用户信息
+ * topic 订阅的用户信息.
+ * <pre>
+ * If a Server receives a SUBSCRIBE Packet containing a Topic Filter that is identical
+ * to an existing Subscription’s Topic Filter then it MUST completely replace that existing
+ * Subscription with a new Subscription. The Topic Filter in the new Subscription will be
+ * identical to that in the previous Subscription, although its maximum QoS value could be different.
+ * Any existing retained messages matching the Topic Filter MUST be re-sent, but the flow of
+ * publications MUST NOT be interrupted [MQTT-3.8.4-3].
+ * </pre>
+ * 根据上述协议，client 订阅对象判定相等只需 topic 与 client 两个参数即可。
  *
  * @author Jun
  * @since 1.0.4
@@ -54,5 +65,18 @@ public class ClientSub implements Comparable<ClientSub> {
         } else {
             throw new IllegalArgumentException("非法的比较对象:" + o);
         }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ClientSub clientSub = (ClientSub) o;
+        return clientId.equals(clientSub.clientId) && topic.equals(clientSub.topic);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(clientId, topic);
     }
 }

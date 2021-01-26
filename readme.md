@@ -20,6 +20,8 @@
     - [4.6 共享主题支持](#46-共享主题支持)
     - [4.7 websocket 支持](#47-websocket-支持)
     - [4.8 系统主题](#48-系统主题)
+      - 4.8.1 [状态主题](#481-状态主题)
+      - 4.8.2 [功能主题](#482-功能主题)
     - [4.9 消息桥接支持](#49-消息桥接支持)
     - [4.10 主题限流支持](#410-主题限流支持)
     - [4.11 消息持久化支持](#411-消息持久化支持)
@@ -36,8 +38,7 @@
 
 ## 1 介绍
 
-`Mqttx` 基于 [MQTT v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) 协议开发，旨在提供 ***易于使用*** 且 ***
-性能优越*** 的 **mqtt broker**。
+`Mqttx` 基于 [MQTT v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) 协议开发，旨在提供 ***易于使用*** 且 ***性能优越*** 的 **mqtt broker**。
 
 ### 1.1 快速开始
 
@@ -73,7 +74,7 @@
 
 其它说明：
 
-1. 项目使用了 lombok，使用 ide 请安装对应的插件
+1. 项目使用了 **lombok**，使用 **ide** 请安装对应的插件
 
 > 开发工具建议使用 [Intellij IDEA](https://www.jetbrains.com/idea/) :blush:
 >
@@ -203,7 +204,7 @@
 
 #### 4.5 topic 安全支持
 
-为了对 client 订阅 topic 进行限制，加入 **topic 订阅&发布鉴权**机制:
+为了对 client 订阅 topic 进行限制，加入**topic 订阅&发布鉴权**机制:
 
 1. `mqttx.enable-topic-sub-pub-secure`: 功能开关，默认 `false`
 2. 使用时需要实现接口 `AuhenticationService` ，该接口返回对象中含有 `authorizedSub,authorizedPub` 存储 client 被授权订阅及发布的 `topic` 列表。
@@ -261,28 +262,34 @@
 
 #### 4.8 系统主题
 
-客户端可通过订阅系统主题获取 broker 状态，目前系统支持如下主题：
+**mqttx broker** 内置部分系统主题，用户可酌情使用。
 
-| topic                               | repeat  | comment                                                      |
-| ----------------------------------- | ------- | ------------------------------------------------------------ |
-| `$SYS/broker/status`                | `false` | 订阅此主题的客户端会定期（`mqttx.sys-topic.interval`）收到 broker 的状态，该状态涵盖下面所有主题的状态值. <br/> **注意：客户端连接断开后，订阅取消** |
-| `$SYS/broker/activeConnectCount`    | `true`  | 立即返回当前的活动连接数量                                   |
-| `$SYS/broker/time`                  | `true`  | 立即返回当前时间戳                                           |
-| `$SYS/broker/version`               | `true`  | 立即返回 `broker` 版本                                       |
-| `$SYS/broker/receivedMsg`           | `true`  | 立即返回 `broker` 启动到现在收到的 `MqttMessage`, 不含 `ping` |
-| `$SYS/broker/sendMsg`               | `true`  | 立即返回 `broker` 启动到现在发送的 `MqttMessage`, 不含 `pingAck` |
-| `$SYS/broker/uptime`                | `true`  | 立即返回 `broker` 运行时长，单位***秒***                     |
-| `$SYS/broker/maxActiveConnectCount` | `true`  | 立即返回 `broker` 运行至今的最大 `tcp` 连接数                |
+系统主题不支持如下特性：
 
-> `repeat`:
->
-> - `repeat = false` : 只需订阅一次，broker 会定时发布数据到此主题.
-> - `repeat = true` : 订阅一次，broker 发布一次，可多次订阅.
->
-> 注意：
->
-> 1. *topic 安全机制* 同样会影响客户端订阅系统主题, 未授权客户端将无法订阅系统主题
-> 2. 系统主题订阅不会持久化
+- 集群：系统主题消息无法在集群内传播
+- 持久化：系统主题消息不支持持久化，包括订阅关系
+
+> 注意：***topic 安全机制*** 同样会影响客户端订阅系统主题, 未授权客户端将无法订阅系统主题
+
+系统主题可分两种：
+
+1. 状态主题：反应 **broker** 自身状态的主题
+2. 功能主题：对外提供功能性支持的主题
+
+##### 4.8.1 状态主题
+
+客户端可通过订阅系统主题获取 **broker** 状态，目前系统支持如下状态主题：
+
+| 主题                                | 描述                                                         |
+| ----------------------------------- | ------------------------------------------------------------ |
+| `$SYS/broker/status`                | 触发方式：订阅此主题的客户端会定期（`mqttx.sys-topic.interval`）收到 broker 的状态，该状态涵盖下面所有主题的状态值. <br/> **注意：客户端连接断开后，订阅取消** |
+| `$SYS/broker/activeConnectCount`    | 立即返回当前的活动连接数量<br/>触发：订阅一次触发一次        |
+| `$SYS/broker/time`                  | 立即返回当前时间戳<br/>触发：订阅一次触发一次                |
+| `$SYS/broker/version`               | 立即返回 `broker` 版本<br/>触发：订阅一次触发一次            |
+| `$SYS/broker/receivedMsg`           | 立即返回 `broker` 启动到现在收到的 `MqttMessage`, 不含 `ping`<br/>触发：订阅一次触发一次 |
+| `$SYS/broker/sendMsg`               | 立即返回 `broker` 启动到现在发送的 `MqttMessage`, 不含 `pingAck`<br/>触发：订阅一次触发一次 |
+| `$SYS/broker/uptime`                | 立即返回 `broker` 运行时长，单位***秒***<br/>触发：订阅一次触发一次 |
+| `$SYS/broker/maxActiveConnectCount` | 立即返回 `broker` 运行至今的最大 `tcp` 连接数<br/>触发：订阅一次触发一次 |
 
 响应对象格式为 `json` 字符串：
 
@@ -299,6 +306,21 @@
 | `activeConnectCount` | 当前活跃连接数量                |
 | `timestamp`          | 时间戳；(`yyyy-MM-dd HH:mm:ss`) |
 | `version`            | `mqttx` 版本                    |
+
+##### 4.8.2 功能主题
+
+此功能需求源自 issue: [监听MQTT客户端状态（在线、离线） · Issue #8 · Amazingwujun/mqttx (github.com)](https://github.com/Amazingwujun/mqttx/issues/8)
+
+| 主题                                                   | 描述                                                         |
+| ------------------------------------------------------ | ------------------------------------------------------------ |
+| `$SYS/broker/{borkerId}/clients/{clientId}/connect`    | 客户端上线通知主题 <br/>触发：当某个客户端上线后，**broker** 会发送消息给该主题 |
+| `$SYS/broker/{borkerId}/clients/{clientId}/disconnect` | 客户端下线通知主题<br/>触发：当某个客户端掉线后，**broker** 会发送消息给该主题 |
+
+这两个系统主题支持通配符，举例：
+
+1. `$SYS/broker/+/clients/#`: 匹配客户端上下线通知主题
+2. `$SYS/broker/+/clients/+/connect`: 匹配客户端上线通知主题
+3. `$SYS/broker/+/clients/+/disconnect`: 匹配客户端下线通知主题
 
 #### 4.9 消息桥接支持
 
@@ -467,11 +489,12 @@ mqttx:
 #### 6.2.1 v1.0
 
 - **v1.0.8.RELEASE(待开发)**
-    - [x] [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html) 支持
-    - [x] bug 修复及优化
+    - [ ] [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html) 支持
+    - [ ] bug 修复及优化
 - **v1.0.7.RELEASE(开发中)**
     - [x] 增加序列化框架 ***Kryo*** 的支持
-    - [x] 消息集中持久化到 `redis hmap` 数据结构中，`PubMsg` 仅保存 `hmap` 中的 `payloadId`, 该优化目的在于防止消息膨胀导致的 redis 内存耗用过大。（之前版本消息都是持久化到客户端各自的 `PubMsg`）
+    - [ ] 消息集中持久化到 `redis hmap` 数据结构中，`PubMsg` 仅保存 `hmap` 中的 `payloadId`, 该优化目的在于防止消息膨胀导致的 redis 内存耗用过大。（之前版本消息都是持久化到客户端各自的 `PubMsg`）
+    - [x]  系统主题新增客户端上下线通知主题
     - [x] 修复新增订阅触发 `retain` 消息后，消息分发给全部订阅者的 bug
     - [x] 修复遗嘱消息 `isWillRetain:true` 持久化的bug
     - [x] bug 修复及优化
@@ -505,7 +528,7 @@ mqttx:
 
 - ***v1.1.0.RELEASE（开发中）***
 
-    - [x] `redis` 同步转异步实现，提升性能
+    - [ ] `redis` 同步转异步实现，提升性能
 
 ### 6.3 Benchmark
 

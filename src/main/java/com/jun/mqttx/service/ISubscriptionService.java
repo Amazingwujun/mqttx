@@ -21,7 +21,11 @@ import com.jun.mqttx.entity.ClientSub;
 import java.util.List;
 
 /**
- * 订阅相关服务
+ * 订阅相关服务, 为两种主题提供服务:
+ * <ol>
+ *     <li>普通主题</li>
+ *     <li>系统主题</li>
+ * </ol>
  *
  * @author Jun
  * @since 1.0.4
@@ -73,4 +77,27 @@ public interface ISubscriptionService {
      * @param authorizedSub 客户端被允许订阅的 topic 集合
      */
     void clearUnAuthorizedClientSub(String clientId, List<String> authorizedSub);
+
+
+    /**
+     * 获取订阅系统主题 topic 的客户端集合
+     *
+     * @param topic 系统主题
+     */
+    List<ClientSub> searchSysTopicClients(String topic);
+
+    /**
+     * 保存系统主题客户订阅
+     *
+     * @param clientSub 客户订阅
+     */
+    void subscribeSys(ClientSub clientSub);
+
+    /**
+     * 解除客户系统主题订阅
+     *
+     * @param clientId 客户 id
+     * @param topics   主题列表
+     */
+    void unsubscribeSys(String clientId, List<String> topics);
 }

@@ -6,10 +6,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.AttributeKey;
 import org.springframework.util.StringUtils;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 /**
  * mqtt topic工具类
@@ -42,22 +39,19 @@ public class TopicUtils {
     public static final String BROKER_SEND_MSG = SYS_TOPIC_BROKER + "sendMsg";
     /** 代理上线时长 */
     public static final String BROKER_UPTIME = SYS_TOPIC_BROKER + "uptime";
-
-    private static final Set<String> sysTopicSets;
-
+    /** 客户端上线通知主题, {@link #BROKER_CLIENT_DISCONNECT} */
+    public static final String BROKER_CLIENT_CONNECT = SYS_TOPIC_BROKER + "%s/clients/%s/connected";
+    /**
+     *  客户端下线通知主题
+     *  <pre>
+     *      使用方式
+     *      String brokerId = 1;
+     *      String clientId = abcd;
+     *      String result =  String.format(BROKER_CLIENT_DISCONNECT, brokerId, clientId);
+     *  </pre>
+     */
+    public static final String BROKER_CLIENT_DISCONNECT = SYS_TOPIC_BROKER + "%s/clients/%s/disconnected";
     //@formatter:on
-
-    static {
-        sysTopicSets = new HashSet<>(6);
-        sysTopicSets.add(BROKER_STATUS);
-        sysTopicSets.add(BROKER_CLIENTS_ACTIVE_CONNECTED_COUNT);
-        sysTopicSets.add(BROKER_TIME);
-        sysTopicSets.add(BROKER_VERSION);
-        sysTopicSets.add(BROKER_MAX_CLIENTS_ACTIVE);
-        sysTopicSets.add(BROKER_RECEIVED_MSG);
-        sysTopicSets.add(BROKER_SEND_MSG);
-        sysTopicSets.add(BROKER_UPTIME);
-    }
 
     /**
      * client 是否被允许订阅 topic
@@ -113,7 +107,7 @@ public class TopicUtils {
      * @return true, if topic is sys
      */
     public static boolean isSys(String topic) {
-        return sysTopicSets.contains(topic);
+        return topic != null && topic.startsWith(SYS_TOPIC);
     }
 
     /**

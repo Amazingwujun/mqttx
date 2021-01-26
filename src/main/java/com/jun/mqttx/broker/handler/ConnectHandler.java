@@ -22,6 +22,8 @@ import com.jun.mqttx.constants.InternalMessageEnum;
 import com.jun.mqttx.entity.*;
 import com.jun.mqttx.exception.AuthenticationException;
 import com.jun.mqttx.service.*;
+import com.jun.mqttx.utils.TopicUtils;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelId;
@@ -31,8 +33,11 @@ import io.netty.handler.timeout.IdleStateHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -53,7 +58,8 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
 
     public final static ConcurrentHashMap<String, ChannelId> CLIENT_MAP = new ConcurrentHashMap<>(100000);
     private static final String NONE_ID_PREFIX = "NONE_ID_";
-    final private boolean enableTopicSubPubSecure;
+    final private boolean enableTopicSubPubSecure, enableSysTopic;
+    private final MqttQoS sysTopicQos;
     private final int brokerId;
     /** 认证服务 */
     private final IAuthenticationService authenticationService;
@@ -82,13 +88,16 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         Assert.notNull(pubRelMessageService, "pubRelMessageService can't be null");
         Assert.notNull(config, "mqttxConfig can't be null");
 
+        MqttxConfig.SysTopic sysTopic = config.getSysTopic();
+        brokerId = config.getBrokerId();
         this.authenticationService = authenticationService;
         this.sessionService = sessionService;
         this.subscriptionService = subscriptionService;
         this.publishMessageService = publishMessageService;
         this.pubRelMessageService = pubRelMessageService;
-        this.brokerId = config.getBrokerId();
         this.enableTopicSubPubSecure = config.getEnableTopicSubPubSecure();
+        this.enableSysTopic = sysTopic.getEnable();
+        this.sysTopicQos = MqttQoS.valueOf(sysTopic.getQos());
 
         if (isClusterMode()) {
             this.internalMessagePublishService = internalMessagePublishService;
@@ -179,15 +188,15 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         // 这部分是 client 遵守的规则
         // [MQTT-3.1.2-6] State data associated with this Session MUST NOT be reused in any subsequent Session - 针对
         // clearSession == 1 的情况，需要清理之前保存的会话状态
-        boolean clearSession = variableHeader.isCleanSession();
-        if (clearSession) {
+        boolean isCleanSession = variableHeader.isCleanSession();
+        if (isCleanSession) {
             actionOnCleanSession(clientId);
         }
 
         // 新建会话并保存会话，同时判断sessionPresent
         Session session;
         boolean sessionPresent = false;
-        if (clearSession) {
+        if (isCleanSession) {
             session = Session.of(clientId, true);
         } else {
             session = sessionService.find(clientId);
@@ -224,6 +233,9 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
                 .build();
         ctx.writeAndFlush(acceptAck);
 
+        // 连接成功相关处理
+        onClientConnectSuccess(ctx);
+
         // 心跳超时设置
         // [MQTT-3.1.2-24] If the Keep Alive value is non-zero and the Server does not receive a Control Packet from
         // the Client within one and a half times the Keep Alive time period, it MUST disconnect the Network Connection
@@ -236,39 +248,86 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         }
 
         // 根据协议补发 qos1,与 qos2 的消息
-        if (!clearSession) {
-            List<PubMsg> pubMsgList = publishMessageService.search(clientId);
-            pubMsgList.forEach(pubMsg -> {
-                // fixedHeader dup flag 置为 true
-                pubMsg.setDup(true);
+        if (!isCleanSession) {
+            republish(ctx, clientId);
+        }
+    }
 
-                String topic = pubMsg.getTopic();
-                // 订阅权限判定
-                if (enableTopicSubPubSecure && !hasAuthToSubTopic(ctx, topic)) {
-                    return;
-                }
+    /**
+     * 客户端(cleanSession = false)上线，补发 qos1,2 消息
+     *
+     * @param ctx      {@link ChannelHandlerContext}
+     * @param clientId 客户端id
+     */
+    private void republish(ChannelHandlerContext ctx, String clientId) {
+        List<PubMsg> pubMsgList = publishMessageService.search(clientId);
+        pubMsgList.forEach(pubMsg -> {
+            // fixedHeader dup flag 置为 true
+            pubMsg.setDup(true);
 
-                MqttMessage mqttMessage = MqttMessageFactory.newMessage(
-                        new MqttFixedHeader(MqttMessageType.PUBLISH, true, MqttQoS.valueOf(pubMsg.getQoS()), false, 0),
-                        new MqttPublishVariableHeader(topic, pubMsg.getMessageId()),
-                        // 这是一个浅拷贝，任何对pubMsg中payload的修改都会反馈到wrappedBuffer
-                        Unpooled.wrappedBuffer(pubMsg.getPayload())
-                );
+            String topic = pubMsg.getTopic();
+            // 订阅权限判定
+            if (enableTopicSubPubSecure && !hasAuthToSubTopic(ctx, topic)) {
+                return;
+            }
 
-                ctx.writeAndFlush(mqttMessage);
-            });
+            MqttMessage mqttMessage = MqttMessageFactory.newMessage(
+                    new MqttFixedHeader(MqttMessageType.PUBLISH, true, MqttQoS.valueOf(pubMsg.getQoS()), false, 0),
+                    new MqttPublishVariableHeader(topic, pubMsg.getMessageId()),
+                    // 这是一个浅拷贝，任何对pubMsg中payload的修改都会反馈到wrappedBuffer
+                    Unpooled.wrappedBuffer(pubMsg.getPayload())
+            );
 
-            List<Integer> pubRelList = pubRelMessageService.searchOut(clientId);
-            pubRelList.forEach(messageId -> {
-                MqttMessage mqttMessage = MqttMessageFactory.newMessage(
-                        // pubRel 的 fixHeader 是固定死了的 [0,1,1,0,0,0,1,0]
-                        new MqttFixedHeader(MqttMessageType.PUBREL, false, MqttQoS.AT_LEAST_ONCE, false, 0),
-                        MqttMessageIdVariableHeader.from(messageId),
-                        null
-                );
+            ctx.writeAndFlush(mqttMessage);
+        });
 
-                ctx.writeAndFlush(mqttMessage);
-            });
+        List<Integer> pubRelList = pubRelMessageService.searchOut(clientId);
+        pubRelList.forEach(messageId -> {
+            MqttMessage mqttMessage = MqttMessageFactory.newMessage(
+                    // pubRel 的 fixHeader 是固定死了的 [0,1,1,0,0,0,1,0]
+                    new MqttFixedHeader(MqttMessageType.PUBREL, false, MqttQoS.AT_LEAST_ONCE, false, 0),
+                    MqttMessageIdVariableHeader.from(messageId),
+                    null
+            );
+
+            ctx.writeAndFlush(mqttMessage);
+        });
+    }
+
+    /**
+     * 客户端连接成功处理
+     *
+     * @param ctx {@link ChannelHandlerContext}
+     */
+    private void onClientConnectSuccess(ChannelHandlerContext ctx) {
+        if (enableSysTopic) {
+            final String topic = String.format(TopicUtils.BROKER_CLIENT_CONNECT, brokerId, clientId(ctx));
+
+            // 抓取订阅了该主题的客户
+            List<ClientSub> clientSubs = subscriptionService.searchSysTopicClients(topic);
+            if (CollectionUtils.isEmpty(clientSubs)) {
+                return;
+            }
+
+            // publish 对象组装
+            byte[] bytes = LocalDateTime.now().toString().getBytes(StandardCharsets.UTF_8);
+            ByteBuf connectTime = Unpooled.buffer(bytes.length).writeBytes(bytes);
+            MqttPublishMessage mpm = MqttMessageBuilders.publish()
+                    .qos(sysTopicQos)
+                    .retained(false)
+                    .topicName(topic)
+                    .messageId(nextMessageId(ctx))
+                    //  上线时间
+                    .payload(connectTime)
+                    .build();
+
+            // 消息发布
+            for (ClientSub clientSub : clientSubs) {
+                Optional
+                        .ofNullable(CLIENT_MAP.get(clientSub.getClientId()))
+                        .map(BrokerHandler.CHANNELS::find)
+                        .ifPresent(channel -> channel.writeAndFlush(mpm));
+            }
         }
     }
 

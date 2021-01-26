@@ -17,14 +17,12 @@
 package com.jun.mqttx.broker;
 
 import com.alibaba.fastjson.TypeReference;
-import com.jun.mqttx.broker.handler.AbstractMqttSessionHandler;
-import com.jun.mqttx.broker.handler.ConnectHandler;
-import com.jun.mqttx.broker.handler.MessageDelegatingHandler;
-import com.jun.mqttx.broker.handler.PublishHandler;
+import com.jun.mqttx.broker.handler.*;
 import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.constants.InternalMessageEnum;
 import com.jun.mqttx.consumer.Watcher;
 import com.jun.mqttx.entity.Authentication;
+import com.jun.mqttx.entity.ClientSub;
 import com.jun.mqttx.entity.InternalMessage;
 import com.jun.mqttx.entity.Session;
 import com.jun.mqttx.exception.AuthenticationException;
@@ -33,6 +31,9 @@ import com.jun.mqttx.service.ISessionService;
 import com.jun.mqttx.service.ISubscriptionService;
 import com.jun.mqttx.utils.JsonSerializer;
 import com.jun.mqttx.utils.Serializer;
+import com.jun.mqttx.utils.TopicUtils;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -52,6 +53,8 @@ import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -79,6 +82,8 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
     private final PublishHandler publishHandler;
     private final Serializer serializer;
     private final boolean enableSysTopic;
+    private final MqttQoS sysTopicQos;
+    private final int brokerId;
     //@formatter:on
 
     public BrokerHandler(MqttxConfig config, MessageDelegatingHandler messageDelegatingHandler,
@@ -89,12 +94,15 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
         Assert.notNull(subscriptionService, "subscriptionService can't be null");
         Assert.notNull(serializer, "serializer can't be null");
 
+        MqttxConfig.SysTopic sysTopic = config.getSysTopic();
         this.messageDelegatingHandler = messageDelegatingHandler;
         this.sessionService = sessionService;
         this.subscriptionService = subscriptionService;
         this.publishHandler = publishHandler;
         this.serializer = serializer;
-        this.enableSysTopic = config.getSysTopic().getEnable();
+        this.enableSysTopic = sysTopic.getEnable();
+        this.sysTopicQos = MqttQoS.valueOf(sysTopic.getQos());
+        this.brokerId = config.getBrokerId();
     }
 
     @Override
@@ -141,27 +149,68 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
 
         // 会话状态处理
         if (session != null) {
-            final String clientId = session.getClientId();
+            onClientDisconnected(ctx, session);
+        }
+    }
 
-            // 发布遗嘱消息
-            Optional.of(session)
-                    .map(Session::getWillMessage)
-                    .ifPresent(msg -> {
-                        // 解决遗嘱消息无法 retain 的 bug
-                        if (msg.isRetain()) {
-                            publishHandler.handleRetainMsg(msg);
-                        }
-                        publishHandler.publish(msg, ctx, false);
-                    });
+    /**
+     * 客户端下线处理:
+     * <ol>
+     *     <li>遗嘱消息</li>
+     *     <li>{@link Session} 处理</li>
+     *     <li>下线通知</li>
+     * </ol>
+     *
+     * @param ctx     {@link ChannelHandlerContext}
+     * @param session 会话
+     */
+    private void onClientDisconnected(ChannelHandlerContext ctx, Session session) {
+        final String clientId = session.getClientId();
 
-            ConnectHandler.CLIENT_MAP.remove(clientId);
-            if (Boolean.TRUE.equals(session.getCleanSession())) {
-                // 当 cleanSession = 1，清理会话状态。
-                // MQTTX 为了提升性能，将 session/pub/pubRel 等信息保存在内存中，这部分信息关联 {@link io.netty.channel.Channel} 无需 clean 由 GC 自动回收.
-                // 订阅信息则不同，此类信息通过常驻内存，需要明确调用清理的 API
-                subscriptionService.clearClientSubscriptions(clientId, true);
-            } else {
-                sessionService.save(session);
+        // 发布遗嘱消息
+        Optional.of(session)
+                .map(Session::getWillMessage)
+                .ifPresent(msg -> {
+                    // 解决遗嘱消息无法 retain 的 bug
+                    if (msg.isRetain()) {
+                        publishHandler.handleRetainMsg(msg);
+                    }
+                    publishHandler.publish(msg, ctx, false);
+                });
+
+        // session 处理
+        ConnectHandler.CLIENT_MAP.remove(clientId);
+        if (Boolean.TRUE.equals(session.getCleanSession())) {
+            // 当 cleanSession = 1，清理会话状态。
+            // MQTTX 为了提升性能，将 session/pub/pubRel 等信息保存在内存中，这部分信息关联 {@link io.netty.channel.Channel} 无需 clean 由 GC 自动回收.
+            // 订阅信息则不同，此类信息通过常驻内存，需要明确调用清理的 API
+            subscriptionService.clearClientSubscriptions(clientId, true);
+        } else {
+            sessionService.save(session);
+        }
+
+        // 下线通知
+        if (enableSysTopic) {
+            final String topic = String.format(TopicUtils.BROKER_CLIENT_DISCONNECT, brokerId, clientId);
+            List<ClientSub> clientSubs = subscriptionService.searchSysTopicClients(topic);
+            if (CollectionUtils.isEmpty(clientSubs)) {
+                return;
+            }
+
+            byte[] bytes = LocalDateTime.now().toString().getBytes(StandardCharsets.UTF_8);
+            ByteBuf disconnectTime = Unpooled.buffer(bytes.length).writeBytes(bytes);
+            MqttPublishMessage mpm = MqttMessageBuilders.publish()
+                    .qos(sysTopicQos)
+                    .retained(false)
+                    .topicName(topic)
+                    .messageId(MqttQoS.AT_MOST_ONCE == sysTopicQos ? 0 : session.increaseAndGetMessageId())
+                    .payload(disconnectTime)
+                    .build();
+
+            for (ClientSub clientSub : clientSubs) {
+                Optional.ofNullable(ConnectHandler.CLIENT_MAP.get(clientSub.getClientId()))
+                        .map(BrokerHandler.CHANNELS::find)
+                        .ifPresent(channel -> channel.writeAndFlush(mpm));
             }
         }
     }

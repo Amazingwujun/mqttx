@@ -64,6 +64,10 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
     /** cleanSession = 0 的主 topic -> clients 关系集合 */
     private final Map<String, ConcurrentHashMap.KeySetView<ClientSub, Boolean>> inDiskTopicClientsMap = new ConcurrentHashMap<>(ASSUME_COUNT);
 
+    /*                                               系统主题                                                                  */
+    /** 系统主题 -> clients map */
+    private final Map<String, ConcurrentHashMap.KeySetView<ClientSub, Boolean>> sysTopicClientsMap = new ConcurrentHashMap<>();
+
     //@formatter:on
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
@@ -458,7 +462,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         for (String topic : topics) {
             ConcurrentHashMap.KeySetView<ClientSub, Boolean> clientSubs = inDiskTopicClientsMap.get(topic);
             if (clientSubs != null) {
-                clientSubs.removeIf(clientSub -> Objects.equals(clientId, clientSub.getClientId()));
+                clientSubs.remove(ClientSub.of(clientId, 0, topic, false));
             }
         }
     }
@@ -474,7 +478,37 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         inDiskTopics.add(topic);
 
         // 保存客户端订阅内容
-        ConcurrentHashMap.KeySetView<ClientSub, Boolean> subMap = inDiskTopicClientsMap.computeIfAbsent(topic, k -> ConcurrentHashMap.newKeySet());
-        subMap.add(clientSub);
+        inDiskTopicClientsMap
+                .computeIfAbsent(topic, k -> ConcurrentHashMap.newKeySet())
+                .add(clientSub);
+    }
+
+    @Override
+    public List<ClientSub> searchSysTopicClients(String topic) {
+        // result
+        List<ClientSub> clientSubList = new ArrayList<>();
+
+        sysTopicClientsMap.forEach((wildTopic, set) -> {
+            if (TopicUtils.match(topic, wildTopic)) {
+                clientSubList.addAll(set);
+            }
+        });
+
+        return clientSubList;
+    }
+
+    @Override
+    public void subscribeSys(ClientSub clientSub) {
+        sysTopicClientsMap.computeIfAbsent(clientSub.getTopic(), k -> ConcurrentHashMap.newKeySet()).add(clientSub);
+    }
+
+    @Override
+    public void unsubscribeSys(String clientId, List<String> topics) {
+        for (String topic : topics) {
+            ConcurrentHashMap.KeySetView<ClientSub, Boolean> clientSubs = sysTopicClientsMap.get(topic);
+            if (!CollectionUtils.isEmpty(clientSubs)) {
+                clientSubs.remove(ClientSub.of(clientId, 0, topic, false));
+            }
+        }
     }
 }

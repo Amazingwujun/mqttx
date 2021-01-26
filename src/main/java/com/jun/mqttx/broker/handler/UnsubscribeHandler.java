@@ -53,7 +53,7 @@ public class UnsubscribeHandler extends AbstractMqttSessionHandler {
         // 系统主题
         List<String> collect = payload.topics();
         if (enableSysTopic) {
-            collect = unsubscribeSysTopics(payload.topics(), ctx.channel());
+            collect = unsubscribeSysTopics(payload.topics(), ctx);
         }
 
         // 非系统主题
@@ -71,16 +71,17 @@ public class UnsubscribeHandler extends AbstractMqttSessionHandler {
     /**
      * 系统主题订阅处理. 系统主题订阅没有持久化，仅保存在内存，需要单独处理.
      *
-     * @param unSub   解除订阅的主题列表
-     * @param channel {@link Channel}
+     * @param unSub 解除订阅的主题列表
+     * @param ctx   {@link ChannelHandlerContext}
      * @return 非系统主题列表
      */
-    private List<String> unsubscribeSysTopics(List<String> unSub, Channel channel) {
+    private List<String> unsubscribeSysTopics(List<String> unSub, ChannelHandlerContext ctx) {
         return unSub.stream()
                 .peek(topic -> {
                     if (TopicUtils.BROKER_STATUS.equals(topic)) {
-                        SubscribeHandler.SYS_CHANNELS.remove(channel);
+                        SubscribeHandler.SYS_CHANNELS.remove(ctx.channel());
                     }
+                    subscriptionService.unsubscribeSys(clientId(ctx), unSub);
                 })
                 .filter(topic -> !TopicUtils.isSys(topic))
                 .collect(Collectors.toList());

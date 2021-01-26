@@ -49,7 +49,7 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
     //@formatter:off
 
     /**系统主题 $SYS 订阅群组 */
-    static ChannelGroup SYS_CHANNELS;
+    public static ChannelGroup SYS_CHANNELS;
     private final boolean enableTopicPubSubSecure;
     private final IRetainMessageService retainMessageService;
     private final ISubscriptionService subscriptionService;
@@ -117,10 +117,15 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
                     // 系统主题消息订阅, 则定时发布订阅的主题给客户端
                     // 系统 topic 订阅结果不存储
                     if (enableSysTopic && TopicUtils.isSys(topic)) {
-                        sysTopicSubscribeHandle(topic, ctx);
+                        sysTopicSubscribeHandle(ClientSub.of(clientId, qos, topic, isCleanSession(ctx)), ctx);
                     } else {
-                        ClientSub clientSub = ClientSub.of(clientId, qos, topic, isCleanSession(ctx));
-                        subscriptionService.subscribe(clientSub);
+                        // 区分开系统主题与普通主题
+                        if (TopicUtils.isSys(topic)) {
+                            qos = 0x80;
+                        }else {
+                            ClientSub clientSub = ClientSub.of(clientId, qos, topic, isCleanSession(ctx));
+                            subscriptionService.subscribe(clientSub);
+                        }
                     }
                 }
             }
@@ -149,42 +154,48 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
     }
 
     /**
-     * 系统 topic 任务处理. 定时发送的系统主题（repeat = true）订阅状态与 tcp 连接状态相关，连接断开则订阅关系解除.
-     * 系统主题:
+     * 系统 topic 任务处理，连接断开则订阅关系解除.
+     * <h2>状态主题</h2>
      * <pre>
-     * +-----------------------------------+--------+-------------------------------------------------------------------+
-     * | topic                             | repeat | comment                                                           |
-     * +-----------------------------------+--------+-------------------------------------------------------------------+
-     * | $SYS/broker/status                | false  | 订阅此主题的客户端会定期（mqttx.sys-topic.interval）收到 broker 的状态,|
-     * |                                   |        | 该状态涵盖下面所有主题的状态值。                                      |
-     * |                                   |        | 注意：客户端连接断开后，订阅取消                                      |
-     * +-----------------------------------+--------+-------------------------------------------------------------------+
-     * | $SYS/broker/activeConnectCount    | true   | 立即返回当前的活动连接数量                                           |
-     * +-----------------------------------+--------+-------------------------------------------------------------------+
-     * | $SYS/broker/time                  | true   | 立即返回当前时间戳                                                  |
-     * +-----------------------------------+--------+-------------------------------------------------------------------+
-     * | $SYS/broker/version               | true   | 立即返回 broker 版本                                               |
-     * +-----------------------------------+--------+-------------------------------------------------------------------+
-     * | $SYS/broker/receivedMsg           | true   | 立即返回 broker 启动到现在收到的 MqttMessage, 不含 ping              |
-     * +-----------------------------------+--------+-------------------------------------------------------------------+
-     * | $SYS/broker/sendMsg               | true   | 立即返回 broker 启动到现在发送的 MqttMessage, 不含 pingAck           |
-     * +-----------------------------------+--------+-------------------------------------------------------------------+
-     * | $SYS/broker/uptime                | true   | 立即返回 broker 运行时长，单位秒                                     |
-     * +-----------------------------------+--------+-------------------------------------------------------------------+
-     * | $SYS/broker/maxActiveConnectCount | true   | 立即返回 broker 运行至今的最大 tcp 连接数                            |
-     * +-----------------------------------+--------+-------------------------------------------------------------------+
+     * +-----------------------------------+----------------------------------------------------------------------------+
+     * | 主题                              | 描述                                                                        |
+     * +-----------------------------------+----------------------------------------------------------------------------+
+     * | $SYS/broker/status                | 触发方式：订阅此主题的客户端会定期（mqttx.sys-topic.interval）收到 broker 的状态，  |
+     * |                                   | 该状态涵盖下面所有主题的状态值.                                                  |
+     * |                                   | 注意：客户端连接断开后，订阅取消                                                 |
+     * +-----------------------------------+----------------------------------------------------------------------------+
+     * | $SYS/broker/activeConnectCount    | 立即返回当前的活动连接数量 触发：订阅一次触发一次                                  |
+     * +-----------------------------------+----------------------------------------------------------------------------+
+     * | $SYS/broker/time                  | 立即返回当前时间戳 触发：订阅一次触发一次                                          |
+     * +-----------------------------------+----------------------------------------------------------------------------+
+     * | $SYS/broker/version               | 立即返回 broker 版本 触发：订阅一次触发一次                                        |
+     * +-----------------------------------+----------------------------------------------------------------------------+
+     * | $SYS/broker/receivedMsg           | 立即返回 broker 启动到现在收到的 MqttMessage, 不含 ping 触发：订阅一次触发一次     |
+     * +-----------------------------------+----------------------------------------------------------------------------+
+     * | $SYS/broker/sendMsg               | 立即返回 broker 启动到现在发送的 MqttMessage, 不含 pingAck 触发：订阅一次触发一次  |
+     * +-----------------------------------+----------------------------------------------------------------------------+
+     * | $SYS/broker/uptime                | 立即返回 broker 运行时长，单位秒 触发：订阅一次触发一次                            |
+     * +-----------------------------------+----------------------------------------------------------------------------+
+     * | $SYS/broker/maxActiveConnectCount | 立即返回 broker 运行至今的最大 tcp 连接数 触发：订阅一次触发一次                    |
+     * +-----------------------------------+----------------------------------------------------------------------------+
      * </pre>
-     * repeat 说明:
-     * <ul>
-     *     <li>当 repeat = false : 只需订阅一次，broker 会定时发布数据到此主题.</li>
-     *     <li>当 repeat = true : 订阅一次，发布一次.</li>
-     * </ul>
+     * <h2>功能主题</h2>
+     * <pre>
+     * +------------------------------------------------------+-------------------------------------------------------------------+
+     * | 主题                                                 | 描述                                                               |
+     * +------------------------------------------------------+-------------------------------------------------------------------+
+     * | $SYS/broker/{brokerId}/clients/{clientId}/connect    | 客户端成功连接至 broker  触发：当某个客户端上线后，broker 会发送消息给该主题 |
+     * +------------------------------------------------------+-------------------------------------------------------------------+
+     * | $SYS/broker/{brokerId}/clients/{clientId}/disconnect | 触发：当某个客户端掉线后，broker 会发送消息给该主题                       |
+     * +------------------------------------------------------+-------------------------------------------------------------------+
+     * </pre>
      *
-     * @param topic 系统主题
-     * @param ctx   {@link ChannelHandlerContext}
+     * @param clientSub 客户端订阅信息
+     * @param ctx       {@link ChannelHandlerContext}
      */
-    private void sysTopicSubscribeHandle(final String topic, final ChannelHandlerContext ctx) {
-        final int messageId = nextMessageId(ctx);
+    private void sysTopicSubscribeHandle(final ClientSub clientSub, final ChannelHandlerContext ctx) {
+        final int messageId = MqttQoS.AT_MOST_ONCE == sysTopicQos ? 0 : nextMessageId(ctx);
+        final String topic = clientSub.getTopic();
         switch (topic) {
             case TopicUtils.BROKER_STATUS: {
                 SYS_CHANNELS.add(ctx.channel());
@@ -299,7 +310,8 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
                 break;
             }
             default:
-                // unreachable code
+                // 订阅功能主题
+                subscriptionService.subscribeSys(clientSub);
         }
     }
 
