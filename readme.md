@@ -359,7 +359,7 @@ mqttx:
 
 #### 4.11 消息持久化支持
 
-`mqttx` 的持久化依赖 `redis` , `mqttx` 会持久化 `cleanSession = true & qos > 0` 的消息, 消息被 `Serializer` 序列化为字节数组后存储在 `redis`。
+`mqttx` 的持久化依赖 `redis` , `mqttx` 会持久化 `cleanSession = false & qos > 0` 的消息, 消息被 `Serializer` 序列化为字节数组后存储在 `redis`。
 
 目前 `mqttx` 提供了两种序列化实现：
 
