@@ -19,10 +19,10 @@ package com.jun.mqttx.broker.handler;
 import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.service.ISubscriptionService;
 import com.jun.mqttx.utils.TopicUtils;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -51,9 +51,11 @@ public class UnsubscribeHandler extends AbstractMqttSessionHandler {
         MqttUnsubscribePayload payload = mqttUnsubscribeMessage.payload();
 
         // 系统主题
-        List<String> collect = payload.topics();
+        List<String> collect = new ArrayList<>(payload.topics());
         if (enableSysTopic) {
-            collect = unsubscribeSysTopics(payload.topics(), ctx);
+            List<String> unSubSysTopics = collect.stream().filter(TopicUtils::isSys).collect(Collectors.toList());
+            collect.removeAll(unSubSysTopics);
+            unsubscribeSysTopics(unSubSysTopics, ctx);
         }
 
         // 非系统主题
@@ -71,19 +73,16 @@ public class UnsubscribeHandler extends AbstractMqttSessionHandler {
     /**
      * 系统主题订阅处理. 系统主题订阅没有持久化，仅保存在内存，需要单独处理.
      *
-     * @param unSub 解除订阅的主题列表
+     * @param unSubSysTopics 解除订阅的主题列表
      * @param ctx   {@link ChannelHandlerContext}
-     * @return 非系统主题列表
      */
-    private List<String> unsubscribeSysTopics(List<String> unSub, ChannelHandlerContext ctx) {
-        return unSub.stream()
-                .peek(topic -> {
-                    if (TopicUtils.BROKER_STATUS.equals(topic)) {
-                        SubscribeHandler.SYS_CHANNELS.remove(ctx.channel());
-                    }
-                    subscriptionService.unsubscribeSys(clientId(ctx), unSub);
-                })
-                .filter(topic -> !TopicUtils.isSys(topic))
-                .collect(Collectors.toList());
+    private void unsubscribeSysTopics(List<String> unSubSysTopics, ChannelHandlerContext ctx) {
+        unSubSysTopics.forEach(topic -> {
+            if (TopicUtils.BROKER_STATUS.equals(topic)) {
+                SubscribeHandler.SYS_CHANNELS.remove(ctx.channel());
+            }
+        });
+        unSubSysTopics.remove(TopicUtils.BROKER_STATUS);
+        subscriptionService.unsubscribeSys(clientId(ctx), unSubSysTopics);
     }
 }

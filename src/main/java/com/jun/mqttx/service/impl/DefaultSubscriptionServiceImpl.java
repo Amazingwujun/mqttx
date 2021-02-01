@@ -511,4 +511,9 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
             }
         }
     }
+
+    @Override
+    public void clearClientSysSub(String clientId) {
+        sysTopicClientsMap.forEach((topic, clientSubs) -> clientSubs.remove(ClientSub.of(clientId, 0, topic, false)));
+    }
 }

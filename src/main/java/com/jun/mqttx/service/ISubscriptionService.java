@@ -100,4 +100,11 @@ public interface ISubscriptionService {
      * @param topics   主题列表
      */
     void unsubscribeSys(String clientId, List<String> topics);
+
+    /**
+     * 清理客户订阅的系统主题
+     *
+     * @param clientId 客户 id
+     */
+    void clearClientSysSub(String clientId);
 }

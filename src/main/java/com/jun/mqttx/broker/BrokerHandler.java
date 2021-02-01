@@ -206,11 +206,15 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
                     .messageId(MqttQoS.AT_MOST_ONCE == sysTopicQos ? 0 : session.increaseAndGetMessageId())
                     .payload(disconnectTime)
                     .build();
+            mpm.release();
 
             for (ClientSub clientSub : clientSubs) {
                 Optional.ofNullable(ConnectHandler.CLIENT_MAP.get(clientSub.getClientId()))
                         .map(BrokerHandler.CHANNELS::find)
-                        .ifPresent(channel -> channel.writeAndFlush(mpm));
+                        .ifPresent(channel -> {
+                            mpm.retain();
+                            channel.writeAndFlush(mpm);
+                        });
             }
         }
     }

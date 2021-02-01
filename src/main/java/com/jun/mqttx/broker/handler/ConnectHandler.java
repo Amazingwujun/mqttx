@@ -25,6 +25,7 @@ import com.jun.mqttx.service.*;
 import com.jun.mqttx.utils.TopicUtils;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelOutboundInvoker;
@@ -320,13 +321,17 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
                     //  上线时间
                     .payload(connectTime)
                     .build();
+            mpm.release();
 
             // 消息发布
             for (ClientSub clientSub : clientSubs) {
                 Optional
                         .ofNullable(CLIENT_MAP.get(clientSub.getClientId()))
                         .map(BrokerHandler.CHANNELS::find)
-                        .ifPresent(channel -> channel.writeAndFlush(mpm));
+                        .ifPresent(channel -> {
+                            mpm.retain();
+                            channel.writeAndFlush(mpm);
+                        });
             }
         }
     }
@@ -358,5 +363,8 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         subscriptionService.clearClientSubscriptions(clientId, false);
         publishMessageService.clear(clientId);
         pubRelMessageService.clear(clientId);
+        if (enableSysTopic) {
+            subscriptionService.clearClientSysSub(clientId);
+        }
     }
 }
