@@ -313,8 +313,8 @@
 
 | 主题                                                   | 描述                                                         |
 | ------------------------------------------------------ | ------------------------------------------------------------ |
-| `$SYS/broker/{borkerId}/clients/{clientId}/connect`    | 客户端上线通知主题 <br/>触发：当某个客户端上线后，**broker** 会发送消息给该主题 |
-| `$SYS/broker/{borkerId}/clients/{clientId}/disconnect` | 客户端下线通知主题<br/>触发：当某个客户端掉线后，**broker** 会发送消息给该主题 |
+| `$SYS/broker/{borkerId}/clients/{clientId}/connected`    | 客户端上线通知主题 <br/>触发：当某个客户端上线后，**broker** 会发送消息给该主题 |
+| `$SYS/broker/{borkerId}/clients/{clientId}/disconnected` | 客户端下线通知主题<br/>触发：当某个客户端掉线后，**broker** 会发送消息给该主题 |
 
 这两个系统主题支持通配符，举例：
 
