@@ -45,6 +45,7 @@ public final class DisconnectHandler extends AbstractMqttSessionHandler implemen
 
     private final Serializer serializer;
 
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     public DisconnectHandler(Serializer serializer, MqttxConfig config) {
         super(config.getEnableTestMode(), config.getCluster().getEnable());
         this.serializer = serializer;

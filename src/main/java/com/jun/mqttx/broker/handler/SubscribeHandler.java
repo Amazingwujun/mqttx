@@ -122,7 +122,7 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
                         // 区分开系统主题与普通主题
                         if (TopicUtils.isSys(topic)) {
                             qos = 0x80;
-                        }else {
+                        } else {
                             ClientSub clientSub = ClientSub.of(clientId, qos, topic, isCleanSession(ctx));
                             subscriptionService.subscribe(clientSub);
                         }

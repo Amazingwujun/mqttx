@@ -74,7 +74,7 @@ public class UnsubscribeHandler extends AbstractMqttSessionHandler {
      * 系统主题订阅处理. 系统主题订阅没有持久化，仅保存在内存，需要单独处理.
      *
      * @param unSubSysTopics 解除订阅的主题列表
-     * @param ctx   {@link ChannelHandlerContext}
+     * @param ctx            {@link ChannelHandlerContext}
      */
     private void unsubscribeSysTopics(List<String> unSubSysTopics, ChannelHandlerContext ctx) {
         unSubSysTopics.forEach(topic -> {

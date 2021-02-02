@@ -22,10 +22,10 @@ import com.jun.mqttx.constants.InternalMessageEnum;
 import com.jun.mqttx.entity.*;
 import com.jun.mqttx.exception.AuthenticationException;
 import com.jun.mqttx.service.*;
+import com.jun.mqttx.utils.GlobalExecutor;
 import com.jun.mqttx.utils.TopicUtils;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelOutboundInvoker;
@@ -250,17 +250,17 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
 
         // 根据协议补发 qos1,与 qos2 的消息
         if (!isCleanSession) {
-            republish(ctx, clientId);
+            GlobalExecutor.execute("pub 消息补发任务", () -> republish(ctx));
         }
     }
 
     /**
      * 客户端(cleanSession = false)上线，补发 qos1,2 消息
      *
-     * @param ctx      {@link ChannelHandlerContext}
-     * @param clientId 客户端id
+     * @param ctx {@link ChannelHandlerContext}
      */
-    private void republish(ChannelHandlerContext ctx, String clientId) {
+    private void republish(ChannelHandlerContext ctx) {
+        final String clientId = clientId(ctx);
         List<PubMsg> pubMsgList = publishMessageService.search(clientId);
         pubMsgList.forEach(pubMsg -> {
             // fixedHeader dup flag 置为 true
