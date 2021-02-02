@@ -321,7 +321,6 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
                     //  上线时间
                     .payload(connectTime)
                     .build();
-            mpm.release();
 
             // 消息发布
             for (ClientSub clientSub : clientSubs) {
@@ -333,6 +332,9 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
                             channel.writeAndFlush(mpm);
                         });
             }
+
+            // 必须最后释放
+            mpm.release();
         }
     }
 
