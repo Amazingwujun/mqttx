@@ -361,12 +361,12 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
      * @param clientId 客户ID
      */
     private void actionOnCleanSession(String clientId) {
-        sessionService.clear(clientId);
-        subscriptionService.clearClientSubscriptions(clientId, false);
-        publishMessageService.clear(clientId);
-        pubRelMessageService.clear(clientId);
-        if (enableSysTopic) {
-            subscriptionService.clearClientSysSub(clientId);
+        // sessionService.clear(String ClientId) 方法返回 true 则表明该 clientId 之前的 cleanSession = false, 那么应该继续清理
+        // 订阅信息、pub 信息、 pubRel 信息, 否则无需清理
+        if (sessionService.clear(clientId)) {
+            subscriptionService.clearClientSubscriptions(clientId, false);
+            publishMessageService.clear(clientId);
+            pubRelMessageService.clear(clientId);
         }
     }
 }

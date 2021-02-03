@@ -71,14 +71,13 @@ public class DefaultSessionServiceImpl implements ISessionService {
     }
 
     @Override
-    public void clear(String clientId) {
+    public boolean clear(String clientId) {
         if (enableTestMode) {
-            sessionStore.remove(clientId);
-            return;
+            return sessionStore.remove(clientId) != null;
         }
 
-        redisTemplate.opsForHash().delete(clusterSessionHashKey, clientId);
         redisTemplate.delete(messageIdPrefix + clientId);
+        return redisTemplate.opsForHash().delete(clusterSessionHashKey, clientId) > 0;
     }
 
     @Override

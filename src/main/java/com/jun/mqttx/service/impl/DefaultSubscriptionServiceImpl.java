@@ -164,7 +164,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
                 topics.forEach(topic -> {
                     ConcurrentHashMap.KeySetView<ClientSub, Boolean> clientSubs = inMemTopicClientsMap.get(topic);
                     if (!CollectionUtils.isEmpty(clientSubs)) {
-                        clientSubs.removeIf(clientSub -> Objects.equals(clientId, clientSub.getClientId()));
+                        clientSubs.remove(ClientSub.of(clientId, 0, topic, false));
                     }
                 });
                 Optional.ofNullable(inMemClientTopicsMap.get(clientId)).ifPresent(t -> t.removeAll(topics));
@@ -341,7 +341,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
                     data.getTopics().forEach(t -> {
                         ConcurrentHashMap.KeySetView<ClientSub, Boolean> clientSubs = inMemTopicClientsMap.get(t);
                         if (!CollectionUtils.isEmpty(clientSubs)) {
-                            clientSubs.removeIf(clientSub -> Objects.equals(clientId, clientSub.getClientId()));
+                            clientSubs.remove(ClientSub.of(clientId, 0, t, false));
                         }
                     });
                     Optional.ofNullable(inMemClientTopicsMap.get(clientId)).ifPresent(t -> t.removeAll(data.getTopics()));

@@ -45,8 +45,9 @@ public interface ISessionService {
      * 清理会话
      *
      * @param clientId 客户端ID
+     * @return true if session exist
      */
-    void clear(String clientId);
+    boolean clear(String clientId);
 
     /**
      * 检查 clientId 关联的 session 是否存在
