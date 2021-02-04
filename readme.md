@@ -10,7 +10,7 @@
     - [1.3 线上实例](#13-线上实例)
 - [2 架构](#2-架构)
     - [2.1 目录结构](#21-目录结构)
-- [3 容器化部署](#3-容器化部署)
+- [3 docker 启动](#3-docker-启动)
 - [4 功能说明](#4-功能说明)
     - [4.1 qos 支持](#41-qos-支持)
     - [4.2 topicFilter 支持](#42-topicfilter-支持)
@@ -126,16 +126,13 @@
     └─tls                       # ca 存放地址
 ```
 
-## 3 容器化部署
+## 3 docker 启动
 
-为了方便项目快速的部署，引进 docker
+> 镜像已上传至  docker-hub , 点击访问：[fantasywujun/mqttx - Docker Hub](https://hub.docker.com/r/fantasywujun/mqttx)
 
-> 1. 执行本地部署动作前，需要先下载 docker。
-> 2. docker-compose 文件中写死了端口映射（`1883, 8083`）， 如果你修改了 `mqttx` 的端口配置，则 `docker-compose.yml` 中也应修改
+docker 环境安装好后，执行`docker-compose -f ./docker-compose.yml up` 启动, 效果见下图：
 
-1. 通过IDE提供的打包功能将项目打包为 target/*.jar
-2. 进入 `dockerfile` 同级目录，执行 `docker build -t mqttx:v1.0.4.RELEASE .`
-3. 执行 `docker-compose up`
+![y3R3tI.md.png](https://s3.ax1x.com/2021/02/04/y3R3tI.md.png)
 
 ## 4 功能说明
 
