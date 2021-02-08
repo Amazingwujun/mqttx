@@ -22,10 +22,7 @@ import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.constants.InternalMessageEnum;
 import com.jun.mqttx.constants.ShareStrategy;
 import com.jun.mqttx.consumer.Watcher;
-import com.jun.mqttx.entity.ClientSub;
-import com.jun.mqttx.entity.InternalMessage;
-import com.jun.mqttx.entity.PubMsg;
-import com.jun.mqttx.entity.Session;
+import com.jun.mqttx.entity.*;
 import com.jun.mqttx.exception.AuthorizationException;
 import com.jun.mqttx.service.*;
 import com.jun.mqttx.utils.JsonSerializer;
@@ -196,6 +193,8 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                 publish(pubMsg, ctx, false);
                 break;
             case 1: // at least once
+                pubMsg.setPayloadId(payloadId(clientId(ctx), packetId));
+
                 publish(pubMsg, ctx, false);
                 MqttMessage pubAck = MqttMessageFactory.newMessage(
                         new MqttFixedHeader(MqttMessageType.PUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
@@ -205,6 +204,8 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                 ctx.writeAndFlush(pubAck);
                 break;
             case 2: // exactly once
+                pubMsg.setPayloadId(payloadId(clientId(ctx), packetId));
+
                 // 判断消息是否重复, 未重复的消息需要保存 messageId
                 if (isCleanSession(ctx)) {
                     Session session = getSession(ctx);
@@ -293,6 +294,32 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         // 将消息推送给集群中的broker
         if (isClusterMode() && !isClusterMessage) {
             internalMessagePublish(pubMsg);
+        }
+
+        // 判断消息体是否需要单独保存, 单独保存消息可以防止过多的客户端订阅导致的持久化服务内存/硬盘膨胀问题
+        // 满足如下条件，则进行单独存储消息的逻辑
+        // 1. payload 不能为空
+        // 2. payload 内容不能小于 32 个字节，消息如果过短则没有单独保存的必要，毕竟二次寻址也需要时间
+        // 3. 消息不能是集群分发的
+        // 4. 需要保存消息的客户数量必须大于 1
+        if (pubMsg.getPayload() != null && pubMsg.getPayload().length > 32 && !isClusterMessage) {
+            int flag = 0;
+            List<String> clientIdList = new ArrayList<>(); // cleanSession = 1 的客户 id 集合
+
+            // 计算 cleanSession = 1 的订阅客户端数量，如果超过 1 个，则采用单独保存的消息的形式，否则 pubMsg 持久化方式不变
+            for (ClientSub clientSub : clientList) {
+                if (!clientSub.cleanSession) {
+                    flag++;
+                    clientIdList.add(clientSub.getClientId());
+                }
+            }
+            if (flag > 1) {
+                publishMessageService.savePayloadAndClientBinding(clientIdList, SourcePayload.of(clientId(ctx), pubMsg.getPayload()));
+                pubMsg.setPayload(null);
+            }
+        } else {
+            // 将 payloadId 置为 null, 不发消息时可作为判定消息体是否需要另外抓取的依据
+            pubMsg.setPayloadId(null);
         }
 
         // 遍历发送
@@ -476,5 +503,16 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
      */
     private boolean isCleanSession(String clientId) {
         return !sessionService.hasKey(clientId);
+    }
+
+    /**
+     * 生成由 clientId + timestamp 组成的消息体id
+     *
+     * @param clientId  客户端id
+     * @param packageId 包id
+     * @return 消息体唯一id
+     */
+    public static String payloadId(String clientId, int packageId) {
+        return clientId + "_" + packageId;
     }
 }

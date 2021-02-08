@@ -16,7 +16,9 @@
 
 package com.jun.mqttx.service;
 
+import com.jun.mqttx.entity.ClientSub;
 import com.jun.mqttx.entity.PubMsg;
+import com.jun.mqttx.entity.SourcePayload;
 
 import java.util.List;
 
@@ -29,12 +31,20 @@ import java.util.List;
 public interface IPublishMessageService {
 
     /**
-     * 消息ID
+     * 持久化用户发布消息
      *
      * @param pubMsg   publish 消息体
      * @param clientId 客户id
      */
     void save(String clientId, PubMsg pubMsg);
+
+    /**
+     * 存储 {@link SourcePayload} 及 client 与 {@link SourcePayload#getPayload()} 的关系
+     *
+     * @param clientSubs 订阅客户端id集合
+     * @param sourcePayload 待发布消息原始数据
+     */
+    void savePayloadAndClientBinding(List<String> clientSubs, SourcePayload sourcePayload);
 
     /**
      * 清理与客户相关连的 publish 消息

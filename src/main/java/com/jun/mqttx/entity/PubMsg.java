@@ -63,9 +63,11 @@ public class PubMsg {
 
     private byte[] payload;
 
+    private String payloadId;
+
     //@formatter:on
 
     public static PubMsg of(int qos, String topic, boolean retain, byte[] payload) {
-        return new PubMsg(null, qos, 0, topic, retain, false, false, payload);
+        return new PubMsg(null, qos, 0, topic, retain, false, false, payload,null);
     }
 }

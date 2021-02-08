@@ -1,7 +1,9 @@
 package com.jun.mqttx.service.impl;
 
+import com.jun.mqttx.broker.handler.PublishHandler;
 import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.entity.PubMsg;
+import com.jun.mqttx.entity.SourcePayload;
 import com.jun.mqttx.service.IPublishMessageService;
 import com.jun.mqttx.utils.Serializer;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -9,10 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -24,12 +23,16 @@ import java.util.stream.Collectors;
  */
 @Service
 public class DefaultPublishMessageServiceImpl implements IPublishMessageService {
+    //@formatter:off
 
     private final RedisTemplate<String, byte[]> redisTemplate;
     private final Serializer serializer;
-    private final String pubMsgSetPrefix;
+    private final String pubMsgSetPrefix, msgPayLoadClientsSetKey, msgPayloadKey;
     private final boolean enableTestMode;
     private Map<String, Map<Integer, PubMsg>> pubMsgStore;
+    /** 发布消息体缓存 */
+    private final Map<String,byte[]> payloadCache = new ConcurrentHashMap<>();
+    //@formatter:on
 
     public DefaultPublishMessageServiceImpl(RedisTemplate<String, byte[]> redisTemplate,
                                             @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection") Serializer serializer,
@@ -37,7 +40,10 @@ public class DefaultPublishMessageServiceImpl implements IPublishMessageService 
         this.redisTemplate = redisTemplate;
         this.serializer = serializer;
 
-        this.pubMsgSetPrefix = mqttxConfig.getRedis().getPubMsgSetPrefix();
+        MqttxConfig.Redis redis = mqttxConfig.getRedis();
+        this.pubMsgSetPrefix = redis.getPubMsgSetPrefix();
+        this.msgPayLoadClientsSetKey = redis.getMsgPayLoadClientsSetKey();
+        this.msgPayloadKey = redis.getMsgPayLoadKey();
         this.enableTestMode = mqttxConfig.getEnableTestMode();
         if (enableTestMode) {
             pubMsgStore = new ConcurrentHashMap<>();
@@ -59,13 +65,24 @@ public class DefaultPublishMessageServiceImpl implements IPublishMessageService 
     }
 
     @Override
+    public void savePayloadAndClientBinding(List<String> clientSubs, SourcePayload sourcePayload) {
+        if (enableTestMode) {
+            return;
+        }
+
+        byte[][] bytes = clientSubs.stream().map(serializer::serialize).toArray(byte[][]::new);
+        redisTemplate.opsForSet().add(msgPayLoadClientsSetKey + sourcePayload.getId(), bytes);
+        redisTemplate.opsForHash().put(msgPayloadKey, sourcePayload.getId(), sourcePayload.getPayload());
+    }
+
+    @Override
     public void clear(String clientId) {
         if (enableTestMode) {
             pubMsgStore.remove(clientId);
             return;
         }
 
-        redisTemplate.delete(pubMsgSetPrefix + clientId);
+        redisTemplate.delete(key(clientId));
     }
 
     @Override
@@ -75,10 +92,19 @@ public class DefaultPublishMessageServiceImpl implements IPublishMessageService 
             return;
         }
 
+        // todo 使用 redis script 实现
+        // 1. 删除 pubMsg
+        // 2. 删除 client 和 payloadId 的关联关系
+        // 3. 如果 client 与 payloadId 所在 redis set 已经为空，则删除此 set, 否则返回
         redisTemplate.opsForHash().delete(
                 key(clientId),
                 String.valueOf(messageId)
         );
+        redisTemplate.opsForSet().remove(msgPayLoadClientsSetKey, clientId + messageId);
+        Long size = redisTemplate.opsForSet().size(msgPayLoadClientsSetKey);
+        if (Objects.equals(0L,size)) {
+            redisTemplate.opsForHash().delete(msgPayloadKey, clientId + messageId);
+        }
     }
 
     @Override
@@ -97,6 +123,19 @@ public class DefaultPublishMessageServiceImpl implements IPublishMessageService 
             // noinspection unchecked
             return Collections.EMPTY_LIST;
         }
+        List<PubMsg> pubMsgs = values.stream()
+                .map(o -> serializer.deserialize((byte[]) o, PubMsg.class))
+                .collect(Collectors.toList());
+        List<String> payloadIds = pubMsgs.stream()
+                .map(PubMsg::getPayloadId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        List<Object> payloads = redisTemplate.opsForHash().multiGet(msgPayloadKey, payloadIds);
+        for (Object payloadId : payloadIds) {
+
+        }
+
+
 
         return values.stream()
                 .map(o -> serializer.deserialize((byte[]) o, PubMsg.class))
