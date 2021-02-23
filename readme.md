@@ -31,6 +31,7 @@
     - [6.2 版本说明](#62-版本说明)
         - [6.2.1 v1.0](#621-v10)
         - [6.2.2 v1.1](#622-v11)
+        - [6.2.3 v2.0](#623-v20)
     - [6.3 Benchmark](#63-benchmark)
         - [6.3.1 CleanSessionTrue](#631-cleansessiontrue)
         - [6.3.2 CleanSessionFalse](#632-cleansessionfalse)
@@ -41,6 +42,8 @@
 `Mqttx` 基于 [MQTT v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) 协议开发，旨在提供 ***易于使用*** 且 ***性能优越*** 的 **mqtt broker**。
 
 ### 1.1 快速开始
+
+> 想通过 docker 快速体验？见 [docker 启动](#3-docker-启动)
 
 1. 打包
     - 测试模式：运行  `mvnw -P test -DskipTests=true clean package`
@@ -391,15 +394,15 @@ mqttx:
 
 ## 5 开发者说
 
-1. **bug fix and optimization**，这个会一直继续的。
-
-   > **项目将长期维护**
-
-2. 为了使 ***mqttx*** 项目变得更好，请使用及学习该项目的同学主动反馈使用情况给我（提 issue 或加群反馈）。
-
-3. 版本 `v1.0.7.alpha` 预计二月下旬发布。
-
-4. 交流群
+1. `v1.0` 版本分支将作为支持 **mqttv3.1.1** 协议版本持续迭代
+2. 为使 ***mqttx*** 项目变得更好，请使用及学习该项目的同学主动反馈使用情况给我（提 issue 或加群反馈）
+3. 后续工作
+   - [x] `v1.0.7.RELEASE` 版本 ***Benchmark***
+   - [x] `v1.0.8.RELEASE` 版本开发
+   - [x] `v2.0.0.RELEASE` 版本开发
+   - [x] bug 修复
+4. `v2.0` 版本分支将作为 **mqttv5** 协议版本开始迭代
+6. 交流群
 
 <img src="https://s1.ax1x.com/2020/10/10/0ytoSx.jpg" alt="群二维码" height="300" />
 
@@ -466,12 +469,10 @@ mqttx:
 
 #### 6.2.1 v1.0
 
-- **v1.0.8.RELEASE(待开发)**
-    - [ ] [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html) 支持
-    - [ ] bug 修复及优化
-- **v1.0.7.RELEASE(开发中)**
-    - [x] 增加序列化框架 ***Kryo*** 的支持
+- **v1.0.8.RELEASE（开发中）**
     - [ ] 消息集中持久化到 `redis hmap` 数据结构中，`PubMsg` 仅保存 `hmap` 中的 `payloadId`, 该优化目的在于防止消息膨胀导致的 redis 内存耗用过大。（之前版本消息都是持久化到客户端各自的 `PubMsg`）
+- **v1.0.7.RELEASE**
+    - [x] 增加序列化框架 ***Kryo*** 的支持
     - [x]  系统主题新增客户端上下线通知主题
     - [x] 修复新增订阅触发 `retain` 消息后，消息分发给全部订阅者的 bug
     - [x] 修复遗嘱消息 `isWillRetain:true` 持久化的bug
@@ -504,9 +505,13 @@ mqttx:
 
 #### 6.2.2 v1.1
 
-- ***v1.1.0.RELEASE（开发中）***
+- **v1.1.0.RELEASE（停止开发）**
+  - [ ] `redis` 同步转异步实现，提升性能
 
-    - [ ] `redis` 同步转异步实现，提升性能
+#### 6.2.3 v2.0
+
+- **v2.0.0.RELEASE（开发中）**
+  - [x] [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html) 支持
 
 ### 6.3 Benchmark
 
