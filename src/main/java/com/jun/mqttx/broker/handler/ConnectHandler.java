@@ -152,6 +152,8 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         MqttConnectMessage mcm = (MqttConnectMessage) msg;
         MqttConnectVariableHeader variableHeader = mcm.variableHeader();
         MqttConnectPayload payload = mcm.payload();
+        final String name = variableHeader.name();
+        final int version = variableHeader.version();
 
         // 获取clientId
         String clientId = mcm.payload().clientIdentifier();
@@ -198,11 +200,13 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         Session session;
         boolean sessionPresent = false;
         if (isCleanSession) {
-            session = Session.of(clientId, true);
+            session = Session.of(clientId, true,
+                    MqttVersion.fromProtocolNameAndLevel(name, (byte) version));
         } else {
             session = sessionService.find(clientId);
             if (session == null) {
-                session = Session.of(clientId, false);
+                session = Session.of(clientId, false,
+                        MqttVersion.fromProtocolNameAndLevel(name, (byte) version));
                 sessionService.save(session);
             } else {
                 sessionPresent = true;
