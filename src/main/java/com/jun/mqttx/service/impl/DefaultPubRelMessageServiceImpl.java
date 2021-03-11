@@ -149,7 +149,7 @@ public class DefaultPubRelMessageServiceImpl implements IPubRelMessageService {
 
         int result = 0;
         for (int i = 0; i < 4; i++) {
-            result += (msg[i] & 0xff) << (8 * i);
+            result += (msg[i] & 0xff) << (8 * (3 - i));
         }
         return result;
     }

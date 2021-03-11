@@ -126,12 +126,12 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         if (variableHeader.hasPassword() && variableHeader.hasUserName()) {
             authenticationService.asyncAuthenticate(
                     ClientAuthDTO.of(username, password),
-                    authentication -> proccess0(ctx, msg, authentication),
+                    authentication -> process0(ctx, msg, authentication),
                     throwable -> {
                         throw new AuthenticationException("登入失败", throwable);
                     });
         } else {
-            proccess0(ctx, msg, null);
+            process0(ctx, msg, null);
         }
     }
 
@@ -148,7 +148,7 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
      * @param msg  解包后的数据
      * @param auth 认证对象，见 {@link Authentication}
      */
-    private void proccess0(ChannelHandlerContext ctx, MqttMessage msg, Authentication auth) {
+    private void process0(ChannelHandlerContext ctx, MqttMessage msg, Authentication auth) {
         MqttConnectMessage mcm = (MqttConnectMessage) msg;
         MqttConnectVariableHeader variableHeader = mcm.variableHeader();
         MqttConnectPayload payload = mcm.payload();

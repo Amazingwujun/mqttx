@@ -29,7 +29,7 @@ import java.util.concurrent.TimeUnit;
  *     <li>最大线程池数量: {@link Runtime#availableProcessors()} * 2 </li>
  *     <li>空闲时线程存活时间: 60 秒</li>
  *     <li>任务队列: {@link ArrayBlockingQueue}</li>
- *     <li>拒绝策略: 抛弃任务并应答错误信息</li>
+ *     <li>拒绝策略: 抛弃任务并打印错误信息</li>
  * </ol>
  *
  * @since 1.0.7
