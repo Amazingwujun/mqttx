@@ -336,7 +336,8 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
                     .uptime((int) ((System.currentTimeMillis() - BrokerHandler.START_TIME) / 1000))
                     .version(this.version)
                     .build().toUtf8Bytes();
-            ByteBuf payload = Unpooled.buffer(bytes.length).writeBytes(bytes);
+            final ByteBuf payload = Unpooled.buffer(bytes.length).writeBytes(bytes);
+            payload.markReaderIndex();
 
             // 遍历发送
             SYS_CHANNELS.forEach(channel -> {
@@ -347,8 +348,12 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
                         .messageId(nextMessageId(channel))
                         .payload(payload)
                         .build();
+                payload.resetReaderIndex();
                 channel.writeAndFlush(mpm);
             });
+
+            // 释放引用
+            payload.release();
         }, 0, interval, TimeUnit.SECONDS);
     }
 }
