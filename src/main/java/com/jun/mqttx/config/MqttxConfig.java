@@ -260,9 +260,6 @@ public class MqttxConfig {
 
         /** 定时发送时间，默认一分钟 */
         private Duration interval = Duration.ofMinutes(1);
-
-        /** 系统主题qos, 默认qos0; 参数适用所有的系统主题. ps: 除开特殊需求，qos0 应该是比较合适的*/
-        private Integer qos = 0;
     }
 
     /**

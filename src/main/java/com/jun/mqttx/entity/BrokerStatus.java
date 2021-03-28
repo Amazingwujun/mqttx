@@ -52,8 +52,12 @@ public class BrokerStatus {
 
     //@formatter:on
 
-
-    public byte[] toUtf8Bytes() {
+    /**
+     * 将当前对象转为 json 格式字节数组
+     *
+     * @return json 格式字节数组
+     */
+    public byte[] toJsonBytes() {
         return JSON.toJSONString(this).getBytes(StandardCharsets.UTF_8);
     }
 }

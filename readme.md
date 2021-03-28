@@ -266,8 +266,9 @@ docker 环境安装好后，执行`docker-compose -f ./docker-compose.yml up` �
 
 系统主题不支持如下特性：
 
-- 集群：系统主题消息无法在集群内传播
+- 集群：系统主题不支持集群，包括消息及订阅
 - 持久化：系统主题消息不支持持久化，包括订阅关系
+- QoS: 不支持 QoS 1,2 仅支持 QoS 0
 
 **注意**：***topic 安全机制*** 同样会影响客户端订阅系统主题, 未授权客户端将无法订阅系统主题
 
@@ -282,7 +283,7 @@ docker 环境安装好后，执行`docker-compose -f ./docker-compose.yml up` �
 
 | 主题                                | 描述                                                         |
 | ----------------------------------- | ------------------------------------------------------------ |
-| `$SYS/broker/status`                | 触发方式：订阅此主题的客户端会定期（`mqttx.sys-topic.interval`）收到 broker 的状态，该状态涵盖下面所有主题的状态值. <br/> **注意：客户端连接断开后，订阅取消** |
+| `$SYS/broker/{brokerId}/status`     | 触发方式：订阅此主题的客户端会定期（`mqttx.sys-topic.interval`）收到 broker 的状态，该状态涵盖下面所有主题的状态值. <br/> **注意：客户端连接断开后，订阅取消** |
 | `$SYS/broker/activeConnectCount`    | 立即返回当前的活动连接数量<br/>触发：订阅一次触发一次        |
 | `$SYS/broker/time`                  | 立即返回当前时间戳<br/>触发：订阅一次触发一次                |
 | `$SYS/broker/version`               | 立即返回 `broker` 版本<br/>触发：订阅一次触发一次            |
@@ -291,21 +292,31 @@ docker 环境安装好后，执行`docker-compose -f ./docker-compose.yml up` �
 | `$SYS/broker/uptime`                | 立即返回 `broker` 运行时长，单位***秒***<br/>触发：订阅一次触发一次 |
 | `$SYS/broker/maxActiveConnectCount` | 立即返回 `broker` 运行至今的最大 `tcp` 连接数<br/>触发：订阅一次触发一次 |
 
+系统主题 `$SYS/broker/{brokerId}/status` 中的 **brokerId** 为配置项参数（见 ***[6.1 配置项](#61-配置项)***），可通过携带通配符的主题 `$SYS/broker/+/status` 订阅。
+
 响应对象格式为 `json` 字符串：
 
 ```json
 {
-  "activeConnectCount": 2,
-  "timestamp": "2020-09-18 15:13:46",
-  "version": "1.0.5.ALPHA"
+    "activeConnectCount": 1,
+    "maxActiveConnectCount": 2,
+    "receivedMsg": 6,
+    "sendMsg": 77,
+    "timestamp": "2021-03-23T23:05:37.035",
+    "uptime": 149,
+    "version": "1.0.7.RELEASE"
 }
 ```
 
-| field                | 说明                            |
-| -------------------- | ------------------------------- |
-| `activeConnectCount` | 当前活跃连接数量                |
-| `timestamp`          | 时间戳；(`yyyy-MM-dd HH:mm:ss`) |
-| `version`            | `mqttx` 版本                    |
+| field                   | 说明                            |
+| ----------------------- | ------------------------------- |
+| `activeConnectCount`    | 当前活跃连接数量                |
+| `maxActiveConnectCount` | 最大活跃连接数量                |
+| `receiveMsg`            | 收到消息数量，不含 **ping**     |
+| `sendMsg`               | 发送消息数量，不含 **pingAck**  |
+| `timestamp`             | 时间戳；(`yyyy-MM-dd HH:mm:ss`) |
+| `uptime`                | broker 上线时长，单位秒         |
+| `version`               | `mqttx` 版本                    |
 
 ##### 4.8.2 功能主题
 
@@ -457,7 +468,6 @@ mqttx:
 | `mqttx.share-topic.share-sub-strategy`   | `round`                         | 负载均衡策略, 目前支持随机、轮询、哈希                       |
 | `mqttx.sys-topic.enable` | `false` | 系统主题功能开关 |
 | `mqttx.sys-topic.interval` | `60s` | 定时发布间隔 |
-| `mqttx.sys-topic.qos` | `0` | 主题 qos, 暂不支持 `qos > 0` |
 | `mqttx.message-bridge.enable` | `false` | 消息桥接功能开关 |
 | `mqttx.message-bridge.topics` | `null` | 需要桥接消息的主题列表 |
 | `mqttx.rate-limiter.enable` | `false` | 主题限流开关 |

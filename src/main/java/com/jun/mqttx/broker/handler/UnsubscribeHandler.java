@@ -77,12 +77,6 @@ public class UnsubscribeHandler extends AbstractMqttSessionHandler {
      * @param ctx            {@link ChannelHandlerContext}
      */
     private void unsubscribeSysTopics(List<String> unSubSysTopics, ChannelHandlerContext ctx) {
-        unSubSysTopics.forEach(topic -> {
-            if (TopicUtils.BROKER_STATUS.equals(topic)) {
-                SubscribeHandler.SYS_CHANNELS.remove(ctx.channel());
-            }
-        });
-        unSubSysTopics.remove(TopicUtils.BROKER_STATUS);
         subscriptionService.unsubscribeSys(clientId(ctx), unSubSysTopics);
     }
 }

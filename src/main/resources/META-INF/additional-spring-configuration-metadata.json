@@ -12,23 +12,6 @@
       ]
     },
     {
-      "name": "mqttx.sys-topic.qos",
-      "values": [
-        {
-          "value": "0",
-          "description": "at most once, 建议使用."
-        },
-        {
-          "value": "1",
-          "description": "at least once."
-        },
-        {
-          "value": "2",
-          "description": "at exactly once, 不建议使用此参数."
-        }
-      ]
-    },
-    {
       "name": "mqttx.cluster.type",
       "values": [
         {
