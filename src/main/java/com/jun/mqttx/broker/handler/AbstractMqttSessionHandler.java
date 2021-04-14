@@ -156,6 +156,16 @@ public abstract class AbstractMqttSessionHandler implements MqttMessageHandler {
     }
 
     /**
+     * 判断当前连接是否为 {@link MqttVersion#MQTT_5} 版本的协议
+     *
+     * @param ctx {@link ChannelHandlerContext}
+     * @return true 如果当前连接协议版本为 {@link MqttVersion#MQTT_5}
+     */
+    boolean isMqttV5(ChannelHandlerContext ctx){
+        return MqttVersion.MQTT_5 == version(ctx);
+    }
+
+    /**
      * 判断 broker 是否进入了集群模式
      *
      * @return true if mqttx broker enter cluster mode

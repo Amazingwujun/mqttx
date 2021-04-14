@@ -7,6 +7,9 @@ spring:
 mqttx:
   web-socket:
     enable: true
+  sys-topic:
+    enable: true
+    interval: 2s
 
 logging:
   pattern:

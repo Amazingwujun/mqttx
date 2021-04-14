@@ -155,6 +155,27 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         MqttPublishVariableHeader mqttPublishVariableHeader = mpm.variableHeader();
         ByteBuf payload = mpm.payload();
 
+        // 处理 mqtt v5 协议
+        if (isMqttV5(ctx)) {
+            // publish properties 处理
+            // 1. 载荷格式
+            // 2. 消息过期时间
+            // 3. 内容类型
+            // 4. 响应主题
+            // 5. 相关数据
+            // 6. 定义标识符
+            // 7. 主题别名
+            // 8. 用户属性
+            MqttProperties properties = mqttPublishVariableHeader.properties();
+
+            // 消息过期时间
+            MqttProperties.IntegerProperty property = (MqttProperties.IntegerProperty)
+                    properties.getProperty(MqttProperties.MqttPropertyType.PUBLICATION_EXPIRY_INTERVAL.value());
+        }
+
+
+
+
         // 获取qos、topic、packetId、retain、payload
         int mqttQoS = mqttFixedHeader.qosLevel().value();
         String topic = mqttPublishVariableHeader.topicName();
