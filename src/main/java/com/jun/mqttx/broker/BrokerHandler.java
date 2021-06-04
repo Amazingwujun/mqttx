@@ -215,10 +215,7 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
             for (ClientSub clientSub : clientSubs) {
                 Optional.ofNullable(ConnectHandler.CLIENT_MAP.get(clientSub.getClientId()))
                         .map(BrokerHandler.CHANNELS::find)
-                        .ifPresent(channel -> {
-                            mpm.retain();
-                            channel.writeAndFlush(mpm);
-                        });
+                        .ifPresent(channel -> channel.writeAndFlush(mpm.retain()));
             }
 
             // 必须最后释放
