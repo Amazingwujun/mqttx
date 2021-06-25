@@ -146,7 +146,6 @@ public class BrokerInitializer implements DisposableBean {
      * <p>
      * 为优化性能，当 {@link Epoll#isAvailable()} = true , 启用 Native Epoll.
      * 参考 <a href="https://netty.io/wiki/native-transports.html">https://netty.io/wiki/native-transports.html</a>
-     * <p>
      * <pre>
      * Netty provides the following platform specific JNI transports:
      *    Linux (since 4.0.16)
@@ -246,7 +245,7 @@ public class BrokerInitializer implements DisposableBean {
      * <ol>
      *     <li>必须使用字节流（webSocket binary data frames）, 其它一律关闭连接</li>
      *     <li>一个 websocket 可以包含多个 mqtt 控制包, 实现协议时不能假设一个 websocket 包就是一个 mqtt 控制包</li>
-     *     <li>客户端要申明自己的自协议是 "mqtt"</li>
+     *     <li>客户端要申明自己的子协议是 "mqtt"</li>
      *     <li>服务端当然得支持子协议(subProtocol) "mqtt" 啦</li>
      * </ol>
      */
