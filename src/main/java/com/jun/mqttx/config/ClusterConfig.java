@@ -55,7 +55,7 @@ import static com.jun.mqttx.constants.InternalMessageEnum.*;
  */
 @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
 @Configuration
-@ConditionalOnExpression("${mqttx.cluster.enable:false} && !${mqttx.enable-test-mode:false}")
+@ConditionalOnExpression("${mqttx.cluster.enable:false}")
 public class ClusterConfig {
 
     public static final String REDIS = "redis";

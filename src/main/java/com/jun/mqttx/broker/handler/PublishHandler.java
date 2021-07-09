@@ -91,7 +91,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                           ISubscriptionService subscriptionService, IPubRelMessageService pubRelMessageService, ISessionService sessionService,
                           @Nullable IInternalMessagePublishService internalMessagePublishService, MqttxConfig config,
                           @Nullable KafkaTemplate<String, byte[]> kafkaTemplate, Serializer serializer) {
-        super(config.getEnableTestMode(), config.getCluster().getEnable());
+        super(config.getCluster().getEnable());
         Assert.notNull(publishMessageService, "publishMessageService can't be null");
         Assert.notNull(retainMessageService, "retainMessageService can't be null");
         Assert.notNull(subscriptionService, "publishMessageService can't be null");

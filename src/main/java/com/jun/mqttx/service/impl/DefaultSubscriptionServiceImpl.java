@@ -44,7 +44,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
     private final IInternalMessagePublishService internalMessagePublishService;
     /** client订阅主题, 订阅主题前缀, 主题集合 */
     private final String clientTopicsPrefix, topicSetKey, topicPrefix;
-    private final boolean enableInnerCache, enableCluster, enableTestMode;
+    private final boolean enableInnerCache, enableCluster;
     private final int brokerId;
 
 
@@ -85,9 +85,8 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         MqttxConfig.Cluster cluster = mqttxConfig.getCluster();
         this.enableCluster = cluster.getEnable();
         this.enableInnerCache = mqttxConfig.getEnableInnerCache();
-        this.enableTestMode = mqttxConfig.getEnableTestMode();
-        if (enableInnerCache && !enableTestMode) {
-            // 非测试模式，初始化缓存
+        if (enableInnerCache) {
+            // 初始化缓存
             initInnerCache(stringRedisTemplate);
         }
         this.brokerId = mqttxConfig.getBrokerId();
@@ -108,40 +107,37 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         int qos = clientSub.getQos();
         boolean cleanSession = clientSub.isCleanSession();
 
-        if (enableTestMode) {
-            subscribeWithCache(clientSub);
+        // 保存订阅关系
+        // 1. 保存 topic -> client 映射
+        // 2. 将topic保存到redis set 集合中
+        // 3. 保存 client -> topics
+        if (cleanSession) {
+            inMemTopicClientsMap
+                    .computeIfAbsent(topic, s -> ConcurrentHashMap.newKeySet())
+                    .add(clientSub);
+            inMemTopics.add(topic);
+            inMemClientTopicsMap
+                    .computeIfAbsent(clientId, s -> ConcurrentHashMap.newKeySet())
+                    .add(topic);
         } else {
-            // 保存订阅关系
-            // 1. 保存 topic -> client 映射
-            // 2. 将topic保存到redis set 集合中
-            // 3. 保存 client -> topics
-            if (cleanSession) {
-                inMemTopicClientsMap
-                        .computeIfAbsent(topic, s -> ConcurrentHashMap.newKeySet())
-                        .add(clientSub);
-                inMemTopics.add(topic);
-                inMemClientTopicsMap
-                        .computeIfAbsent(clientId, s -> ConcurrentHashMap.newKeySet())
-                        .add(topic);
-            } else {
-                stringRedisTemplate.opsForHash()
-                        .put(topicPrefix + topic, clientId, String.valueOf(qos));
-                stringRedisTemplate.opsForSet().add(topicSetKey, topic);
-                stringRedisTemplate.opsForSet().add(clientTopicsPrefix + clientId, topic);
-                if (enableInnerCache) {
-                    subscribeWithCache(clientSub);
-                }
-            }
-
-            if (enableCluster) {
-                InternalMessage<ClientSubOrUnsubMsg> im = new InternalMessage<>(
-                        new ClientSubOrUnsubMsg(clientId, qos, topic, cleanSession, null, SUB),
-                        System.currentTimeMillis(),
-                        brokerId
-                );
-                internalMessagePublishService.publish(im, InternalMessageEnum.SUB_UNSUB.getChannel());
+            stringRedisTemplate.opsForHash()
+                    .put(topicPrefix + topic, clientId, String.valueOf(qos));
+            stringRedisTemplate.opsForSet().add(topicSetKey, topic);
+            stringRedisTemplate.opsForSet().add(clientTopicsPrefix + clientId, topic);
+            if (enableInnerCache) {
+                subscribeWithCache(clientSub);
             }
         }
+
+        if (enableCluster) {
+            InternalMessage<ClientSubOrUnsubMsg> im = new InternalMessage<>(
+                    new ClientSubOrUnsubMsg(clientId, qos, topic, cleanSession, null, SUB),
+                    System.currentTimeMillis(),
+                    brokerId
+            );
+            internalMessagePublishService.publish(im, InternalMessageEnum.SUB_UNSUB.getChannel());
+        }
+
     }
 
     /**
@@ -157,31 +153,27 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
             return;
         }
 
-        if (enableTestMode) {
-            unsubscribeWithCache(clientId, topics);
-        } else {
-            if (cleanSession) {
-                topics.forEach(topic -> {
-                    ConcurrentHashMap.KeySetView<ClientSub, Boolean> clientSubs = inMemTopicClientsMap.get(topic);
-                    if (!CollectionUtils.isEmpty(clientSubs)) {
-                        clientSubs.remove(ClientSub.of(clientId, 0, topic, false));
-                    }
-                });
-                Optional.ofNullable(inMemClientTopicsMap.get(clientId)).ifPresent(t -> t.removeAll(topics));
-            } else {
-                topics.forEach(topic -> stringRedisTemplate.opsForHash().delete(topicPrefix + topic, clientId));
-                stringRedisTemplate.opsForSet().remove(clientTopicsPrefix + clientId, topics.toArray());
-                if (enableInnerCache) {
-                    unsubscribeWithCache(clientId, topics);
+        if (cleanSession) {
+            topics.forEach(topic -> {
+                ConcurrentHashMap.KeySetView<ClientSub, Boolean> clientSubs = inMemTopicClientsMap.get(topic);
+                if (!CollectionUtils.isEmpty(clientSubs)) {
+                    clientSubs.remove(ClientSub.of(clientId, 0, topic, false));
                 }
+            });
+            Optional.ofNullable(inMemClientTopicsMap.get(clientId)).ifPresent(t -> t.removeAll(topics));
+        } else {
+            topics.forEach(topic -> stringRedisTemplate.opsForHash().delete(topicPrefix + topic, clientId));
+            stringRedisTemplate.opsForSet().remove(clientTopicsPrefix + clientId, topics.toArray());
+            if (enableInnerCache) {
+                unsubscribeWithCache(clientId, topics);
             }
+        }
 
-            // 集群广播
-            if (enableCluster) {
-                ClientSubOrUnsubMsg clientSubOrUnsubMsg = new ClientSubOrUnsubMsg(clientId, 0, null, cleanSession, topics, UN_SUB);
-                InternalMessage<ClientSubOrUnsubMsg> im = new InternalMessage<>(clientSubOrUnsubMsg, System.currentTimeMillis(), brokerId);
-                internalMessagePublishService.publish(im, InternalMessageEnum.SUB_UNSUB.getChannel());
-            }
+        // 集群广播
+        if (enableCluster) {
+            ClientSubOrUnsubMsg clientSubOrUnsubMsg = new ClientSubOrUnsubMsg(clientId, 0, null, cleanSession, topics, UN_SUB);
+            InternalMessage<ClientSubOrUnsubMsg> im = new InternalMessage<>(clientSubOrUnsubMsg, System.currentTimeMillis(), brokerId);
+            internalMessagePublishService.publish(im, InternalMessageEnum.SUB_UNSUB.getChannel());
         }
     }
 
@@ -197,7 +189,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
     @Override
     public List<ClientSub> searchSubscribeClientList(String topic) {
         // 启用内部缓存机制
-        if (enableInnerCache || enableTestMode) {
+        if (enableInnerCache) {
             return searchSubscribeClientListByCache(topic);
         }
 
@@ -237,24 +229,19 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
     @Override
     public void clearClientSubscriptions(String clientId, boolean cleanSession) {
         Set<String> keys;
-        if (enableTestMode) {
-            keys = inDiskTopics;
-            unsubscribe(clientId, true, new ArrayList<>(keys));
-        } else {
-            if (cleanSession) {
-                keys = inMemClientTopicsMap.remove(clientId);
-                if (CollectionUtils.isEmpty(keys)) {
-                    return;
-                }
-            } else {
-                keys = stringRedisTemplate.opsForSet().members(clientTopicsPrefix + clientId);
-                if (CollectionUtils.isEmpty(keys)) {
-                    return;
-                }
-                stringRedisTemplate.delete(clientTopicsPrefix + clientId);
+        if (cleanSession) {
+            keys = inMemClientTopicsMap.remove(clientId);
+            if (CollectionUtils.isEmpty(keys)) {
+                return;
             }
-            unsubscribe(clientId, cleanSession, new ArrayList<>(keys));
+        } else {
+            keys = stringRedisTemplate.opsForSet().members(clientTopicsPrefix + clientId);
+            if (CollectionUtils.isEmpty(keys)) {
+                return;
+            }
+            stringRedisTemplate.delete(clientTopicsPrefix + clientId);
         }
+        unsubscribe(clientId, cleanSession, new ArrayList<>(keys));
     }
 
     /**
@@ -384,9 +371,6 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
      * 初始化内部缓存。目前的策略是全部加载，其实可以按需加载，按业务需求来吧。
      */
     private void initInnerCache(final StringRedisTemplate redisTemplate) {
-        if (enableTestMode) {
-            return;
-        }
         log.info("enableInnerCache=true, 开始加载缓存...");
 
         final Set<String> allTopic = redisTemplate.opsForSet().members(topicSetKey);

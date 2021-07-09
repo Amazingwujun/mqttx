@@ -31,8 +31,8 @@ import io.netty.channel.ChannelHandlerContext;
  */
 public abstract class AbstractMqttTopicSecureHandler extends AbstractMqttSessionHandler {
 
-    public AbstractMqttTopicSecureHandler(boolean enableTestMode, boolean enableCluster) {
-        super(enableTestMode, enableCluster);
+    public AbstractMqttTopicSecureHandler(boolean enableCluster) {
+        super(enableCluster);
     }
 
     /**

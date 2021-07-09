@@ -37,7 +37,7 @@ public class PubRecHandler extends AbstractMqttSessionHandler {
 
     public PubRecHandler(IPubRelMessageService pubRelMessageService, IPublishMessageService publishMessageService,
                          MqttxConfig config) {
-        super(config.getEnableTestMode(), config.getCluster().getEnable());
+        super(config.getCluster().getEnable());
         this.pubRelMessageService = pubRelMessageService;
         this.publishMessageService = publishMessageService;
     }

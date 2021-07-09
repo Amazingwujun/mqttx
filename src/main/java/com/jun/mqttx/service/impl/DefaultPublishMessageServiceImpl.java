@@ -28,8 +28,6 @@ public class DefaultPublishMessageServiceImpl implements IPublishMessageService 
     private final RedisTemplate<String, byte[]> redisTemplate;
     private final Serializer serializer;
     private final String pubMsgSetPrefix;
-    private final boolean enableTestMode;
-    private Map<String, Map<Integer, PubMsg>> pubMsgStore;
 
     public DefaultPublishMessageServiceImpl(RedisTemplate<String, byte[]> redisTemplate,
                                             @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection") Serializer serializer,
@@ -38,43 +36,22 @@ public class DefaultPublishMessageServiceImpl implements IPublishMessageService 
         this.serializer = serializer;
 
         this.pubMsgSetPrefix = mqttxConfig.getRedis().getPubMsgSetPrefix();
-        this.enableTestMode = mqttxConfig.getEnableTestMode();
-        if (enableTestMode) {
-            pubMsgStore = new ConcurrentHashMap<>();
-        }
         Assert.hasText(pubMsgSetPrefix, "pubMsgSetPrefix can't be null");
     }
 
     @Override
     public void save(String clientId, PubMsg pubMsg) {
-        if (enableTestMode) {
-            pubMsgStore
-                    .computeIfAbsent(clientId, s -> new ConcurrentHashMap<>())
-                    .put(pubMsg.getMessageId(), pubMsg);
-            return;
-        }
-
         redisTemplate.opsForHash().put(pubMsgSetPrefix + clientId,
                 String.valueOf(pubMsg.getMessageId()), serializer.serialize(pubMsg));
     }
 
     @Override
     public void clear(String clientId) {
-        if (enableTestMode) {
-            pubMsgStore.remove(clientId);
-            return;
-        }
-
         redisTemplate.delete(pubMsgSetPrefix + clientId);
     }
 
     @Override
     public void remove(String clientId, int messageId) {
-        if (enableTestMode) {
-            pubMsgStore.computeIfAbsent(clientId, s -> new ConcurrentHashMap<>()).remove(messageId);
-            return;
-        }
-
         redisTemplate.opsForHash().delete(
                 key(clientId),
                 String.valueOf(messageId)
@@ -83,15 +60,6 @@ public class DefaultPublishMessageServiceImpl implements IPublishMessageService 
 
     @Override
     public List<PubMsg> search(String clientId) {
-        if (enableTestMode) {
-            List<PubMsg> values = new ArrayList<>();
-            pubMsgStore.computeIfPresent(clientId, (s, pubMsgMap) -> {
-                values.addAll(pubMsgMap.values());
-                return pubMsgMap;
-            });
-            return values;
-        }
-
         List<Object> values = redisTemplate.opsForHash().values(key(clientId));
         if (CollectionUtils.isEmpty(values)) {
             // noinspection unchecked

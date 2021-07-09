@@ -102,12 +102,6 @@
                 <profile>prod</profile>
             </properties>
         </profile>
-        <profile>
-            <id>test</id>
-            <properties>
-                <profile>test</profile>
-            </properties>
-        </profile>
     </profiles>
 
     <build>

@@ -35,7 +35,7 @@ public class PubAckHandler extends AbstractMqttSessionHandler {
     private final IPublishMessageService publishMessageService;
 
     public PubAckHandler(IPublishMessageService publishMessageService, MqttxConfig config) {
-        super(config.getEnableTestMode(), config.getCluster().getEnable());
+        super(config.getCluster().getEnable());
         this.publishMessageService = publishMessageService;
     }
 

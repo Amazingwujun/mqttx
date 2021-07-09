@@ -46,14 +46,10 @@
 > 想通过 docker 快速体验？见 [docker 启动](#3-docker-启动)
 
 1. 打包
-    - 测试模式：运行  `mvnw -P test -DskipTests=true clean package`
-
-    - 开发模式：
-        1. 启动 `redis` 实例
-        2. 运行 `mvnw -P dev -DskipTests=true clean package`
+   1. 启动 `redis` 实例
+   2. 运行 `mvnw -P dev -DskipTests=true clean package`
 2. 运行
-
-    1. 运行命令：`java -jar mqttx-1.0.5.BETA.jar`
+    1. 运行命令：`java -jar mqttx-1.0.7.RELEASE.jar`
 
 *快速开始-测试模式* 图例：
 

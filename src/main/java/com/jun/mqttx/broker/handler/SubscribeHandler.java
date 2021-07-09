@@ -63,7 +63,7 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
 
     public SubscribeHandler(IRetainMessageService retainMessageService, ISubscriptionService subscriptionService,
                             PublishHandler publishHandler, MqttxConfig config) {
-        super(config.getEnableTestMode(), config.getCluster().getEnable());
+        super(config.getCluster().getEnable());
         this.retainMessageService = retainMessageService;
         this.publishHandler = publishHandler;
         this.subscriptionService = subscriptionService;
