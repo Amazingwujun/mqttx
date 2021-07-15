@@ -7,7 +7,7 @@
 - [1 介绍](#1-介绍)
     - [1.1 快速开始](#11-快速开始)
     - [1.2 项目依赖](#12-项目依赖)
-    - [1.3 线上实例](#13-线上实例)
+    - [~~1.3  线上实例~~](#13-线上实例)
 - [2 架构](#2-架构)
     - [2.1 目录结构](#21-目录结构)
 - [3 docker 启动](#3-docker-启动)
@@ -83,16 +83,20 @@
 >
 > 举例：`idea` 需要安装插件 `Lombok`, `settings > Build,Execution,Deployment > Compiler > Annotation Processor` 开启 `Enable annotation processing`
 
-### 1.3 线上实例
+### ~~1.3 线上实例~~
 
-云端部署了一个 `mqttx` 单例服务，可供功能测试：
+云服务到期，实例已经无法访问，有朋友赞助吗/(ㄒoㄒ)/~~
 
-1. 不支持 `ssl`
-2. 开启了 `websocket`, 可通过 http://tools.emqx.io/ 测试，仅需将域名修改为：`119.45.158.51`(端口、地址不变)
-3. 支持共享订阅功能
-4. 部署版本 `v1.0.6.RELEASE`
+> 云端部署了一个 `mqttx` 单例服务，可供功能测试：
+>
+> 1. 不支持 `ssl`
+> 2. 开启了 `websocket`, 可通过 http://tools.emqx.io/ 测试，仅需将域名修改为：`119.45.158.51`(端口、地址不变)
+> 3. 支持共享订阅功能
+> 4. 部署版本 `v1.0.6.RELEASE`
+>
+> ![websocket](https://s1.ax1x.com/2020/09/05/wV578J.png)
 
-![websocket](https://s1.ax1x.com/2020/09/05/wV578J.png)
+
 
 ## 2 架构
 
@@ -406,15 +410,24 @@ mqttx:
 ## 5 开发者说
 
 1. `v1.0` 版本分支将作为支持 **mqttv3.1.1** 协议版本持续迭代
+
 2. 为使 ***mqttx*** 项目变得更好，请使用及学习该项目的同学主动反馈使用情况给我（提 issue 或加群反馈）
+
 3. 后续工作
    - [x] `v1.0.7.RELEASE` 版本 ***Benchmark***
    - [x] `v1.0.8.RELEASE` 版本开发
    - [x] `v2.0.0.RELEASE` 版本开发
    - [x] bug 修复
+   
 4. `v2.0` 版本分支将作为 **mqttv5** 协议版本开始迭代
+
 5. 这段时间工作任务繁重，功能迭代暂时停止，当然 **bug** 我还是会优先处理🙂
-6. 交流群
+
+6. 请作者喝杯 **caffee** 😊
+
+   <img src="https://z3.ax1x.com/2021/07/15/Wm53vj.jpg" alt="caffee" height="300" />
+
+7. 交流群
 
 <img src="https://s1.ax1x.com/2020/10/10/0ytoSx.jpg" alt="群二维码" height="300" />
 
