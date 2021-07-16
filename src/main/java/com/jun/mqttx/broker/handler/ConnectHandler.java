@@ -60,7 +60,6 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
     public final static ConcurrentHashMap<String, ChannelId> CLIENT_MAP = new ConcurrentHashMap<>(100000);
     private static final String NONE_ID_PREFIX = "NONE_ID_";
     final private boolean enableTopicSubPubSecure, enableSysTopic;
-    private final MqttQoS sysTopicQos;
     private final int brokerId;
     /** 认证服务 */
     private final IAuthenticationService authenticationService;
@@ -98,7 +97,6 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         this.pubRelMessageService = pubRelMessageService;
         this.enableTopicSubPubSecure = config.getEnableTopicSubPubSecure();
         this.enableSysTopic = sysTopic.getEnable();
-        this.sysTopicQos = MqttQoS.valueOf(sysTopic.getQos());
 
         if (isClusterMode()) {
             this.internalMessagePublishService = internalMessagePublishService;
@@ -175,16 +173,17 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         // 关闭之前可能存在的tcp链接
         // [MQTT-3.1.4-2] If the ClientId represents a Client already connected to the Server then the Server MUST
         // disconnect the existing Client
-        if (isClusterMode()) {
+        if (CLIENT_MAP.containsKey(clientId)) {
+            Optional.ofNullable(CLIENT_MAP.get(clientId))
+                    .map(BrokerHandler.CHANNELS::find)
+                    .filter(channel -> !Objects.equals(channel, ctx.channel()))
+                    .ifPresent(ChannelOutboundInvoker::close);
+        } else if (isClusterMode()) {
             internalMessagePublishService.publish(
                     new InternalMessage<>(clientId, System.currentTimeMillis(), brokerId),
                     InternalMessageEnum.DISCONNECT.getChannel()
             );
         }
-        Optional.ofNullable(CLIENT_MAP.get(clientId))
-                .map(BrokerHandler.CHANNELS::find)
-                .filter(channel -> !Objects.equals(channel, ctx.channel()))
-                .ifPresent(ChannelOutboundInvoker::close);
 
         // 会话状态的处理
         // [MQTT-3.1.3-7] If the Client supplies a zero-byte ClientId, the Client MUST also set CleanSession to 1. -
@@ -318,10 +317,9 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
             byte[] bytes = LocalDateTime.now().toString().getBytes(StandardCharsets.UTF_8);
             ByteBuf connectTime = Unpooled.buffer(bytes.length).writeBytes(bytes);
             MqttPublishMessage mpm = MqttMessageBuilders.publish()
-                    .qos(sysTopicQos)
+                    .qos(MqttQoS.AT_MOST_ONCE)
                     .retained(false)
                     .topicName(topic)
-                    .messageId(nextMessageId(ctx))
                     //  上线时间
                     .payload(connectTime)
                     .build();
@@ -332,8 +330,7 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
                         .ofNullable(CLIENT_MAP.get(clientSub.getClientId()))
                         .map(BrokerHandler.CHANNELS::find)
                         .ifPresent(channel -> {
-                            mpm.retain();
-                            channel.writeAndFlush(mpm);
+                            channel.writeAndFlush(mpm.retain());
                         });
             }
 

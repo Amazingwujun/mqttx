@@ -85,7 +85,6 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
     private final PublishHandler publishHandler;
     private final Serializer serializer;
     private final boolean enableSysTopic;
-    private final MqttQoS sysTopicQos;
     private final int brokerId;
     //@formatter:on
 
@@ -104,7 +103,6 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
         this.publishHandler = publishHandler;
         this.serializer = serializer;
         this.enableSysTopic = sysTopic.getEnable();
-        this.sysTopicQos = MqttQoS.valueOf(sysTopic.getQos());
         this.brokerId = config.getBrokerId();
     }
 
@@ -208,20 +206,16 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
             byte[] bytes = LocalDateTime.now().toString().getBytes(StandardCharsets.UTF_8);
             ByteBuf disconnectTime = Unpooled.buffer(bytes.length).writeBytes(bytes);
             MqttPublishMessage mpm = MqttMessageBuilders.publish()
-                    .qos(sysTopicQos)
+                    .qos(MqttQoS.AT_MOST_ONCE)
                     .retained(false)
                     .topicName(topic)
-                    .messageId(MqttQoS.AT_MOST_ONCE == sysTopicQos ? 0 : session.increaseAndGetMessageId())
                     .payload(disconnectTime)
                     .build();
 
             for (ClientSub clientSub : clientSubs) {
                 Optional.ofNullable(ConnectHandler.CLIENT_MAP.get(clientSub.getClientId()))
                         .map(BrokerHandler.CHANNELS::find)
-                        .ifPresent(channel -> {
-                            mpm.retain();
-                            channel.writeAndFlush(mpm);
-                        });
+                        .ifPresent(channel -> channel.writeAndFlush(mpm.retain()));
             }
 
             // 必须最后释放

@@ -305,7 +305,10 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
             pubMsg.setAppointedClientId(luckyClient.getClientId());
             publish0(luckyClient, pubMsg, isClusterMessage);
 
-            if (isClusterMode()) {
+            // 满足如下条件，则发送消息给集群
+            // 1 集群模式开启
+            // 2 订阅的客户端连接在其它实例上
+            if (isClusterMode() && !ConnectHandler.CLIENT_MAP.containsKey(luckyClient.getClientId())) {
                 internalMessagePublish(pubMsg);
             }
             return;
@@ -313,7 +316,17 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
 
         // 将消息推送给集群中的broker
         if (isClusterMode() && !isClusterMessage) {
-            internalMessagePublish(pubMsg);
+            // 判断是否需要进行集群消息分发
+            boolean flag = false;
+            for (ClientSub clientSub : clientList) {
+                if (!ConnectHandler.CLIENT_MAP.containsKey(clientSub.getClientId())) {
+                    flag = true;
+                    break;
+                }
+            }
+            if (flag) {
+                internalMessagePublish(pubMsg);
+            }
         }
 
         // 遍历发送

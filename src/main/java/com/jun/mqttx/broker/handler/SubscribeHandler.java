@@ -26,14 +26,13 @@ import com.jun.mqttx.utils.TopicUtils;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.group.ChannelGroup;
-import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.handler.codec.mqtt.*;
-import io.netty.util.concurrent.GlobalEventExecutor;
+import org.springframework.util.CollectionUtils;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -49,15 +48,14 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
     //@formatter:off
 
     /**系统主题 $SYS 订阅群组 */
-    public static ChannelGroup SYS_CHANNELS;
     private final boolean enableTopicPubSubSecure;
     private final IRetainMessageService retainMessageService;
     private final ISubscriptionService subscriptionService;
     private final PublishHandler publishHandler;
     private final boolean enableSysTopic;
     private final String version;
+    private final int brokerId;
     private long interval;
-    private MqttQoS sysTopicQos;
     /** 定时任务执行器 */
     private ScheduledExecutorService fixRateExecutor;
 
@@ -73,10 +71,9 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
 
         this.version = config.getVersion();
         this.enableSysTopic = config.getSysTopic().getEnable();
+        this.brokerId = config.getBrokerId();
         if (enableSysTopic) {
-            SubscribeHandler.SYS_CHANNELS = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
             this.interval = config.getSysTopic().getInterval().getSeconds();
-            this.sysTopicQos = MqttQoS.valueOf(config.getSysTopic().getQos());
             fixRateExecutor = Executors.newSingleThreadScheduledExecutor();
             initSystemStatePublishTimer();
         }
@@ -160,7 +157,7 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
      * +-----------------------------------+----------------------------------------------------------------------------+
      * | 主题                              | 描述                                                                        |
      * +-----------------------------------+----------------------------------------------------------------------------+
-     * | $SYS/broker/status                | 触发方式：订阅此主题的客户端会定期（mqttx.sys-topic.interval）收到 broker 的状态，|
+     * | $SYS/broker/{brokerId}/status     | 触发方式：订阅此主题的客户端会定期（mqttx.sys-topic.interval）收到 broker 的状态，|
      * |                                   | 该状态涵盖下面所有主题的状态值.                                                |
      * |                                   | 注意：客户端连接断开后，订阅取消                                               |
      * +-----------------------------------+----------------------------------------------------------------------------+
@@ -195,23 +192,17 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
      * @param ctx       {@link ChannelHandlerContext}
      */
     private void sysTopicSubscribeHandle(final ClientSub clientSub, final ChannelHandlerContext ctx) {
-        final int messageId = MqttQoS.AT_MOST_ONCE == sysTopicQos ? 0 : nextMessageId(ctx);
         final String topic = clientSub.getTopic();
         switch (topic) {
-            case TopicUtils.BROKER_STATUS: {
-                SYS_CHANNELS.add(ctx.channel());
-                break;
-            }
             case TopicUtils.BROKER_VERSION: {
                 byte[] version = BrokerStatus.builder()
                         .version(this.version)
-                        .build().toUtf8Bytes();
+                        .build().toJsonBytes();
 
                 MqttPublishMessage versionResponse = MqttMessageBuilders.publish()
-                        .qos(sysTopicQos)
+                        .qos(MqttQoS.AT_MOST_ONCE)
                         .retained(false)
                         .topicName(topic)
-                        .messageId(messageId)
                         .payload(Unpooled.buffer(version.length).writeBytes(version))
                         .build();
                 ctx.writeAndFlush(versionResponse);
@@ -220,13 +211,12 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
             case TopicUtils.BROKER_CLIENTS_ACTIVE_CONNECTED_COUNT: {
                 byte[] activeConnected = BrokerStatus.builder()
                         .activeConnectCount(BrokerHandler.CHANNELS.size())
-                        .build().toUtf8Bytes();
+                        .build().toJsonBytes();
 
                 MqttPublishMessage timeResponse = MqttMessageBuilders.publish()
-                        .qos(sysTopicQos)
+                        .qos(MqttQoS.AT_MOST_ONCE)
                         .retained(false)
                         .topicName(topic)
-                        .messageId(messageId)
                         .payload(Unpooled.buffer(activeConnected.length).writeBytes(activeConnected))
                         .build();
                 ctx.writeAndFlush(timeResponse);
@@ -235,13 +225,12 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
             case TopicUtils.BROKER_TIME: {
                 byte[] timestamp = BrokerStatus.builder()
                         .timestamp(LocalDateTime.now().toString())
-                        .build().toUtf8Bytes();
+                        .build().toJsonBytes();
 
                 MqttPublishMessage timeResponse = MqttMessageBuilders.publish()
-                        .qos(sysTopicQos)
+                        .qos(MqttQoS.AT_MOST_ONCE)
                         .retained(false)
                         .topicName(topic)
-                        .messageId(messageId)
                         .payload(Unpooled.buffer(timestamp.length).writeBytes(timestamp))
                         .build();
                 ctx.writeAndFlush(timeResponse);
@@ -250,13 +239,12 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
             case TopicUtils.BROKER_MAX_CLIENTS_ACTIVE: {
                 byte[] maxAlive = BrokerStatus.builder()
                         .maxActiveConnectCount(BrokerHandler.MAX_ACTIVE_SIZE.get())
-                        .build().toUtf8Bytes();
+                        .build().toJsonBytes();
 
                 MqttPublishMessage timeResponse = MqttMessageBuilders.publish()
-                        .qos(sysTopicQos)
+                        .qos(MqttQoS.AT_MOST_ONCE)
                         .retained(false)
                         .topicName(topic)
-                        .messageId(messageId)
                         .payload(Unpooled.buffer(maxAlive.length).writeBytes(maxAlive))
                         .build();
                 ctx.writeAndFlush(timeResponse);
@@ -265,13 +253,12 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
             case TopicUtils.BROKER_RECEIVED_MSG: {
                 byte[] received = BrokerStatus.builder()
                         .receivedMsg(ProbeHandler.IN_MSG_SIZE.intValue())
-                        .build().toUtf8Bytes();
+                        .build().toJsonBytes();
 
                 MqttPublishMessage timeResponse = MqttMessageBuilders.publish()
-                        .qos(sysTopicQos)
+                        .qos(MqttQoS.AT_MOST_ONCE)
                         .retained(false)
                         .topicName(topic)
-                        .messageId(messageId)
                         .payload(Unpooled.buffer(received.length).writeBytes(received))
                         .build();
                 ctx.writeAndFlush(timeResponse);
@@ -281,13 +268,12 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
             case TopicUtils.BROKER_SEND_MSG: {
                 byte[] send = BrokerStatus.builder()
                         .receivedMsg(ProbeHandler.OUT_MSG_SIZE.intValue())
-                        .build().toUtf8Bytes();
+                        .build().toJsonBytes();
 
                 MqttPublishMessage timeResponse = MqttMessageBuilders.publish()
-                        .qos(sysTopicQos)
+                        .qos(MqttQoS.AT_MOST_ONCE)
                         .retained(false)
                         .topicName(topic)
-                        .messageId(messageId)
                         .payload(Unpooled.buffer(send.length).writeBytes(send))
                         .build();
                 ctx.writeAndFlush(timeResponse);
@@ -298,13 +284,12 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
                 byte[] uptime = BrokerStatus
                         .builder()
                         .uptime((int) ((System.currentTimeMillis() - BrokerHandler.START_TIME) / 1000))
-                        .build().toUtf8Bytes();
+                        .build().toJsonBytes();
 
                 MqttPublishMessage uptimeResponse = MqttMessageBuilders.publish()
-                        .qos(sysTopicQos)
+                        .qos(MqttQoS.AT_MOST_ONCE)
                         .retained(false)
                         .topicName(topic)
-                        .messageId(messageId)
                         .payload(Unpooled.buffer(uptime.length).writeBytes(uptime))
                         .build();
                 ctx.writeAndFlush(uptimeResponse);
@@ -321,7 +306,12 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
      */
     private void initSystemStatePublishTimer() {
         fixRateExecutor.scheduleAtFixedRate(() -> {
-            if (SYS_CHANNELS.size() == 0) {
+            // 发布主题
+            final String brokerStatusTopic = String.format(TopicUtils.BROKER_STATUS, brokerId);
+
+            // 获取订阅客户端组
+            List<ClientSub> clientSubs = subscriptionService.searchSysTopicClients(brokerStatusTopic);
+            if (CollectionUtils.isEmpty(clientSubs)) {
                 return;
             }
 
@@ -335,20 +325,28 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
                     .timestamp(now.toString())
                     .uptime((int) ((System.currentTimeMillis() - BrokerHandler.START_TIME) / 1000))
                     .version(this.version)
-                    .build().toUtf8Bytes();
-            ByteBuf payload = Unpooled.buffer(bytes.length).writeBytes(bytes);
+                    .build().toJsonBytes();
+            final ByteBuf payload = Unpooled.buffer(bytes.length).writeBytes(bytes);
+            payload.markReaderIndex();
 
-            // 遍历发送
-            SYS_CHANNELS.forEach(channel -> {
-                MqttPublishMessage mpm = MqttMessageBuilders.publish()
-                        .qos(sysTopicQos)
-                        .retained(false)
-                        .topicName(TopicUtils.BROKER_STATUS)
-                        .messageId(nextMessageId(channel))
-                        .payload(payload)
-                        .build();
-                channel.writeAndFlush(mpm);
-            });
+            MqttPublishMessage mpm = MqttMessageBuilders.publish()
+                    .qos(MqttQoS.AT_MOST_ONCE)
+                    .retained(false)
+                    .topicName(brokerStatusTopic)
+                    .payload(payload)
+                    .build();
+
+            // 发布消息
+            for (ClientSub clientSub : clientSubs) {
+                Optional.ofNullable(ConnectHandler.CLIENT_MAP.get(clientSub.getClientId()))
+                        .map(BrokerHandler.CHANNELS::find)
+                        .ifPresent(channel -> {
+                            channel.writeAndFlush(mpm.retain());
+                        });
+            }
+
+            // 释放引用
+            mpm.release();
         }, 0, interval, TimeUnit.SECONDS);
     }
 }

@@ -32,18 +32,6 @@ import java.util.function.Consumer;
 public interface IAuthenticationService {
 
     /**
-     * 执行客户认证。同步请求阻塞 netty io 线程，此接口将在 1.0.5.RELEASE 版本删除
-     *
-     * @param username 用户名
-     * @param password 密码
-     * @throws AuthenticationException if authenticate failed
-     * @throws AuthorizationException  if client
-     * @deprecated 同步接口不建议使用，替代方法 {@link #asyncAuthenticate(ClientAuthDTO, Consumer, Consumer)}
-     */
-    @Deprecated
-    Authentication authenticate(String username, byte[] password) throws AuthenticationException, AuthorizationException;
-
-    /**
      * 异步认证，以 Okhttp 为例:
      * <pre>
      *     OkHttpClient client = new OkHttpClient();

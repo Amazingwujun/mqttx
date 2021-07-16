@@ -7,7 +7,7 @@
 - [1 介绍](#1-介绍)
     - [1.1 快速开始](#11-快速开始)
     - [1.2 项目依赖](#12-项目依赖)
-    - [1.3 线上实例](#13-线上实例)
+    - [~~1.3  线上实例~~](#13-线上实例)
 - [2 架构](#2-架构)
     - [2.1 目录结构](#21-目录结构)
 - [3 docker 启动](#3-docker-启动)
@@ -83,16 +83,20 @@
 >
 > 举例：`idea` 需要安装插件 `Lombok`, `settings > Build,Execution,Deployment > Compiler > Annotation Processor` 开启 `Enable annotation processing`
 
-### 1.3 线上实例
+### ~~1.3 线上实例~~
 
-云端部署了一个 `mqttx` 单例服务，可供功能测试：
+云服务到期，实例已经无法访问，有朋友赞助吗/(ㄒoㄒ)/~~
 
-1. 不支持 `ssl`
-2. 开启了 `websocket`, 可通过 http://tools.emqx.io/ 测试，仅需将域名修改为：`119.45.158.51`(端口、地址不变)
-3. 支持共享订阅功能
-4. 部署版本 `v1.0.6.RELEASE`
+> 云端部署了一个 `mqttx` 单例服务，可供功能测试：
+>
+> 1. 不支持 `ssl`
+> 2. 开启了 `websocket`, 可通过 http://tools.emqx.io/ 测试，仅需将域名修改为：`119.45.158.51`(端口、地址不变)
+> 3. 支持共享订阅功能
+> 4. 部署版本 `v1.0.6.RELEASE`
+>
+> ![websocket](https://s1.ax1x.com/2020/09/05/wV578J.png)
 
-![websocket](https://s1.ax1x.com/2020/09/05/wV578J.png)
+
 
 ## 2 架构
 
@@ -266,8 +270,9 @@ docker 环境安装好后，执行`docker-compose -f ./docker-compose.yml up` �
 
 系统主题不支持如下特性：
 
-- 集群：系统主题消息无法在集群内传播
+- 集群：系统主题不支持集群，包括消息及订阅
 - 持久化：系统主题消息不支持持久化，包括订阅关系
+- QoS: 不支持 QoS 1,2 仅支持 QoS 0
 
 **注意**：***topic 安全机制*** 同样会影响客户端订阅系统主题, 未授权客户端将无法订阅系统主题
 
@@ -282,7 +287,7 @@ docker 环境安装好后，执行`docker-compose -f ./docker-compose.yml up` �
 
 | 主题                                | 描述                                                         |
 | ----------------------------------- | ------------------------------------------------------------ |
-| `$SYS/broker/status`                | 触发方式：订阅此主题的客户端会定期（`mqttx.sys-topic.interval`）收到 broker 的状态，该状态涵盖下面所有主题的状态值. <br/> **注意：客户端连接断开后，订阅取消** |
+| `$SYS/broker/{brokerId}/status`     | 触发方式：订阅此主题的客户端会定期（`mqttx.sys-topic.interval`）收到 broker 的状态，该状态涵盖下面所有主题的状态值. <br/> **注意：客户端连接断开后，订阅取消** |
 | `$SYS/broker/activeConnectCount`    | 立即返回当前的活动连接数量<br/>触发：订阅一次触发一次        |
 | `$SYS/broker/time`                  | 立即返回当前时间戳<br/>触发：订阅一次触发一次                |
 | `$SYS/broker/version`               | 立即返回 `broker` 版本<br/>触发：订阅一次触发一次            |
@@ -291,21 +296,31 @@ docker 环境安装好后，执行`docker-compose -f ./docker-compose.yml up` �
 | `$SYS/broker/uptime`                | 立即返回 `broker` 运行时长，单位***秒***<br/>触发：订阅一次触发一次 |
 | `$SYS/broker/maxActiveConnectCount` | 立即返回 `broker` 运行至今的最大 `tcp` 连接数<br/>触发：订阅一次触发一次 |
 
+系统主题 `$SYS/broker/{brokerId}/status` 中的 **brokerId** 为配置项参数（见 ***[6.1 配置项](#61-配置项)***），可通过携带通配符的主题 `$SYS/broker/+/status` 订阅。
+
 响应对象格式为 `json` 字符串：
 
 ```json
 {
-  "activeConnectCount": 2,
-  "timestamp": "2020-09-18 15:13:46",
-  "version": "1.0.5.ALPHA"
+    "activeConnectCount": 1,
+    "maxActiveConnectCount": 2,
+    "receivedMsg": 6,
+    "sendMsg": 77,
+    "timestamp": "2021-03-23T23:05:37.035",
+    "uptime": 149,
+    "version": "1.0.7.RELEASE"
 }
 ```
 
-| field                | 说明                            |
-| -------------------- | ------------------------------- |
-| `activeConnectCount` | 当前活跃连接数量                |
-| `timestamp`          | 时间戳；(`yyyy-MM-dd HH:mm:ss`) |
-| `version`            | `mqttx` 版本                    |
+| field                   | 说明                            |
+| ----------------------- | ------------------------------- |
+| `activeConnectCount`    | 当前活跃连接数量                |
+| `maxActiveConnectCount` | 最大活跃连接数量                |
+| `receiveMsg`            | 收到消息数量，不含 **ping**     |
+| `sendMsg`               | 发送消息数量，不含 **pingAck**  |
+| `timestamp`             | 时间戳；(`yyyy-MM-dd HH:mm:ss`) |
+| `uptime`                | broker 上线时长，单位秒         |
+| `version`               | `mqttx` 版本                    |
 
 ##### 4.8.2 功能主题
 
@@ -395,14 +410,24 @@ mqttx:
 ## 5 开发者说
 
 1. `v1.0` 版本分支将作为支持 **mqttv3.1.1** 协议版本持续迭代
+
 2. 为使 ***mqttx*** 项目变得更好，请使用及学习该项目的同学主动反馈使用情况给我（提 issue 或加群反馈）
+
 3. 后续工作
    - [x] `v1.0.7.RELEASE` 版本 ***Benchmark***
    - [x] `v1.0.8.RELEASE` 版本开发
    - [x] `v2.0.0.RELEASE` 版本开发
    - [x] bug 修复
+   
 4. `v2.0` 版本分支将作为 **mqttv5** 协议版本开始迭代
-6. 交流群
+
+5. 这段时间工作任务繁重，功能迭代暂时停止，当然 **bug** 我还是会优先处理🙂
+
+6. 请作者喝杯 **caffee** 😊
+
+   <img src="https://z3.ax1x.com/2021/07/15/Wm53vj.jpg" alt="caffee" height="300" />
+
+7. 交流群
 
 <img src="https://s1.ax1x.com/2020/10/10/0ytoSx.jpg" alt="群二维码" height="300" />
 
@@ -457,7 +482,6 @@ mqttx:
 | `mqttx.share-topic.share-sub-strategy`   | `round`                         | 负载均衡策略, 目前支持随机、轮询、哈希                       |
 | `mqttx.sys-topic.enable` | `false` | 系统主题功能开关 |
 | `mqttx.sys-topic.interval` | `60s` | 定时发布间隔 |
-| `mqttx.sys-topic.qos` | `0` | 主题 qos, 暂不支持 `qos > 0` |
 | `mqttx.message-bridge.enable` | `false` | 消息桥接功能开关 |
 | `mqttx.message-bridge.topics` | `null` | 需要桥接消息的主题列表 |
 | `mqttx.rate-limiter.enable` | `false` | 主题限流开关 |
