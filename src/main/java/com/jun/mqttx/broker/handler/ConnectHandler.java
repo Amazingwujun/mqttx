@@ -171,16 +171,17 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         // 关闭之前可能存在的tcp链接
         // [MQTT-3.1.4-2] If the ClientId represents a Client already connected to the Server then the Server MUST
         // disconnect the existing Client
-        if (isClusterMode()) {
+        if (CLIENT_MAP.containsKey(clientId)) {
+            Optional.ofNullable(CLIENT_MAP.get(clientId))
+                    .map(BrokerHandler.CHANNELS::find)
+                    .filter(channel -> !Objects.equals(channel, ctx.channel()))
+                    .ifPresent(ChannelOutboundInvoker::close);
+        } else if (isClusterMode()) {
             internalMessagePublishService.publish(
                     new InternalMessage<>(clientId, System.currentTimeMillis(), brokerId),
                     InternalMessageEnum.DISCONNECT.getChannel()
             );
         }
-        Optional.ofNullable(CLIENT_MAP.get(clientId))
-                .map(BrokerHandler.CHANNELS::find)
-                .filter(channel -> !Objects.equals(channel, ctx.channel()))
-                .ifPresent(ChannelOutboundInvoker::close);
 
         // 会话状态的处理
         // [MQTT-3.1.3-7] If the Client supplies a zero-byte ClientId, the Client MUST also set CleanSession to 1. -
