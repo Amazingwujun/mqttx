@@ -4,10 +4,12 @@ import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.entity.PubMsg;
 import com.jun.mqttx.service.IPublishMessageService;
 import com.jun.mqttx.utils.Serializer;
+import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
+import reactor.core.publisher.Mono;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -30,15 +32,17 @@ public class DefaultPublishMessageServiceImpl implements IPublishMessageService 
     private final String pubMsgSetPrefix;
     private final boolean enableTestMode;
     private Map<String, Map<Integer, PubMsg>> pubMsgStore;
+    private final ReactiveRedisTemplate<String, byte[]> reactiveRedisTemplate;
 
     public DefaultPublishMessageServiceImpl(RedisTemplate<String, byte[]> redisTemplate,
-                                            @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection") Serializer serializer,
-                                            MqttxConfig mqttxConfig) {
+                                            Serializer serializer,
+                                            MqttxConfig mqttxConfig, ReactiveRedisTemplate<String, byte[]> reactiveRedisTemplate) {
         this.redisTemplate = redisTemplate;
         this.serializer = serializer;
 
         this.pubMsgSetPrefix = mqttxConfig.getRedis().getPubMsgSetPrefix();
         this.enableTestMode = mqttxConfig.getEnableTestMode();
+        this.reactiveRedisTemplate = reactiveRedisTemplate;
         if (enableTestMode) {
             pubMsgStore = new ConcurrentHashMap<>();
         }
@@ -55,6 +59,12 @@ public class DefaultPublishMessageServiceImpl implements IPublishMessageService 
         }
 
         redisTemplate.opsForHash().put(pubMsgSetPrefix + clientId,
+                String.valueOf(pubMsg.getMessageId()), serializer.serialize(pubMsg));
+    }
+
+    @Override
+    public Mono<Boolean> _save(String clientId, PubMsg pubMsg) {
+        return reactiveRedisTemplate.opsForHash().put(pubMsgSetPrefix + clientId,
                 String.valueOf(pubMsg.getMessageId()), serializer.serialize(pubMsg));
     }
 
@@ -79,6 +89,11 @@ public class DefaultPublishMessageServiceImpl implements IPublishMessageService 
                 key(clientId),
                 String.valueOf(messageId)
         );
+    }
+
+    @Override
+    public Mono<Long> _remove(String clientId, int messageId) {
+        return reactiveRedisTemplate.opsForHash().remove(key(clientId), String.valueOf(messageId));
     }
 
     @Override

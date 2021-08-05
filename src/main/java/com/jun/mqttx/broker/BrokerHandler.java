@@ -90,7 +90,7 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
 
     public BrokerHandler(MqttxConfig config, MessageDelegatingHandler messageDelegatingHandler,
                          ISessionService sessionService, ISubscriptionService subscriptionService,
-                         PublishHandler publishHandler, @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection") Serializer serializer) {
+                         PublishHandler publishHandler, Serializer serializer) {
         Assert.notNull(messageDelegatingHandler, "messageDelegatingHandler can't be null");
         Assert.notNull(sessionService, "sessionService can't be null");
         Assert.notNull(subscriptionService, "subscriptionService can't be null");

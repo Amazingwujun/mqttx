@@ -53,7 +53,6 @@ import static com.jun.mqttx.constants.InternalMessageEnum.*;
  * @author Jun
  * @since 1.0.4
  */
-@SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
 @Configuration
 @ConditionalOnExpression("${mqttx.cluster.enable:false} && !${mqttx.enable-test-mode:false}")
 public class ClusterConfig {

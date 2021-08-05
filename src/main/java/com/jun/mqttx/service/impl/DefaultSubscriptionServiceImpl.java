@@ -13,11 +13,14 @@ import com.jun.mqttx.utils.JsonSerializer;
 import com.jun.mqttx.utils.Serializer;
 import com.jun.mqttx.utils.TopicUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
+import reactor.core.publisher.Mono;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -40,6 +43,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
     /** 按顺序 -> 订阅，解除订阅，删除 topic */
     private static final int SUB = 1, UN_SUB = 2, DEL_TOPIC = 3;
     private final StringRedisTemplate stringRedisTemplate;
+    @Autowired private ReactiveStringRedisTemplate reactiveStringRedisTemplate;
     private final Serializer serializer;
     private final IInternalMessagePublishService internalMessagePublishService;
     /** client订阅主题, 订阅主题前缀, 主题集合 */
@@ -70,7 +74,6 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
 
     //@formatter:on
 
-    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     public DefaultSubscriptionServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig, Serializer serializer,
                                           @Nullable IInternalMessagePublishService internalMessagePublishService) {
         Assert.notNull(stringRedisTemplate, "stringRedisTemplate can't be null");
@@ -141,6 +144,48 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
                 );
                 internalMessagePublishService.publish(im, InternalMessageEnum.SUB_UNSUB.getChannel());
             }
+        }
+    }
+
+    @Override
+    public Mono<?> _subscribe(ClientSub clientSub) {
+        String topic = clientSub.getTopic();
+        String clientId = clientSub.getClientId();
+        int qos = clientSub.getQos();
+        boolean cleanSession = clientSub.isCleanSession();
+
+        // 保存订阅关系
+        // 1. 保存 topic -> client 映射
+        // 2. 将topic保存到redis set 集合中
+        // 3. 保存 client -> topics
+        if (cleanSession) {
+            inMemTopicClientsMap
+                    .computeIfAbsent(topic, s -> ConcurrentHashMap.newKeySet())
+                    .add(clientSub);
+            inMemTopics.add(topic);
+            inMemClientTopicsMap
+                    .computeIfAbsent(clientId, s -> ConcurrentHashMap.newKeySet())
+                    .add(topic);
+            return Mono.empty();
+        } else {
+            return reactiveStringRedisTemplate.opsForHash()
+                    .put(topicPrefix + topic, clientId, String.valueOf(qos))
+                    .then(reactiveStringRedisTemplate.opsForSet().add(topicSetKey, topic))
+                    .then(reactiveStringRedisTemplate.opsForSet().add(clientTopicsPrefix + clientId, topic))
+                    .doOnNext(e -> {
+                        if (enableInnerCache) {
+                            subscribeWithCache(clientSub);
+                        }
+
+                        if (enableCluster) {
+                            InternalMessage<ClientSubOrUnsubMsg> im = new InternalMessage<>(
+                                    new ClientSubOrUnsubMsg(clientId, qos, topic, cleanSession, null, SUB),
+                                    System.currentTimeMillis(),
+                                    brokerId
+                            );
+                            internalMessagePublishService.publish(im, InternalMessageEnum.SUB_UNSUB.getChannel());
+                        }
+                    });
         }
     }
 

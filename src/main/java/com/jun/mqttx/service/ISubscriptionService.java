@@ -17,6 +17,8 @@
 package com.jun.mqttx.service;
 
 import com.jun.mqttx.entity.ClientSub;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 
@@ -107,4 +109,16 @@ public interface ISubscriptionService {
      * @param clientId 客户 id
      */
     void clearClientSysSub(String clientId);
+
+
+    /*--------------------------------------------
+    |                 反应式接口                   |
+    ============================================*/
+
+    /**
+     * 保存客户订阅的主题
+     *
+     * @param clientSub 客户订阅
+     */
+    Mono<?> _subscribe(ClientSub clientSub);
 }

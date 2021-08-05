@@ -85,8 +85,6 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
 
     //@formatter:on
 
-
-    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     public PublishHandler(IPublishMessageService publishMessageService, IRetainMessageService retainMessageService,
                           ISubscriptionService subscriptionService, IPubRelMessageService pubRelMessageService, ISessionService sessionService,
                           @Nullable IInternalMessagePublishService internalMessagePublishService, MqttxConfig config,
@@ -380,7 +378,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                 if (!isClusterMessage) {
                     pubMsg.setQoS(qos.value());
                     pubMsg.setMessageId(messageId);
-                    publishMessageService.save(clientId, pubMsg);
+                    publishMessageService._save(clientId, pubMsg).subscribe();
                 }
             } else {
                 // qos0

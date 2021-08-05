@@ -46,7 +46,7 @@ public class PubAckHandler extends AbstractMqttSessionHandler {
         if (isCleanSession(ctx)) {
             getSession(ctx).removePubMsg(messageId);
         } else {
-            publishMessageService.remove(clientId(ctx), messageId);
+            publishMessageService._remove(clientId(ctx), messageId).subscribe();
         }
     }
 }

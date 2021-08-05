@@ -28,6 +28,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
 import org.springframework.util.CollectionUtils;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -89,65 +91,64 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
     @Override
     public void process(final ChannelHandlerContext ctx, MqttMessage msg) {
         // 获取订阅的topic、clientId
-        MqttSubscribeMessage mqttSubscribeMessage = (MqttSubscribeMessage) msg;
-        int messageId = mqttSubscribeMessage.variableHeader().messageId();
-        List<MqttTopicSubscription> mqttTopicSubscriptions = mqttSubscribeMessage.payload().topicSubscriptions();
-        String clientId = clientId(ctx);
+        final MqttSubscribeMessage mqttSubscribeMessage = (MqttSubscribeMessage) msg;
+        final int messageId = mqttSubscribeMessage.variableHeader().messageId();
+        final List<MqttTopicSubscription> mqttTopicSubscriptions = mqttSubscribeMessage.payload().topicSubscriptions();
+        final String clientId = clientId(ctx);
 
         // 保存用户订阅
         // 考虑到某些 topic 的订阅可能不开放给某些 client，针对这些 topic，我们有必要增加权限校验。实现办法有很多，目前的校验机制：
         // 当 client 连接并调用认证服务时，认证服务返回 client 具备的哪些 topic 订阅权限，当 enableTopicSubscribeSecure = true 时，
         // 程序将校验 client 当前想要订阅的 topic 是否被授权
-        List<Integer> grantedQosLevels = new ArrayList<>(mqttTopicSubscriptions.size());
-        mqttTopicSubscriptions.forEach(mqttTopicSubscription -> {
-            final String topic = mqttTopicSubscription.topicName();
-            int qos = mqttTopicSubscription.qualityOfService().value();
+        Flux
+                .fromIterable(mqttTopicSubscriptions)
+                .flatMap(mqttTopicSubscription -> {
+                    final String topic = mqttTopicSubscription.topicName();
+                    final int qos = mqttTopicSubscription.qualityOfService().value();
 
-            if (!TopicUtils.isValid(topic)) {
-                // Failure
-                qos = 0x80;
-            } else {
-                if (enableTopicPubSubSecure && !hasAuthToSubTopic(ctx, topic)) {
-                    // client 不允许订阅此 topic
-                    qos = 0x80;
-                } else {
-                    // 系统主题消息订阅, 则定时发布订阅的主题给客户端
-                    // 系统 topic 订阅结果不存储
-                    if (enableSysTopic && TopicUtils.isSys(topic)) {
-                        sysTopicSubscribeHandle(ClientSub.of(clientId, qos, topic, isCleanSession(ctx)), ctx);
-                    } else {
-                        // 区分开系统主题与普通主题
-                        if (TopicUtils.isSys(topic)) {
-                            qos = 0x80;
+                    if (!TopicUtils.isValid(topic)) {
+                        return Mono.just(0x80);
+                    }else {
+                        // 系统主题消息订阅, 则定时发布订阅的主题给客户端
+                        // 系统 topic 订阅结果不存储
+                        if (enableSysTopic && TopicUtils.isSys(topic)) {
+                            sysTopicSubscribeHandle(ClientSub.of(clientId, qos, topic, isCleanSession(ctx)), ctx);
+                            return Mono.just(qos);
                         } else {
-                            ClientSub clientSub = ClientSub.of(clientId, qos, topic, isCleanSession(ctx));
-                            subscriptionService.subscribe(clientSub);
+                            // 区分开系统主题与普通主题
+                            if (TopicUtils.isSys(topic)) {
+                                return Mono.just(0x80);
+                            } else {
+                                ClientSub clientSub = ClientSub.of(clientId, qos, topic, isCleanSession(ctx));
+                                return subscriptionService
+                                        ._subscribe(clientSub)
+                                        .then(Mono.just(qos));
+                            }
                         }
                     }
-                }
-            }
-            grantedQosLevels.add(qos);
-        });
-
-        // acknowledge
-        MqttMessage mqttMessage = MqttMessageFactory.newMessage(
-                new MqttFixedHeader(MqttMessageType.SUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
-                MqttMessageIdVariableHeader.from(messageId),
-                new MqttSubAckPayload(grantedQosLevels));
-        ctx.writeAndFlush(mqttMessage);
-
-        // When a new subscription is established, the last retained message, if any,
-        // on each matching topic name MUST be sent to the subscriber [MQTT-3.3.1-6]
-        // 获取所有存在保留消息的 topic, 当 TopicUtils.match(topic, newSubTopic) = true 时，将保留消息发送给客户端
-        mqttTopicSubscriptions.forEach(mqttTopicSubscription -> {
-            String topicFilter = mqttTopicSubscription.topicName();
-            retainMessageService.searchListByTopicFilter(topicFilter)
-                    .forEach(pubMsg -> {
-                        // 指定 clientId
-                        pubMsg.setAppointedClientId(clientId);
-                        publishHandler.publish(pubMsg, ctx, false);
-                    });
-        });
+                })
+                .collectList()
+                .doOnNext(list -> {
+                    // acknowledge
+                    MqttMessage mqttMessage = MqttMessageFactory.newMessage(
+                            new MqttFixedHeader(MqttMessageType.SUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
+                            MqttMessageIdVariableHeader.from(messageId),
+                            new MqttSubAckPayload(list));
+                    ctx.writeAndFlush(mqttMessage);
+                })
+                .thenMany(Flux.fromIterable(mqttTopicSubscriptions))
+                .doOnNext(mqttTopicSubscription -> {
+                    // When a new subscription is established, the last retained message, if any,
+                    // on each matching topic name MUST be sent to the subscriber [MQTT-3.3.1-6]
+                    // 获取所有存在保留消息的 topic, 当 TopicUtils.match(topic, newSubTopic) = true 时，将保留消息发送给客户端
+                    String topicFilter = mqttTopicSubscription.topicName();
+                    retainMessageService.searchListByTopicFilter(topicFilter)
+                            .forEach(pubMsg -> {
+                                // 指定 clientId
+                                pubMsg.setAppointedClientId(clientId);
+                                publishHandler.publish(pubMsg, ctx, false);
+                            });
+                }).subscribe();
     }
 
     /**

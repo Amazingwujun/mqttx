@@ -17,6 +17,7 @@
 package com.jun.mqttx.service;
 
 import com.jun.mqttx.entity.PubMsg;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 
@@ -58,4 +59,25 @@ public interface IPublishMessageService {
      * @return 客户未能完成发送的消息列表
      */
     List<PubMsg> search(String clientId);
+
+
+    /*--------------------------------------------
+    |                 反应式接口                   |
+    ============================================*/
+
+    /**
+     * 消息ID
+     *
+     * @param pubMsg   publish 消息体
+     * @param clientId 客户id
+     */
+    Mono<Boolean> _save(String clientId, PubMsg pubMsg);
+
+    /**
+     * 移除指定的 publish 消息
+     *
+     * @param clientId  客户端id
+     * @param messageId 消息id
+     */
+    Mono<Long> _remove(String clientId, int messageId);
 }
