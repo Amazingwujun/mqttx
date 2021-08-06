@@ -70,7 +70,6 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
 
     //@formatter:on
 
-    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     public DefaultSubscriptionServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig, Serializer serializer,
                                           @Nullable IInternalMessagePublishService internalMessagePublishService) {
         Assert.notNull(stringRedisTemplate, "stringRedisTemplate can't be null");

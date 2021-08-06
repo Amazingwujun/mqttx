@@ -85,8 +85,6 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
 
     //@formatter:on
 
-
-    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     public PublishHandler(IPublishMessageService publishMessageService, IRetainMessageService retainMessageService,
                           ISubscriptionService subscriptionService, IPubRelMessageService pubRelMessageService, ISessionService sessionService,
                           @Nullable IInternalMessagePublishService internalMessagePublishService, MqttxConfig config,

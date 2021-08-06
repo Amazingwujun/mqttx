@@ -32,7 +32,7 @@ public class DefaultPublishMessageServiceImpl implements IPublishMessageService 
     private Map<String, Map<Integer, PubMsg>> pubMsgStore;
 
     public DefaultPublishMessageServiceImpl(RedisTemplate<String, byte[]> redisTemplate,
-                                            @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection") Serializer serializer,
+                                            Serializer serializer,
                                             MqttxConfig mqttxConfig) {
         this.redisTemplate = redisTemplate;
         this.serializer = serializer;

@@ -121,9 +121,8 @@ public class DefaultPubRelMessageServiceImpl implements IPubRelMessageService {
             clientMsgStore.remove(inKey(clientId));
             return;
         }
-
-        redisTemplate.delete(inKey(clientId));
-        redisTemplate.delete(outKey(clientId));
+        
+        redisTemplate.delete(Arrays.asList(inKey(clientId), outKey(clientId)));
     }
 
     private String inKey(String clientId) {
