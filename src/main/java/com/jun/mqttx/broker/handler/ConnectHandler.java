@@ -35,7 +35,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
+import org.springframework.util.ObjectUtils;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -151,8 +153,8 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         MqttConnectPayload payload = mcm.payload();
 
         // 获取clientId
-        String clientId = mcm.payload().clientIdentifier();
-        if (StringUtils.isEmpty(clientId)) {
+        String clientId0 = mcm.payload().clientIdentifier();
+        if (ObjectUtils.isEmpty(clientId0)) {
             // [MQTT-3.1.3-8] If the Client supplies a zero-byte ClientId with CleanSession set to 0, the Server MUST
             // respond to the CONNECT Packet with a CONNACK return code 0x02 (Identifier rejected) and then close the
             // Network Connection.
@@ -164,8 +166,9 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
             // [MQTT-3.1.3-6] A Server MAY allow a Client to supply a ClientId that has a length of zero bytes,
             // however if it does so the Server MUST treat this as a special case and assign a unique ClientId to that Client.
             // It MUST then process the CONNECT packet as if the Client had provided that unique ClientId
-            clientId = genClientId();
+            clientId0 = genClientId();
         }
+        final String clientId = clientId0; // for lambada
 
         // 关闭之前可能存在的tcp链接
         // [MQTT-3.1.4-2] If the ClientId represents a Client already connected to the Server then the Server MUST
@@ -189,7 +192,7 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         // clearSession == 1 的情况，需要清理之前保存的会话状态
         boolean isCleanSession = variableHeader.isCleanSession();
         if (isCleanSession) {
-            actionOnCleanSession(clientId);
+            _actionOnCleanSession(clientId).subscribe();
         }
 
         // 新建会话并保存会话，同时判断sessionPresent
@@ -356,13 +359,18 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
      *
      * @param clientId 客户ID
      */
-    private void actionOnCleanSession(String clientId) {
+    private Mono<Void> _actionOnCleanSession(String clientId) {
         // sessionService.clear(String ClientId) 方法返回 true 则表明该 clientId 之前的 cleanSession = false, 那么应该继续清理
         // 订阅信息、pub 信息、 pubRel 信息, 否则无需清理
-        if (sessionService.clear(clientId)) {
-            subscriptionService.clearClientSubscriptions(clientId, false);
-            publishMessageService.clear(clientId);
-            pubRelMessageService.clear(clientId);
-        }
+        return sessionService._clear(clientId)
+                .flatMap(e -> {
+                    if (e) {
+                        return Flux.merge(subscriptionService._clearClientSubscriptions(clientId, false),
+                                publishMessageService._clear(clientId),
+                                pubRelMessageService._clear(clientId)).then();
+                    } else {
+                        return Mono.empty();
+                    }
+                });
     }
 }

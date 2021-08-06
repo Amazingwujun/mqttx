@@ -121,4 +121,27 @@ public interface ISubscriptionService {
      * @param clientSub 客户订阅
      */
     Mono<?> _subscribe(ClientSub clientSub);
+
+    /**
+     * 解除订阅
+     *
+     * @param clientId 客户id
+     * @param topics   主题列表
+     */
+    Mono<Void> _unsubscribe(String clientId, boolean cleanSession, List<String> topics);
+
+    /**
+     * 获取订阅系统主题 topic 的客户端集合
+     *
+     * @param topic 系统主题
+     */
+    Mono<List<ClientSub>> _searchSysTopicClients(String topic);
+
+    /**
+     * 移除客户订阅
+     *
+     * @param clientId     客户ID
+     * @param cleanSession 清理类型，true 清理 cleanSession = 1, false清理 cleanSession = 0
+     */
+    Mono<Void> _clearClientSubscriptions(String clientId, boolean cleanSession);
 }

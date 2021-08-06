@@ -20,6 +20,7 @@ import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.*;
@@ -230,6 +231,52 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         }
     }
 
+    @Override
+    public Mono<Void> _unsubscribe(String clientId, boolean cleanSession, List<String> topics) {
+        if (CollectionUtils.isEmpty(topics)) {
+            return Mono.empty();
+        }
+
+        if (enableTestMode) {
+            unsubscribeWithCache(clientId, topics);
+            return Mono.empty();
+        } else {
+            if (cleanSession) {
+                topics.forEach(topic -> {
+                    ConcurrentHashMap.KeySetView<ClientSub, Boolean> clientSubs = inMemTopicClientsMap.get(topic);
+                    if (!CollectionUtils.isEmpty(clientSubs)) {
+                        clientSubs.remove(ClientSub.of(clientId, 0, topic, false));
+                    }
+                });
+                Optional.ofNullable(inMemClientTopicsMap.get(clientId)).ifPresent(t -> t.removeAll(topics));
+
+                // 集群广播
+                if (enableCluster) {
+                    ClientSubOrUnsubMsg clientSubOrUnsubMsg = new ClientSubOrUnsubMsg(clientId, 0, null, cleanSession, topics, UN_SUB);
+                    InternalMessage<ClientSubOrUnsubMsg> im = new InternalMessage<>(clientSubOrUnsubMsg, System.currentTimeMillis(), brokerId);
+                    internalMessagePublishService.publish(im, InternalMessageEnum.SUB_UNSUB.getChannel());
+                }
+                return Mono.empty();
+            } else {
+
+                return Flux.fromIterable(topics)
+                        .flatMap(topic -> reactiveStringRedisTemplate.opsForHash().remove(topicPrefix + topic, clientId))
+                        .doOnComplete(() -> {
+                            if (enableInnerCache) {
+                                unsubscribeWithCache(clientId, topics);
+                            }
+
+                            // 集群广播
+                            if (enableCluster) {
+                                ClientSubOrUnsubMsg clientSubOrUnsubMsg = new ClientSubOrUnsubMsg(clientId, 0, null, cleanSession, topics, UN_SUB);
+                                InternalMessage<ClientSubOrUnsubMsg> im = new InternalMessage<>(clientSubOrUnsubMsg, System.currentTimeMillis(), brokerId);
+                                internalMessagePublishService.publish(im, InternalMessageEnum.SUB_UNSUB.getChannel());
+                            }
+                        })
+                        .then();
+            }
+        }
+    }
 
     /**
      * 返回订阅主题的客户列表。考虑到 pub 类别的消息最为频繁且每次 pub 都会触发 <code>searchSubscribeClientList(String topic)</code>
@@ -299,6 +346,28 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
                 stringRedisTemplate.delete(clientTopicsPrefix + clientId);
             }
             unsubscribe(clientId, cleanSession, new ArrayList<>(keys));
+        }
+    }
+
+    @Override
+    public Mono<Void> _clearClientSubscriptions(String clientId, boolean cleanSession) {
+        Set<String> keys;
+        if (enableTestMode) {
+            keys = inDiskTopics;
+            return _unsubscribe(clientId, true, new ArrayList<>(keys));
+        } else {
+            if (cleanSession) {
+                keys = inMemClientTopicsMap.remove(clientId);
+                if (CollectionUtils.isEmpty(keys)) {
+                    return Mono.empty();
+                }
+                return _unsubscribe(clientId, true, new ArrayList<>(keys));
+            } else {
+                return reactiveStringRedisTemplate.opsForSet().members(clientTopicsPrefix + clientId)
+                        .collectList()
+                        .doOnNext(list -> reactiveStringRedisTemplate.delete(list.toArray(new String[]{})))
+                        .flatMap(list -> _unsubscribe(clientId, false, list));
+            }
         }
     }
 
@@ -540,6 +609,22 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         });
 
         return clientSubList;
+    }
+
+    @Override
+    public Mono<List<ClientSub>> _searchSysTopicClients(String topic) {
+        return Mono.fromSupplier(() -> {
+            // result
+            List<ClientSub> clientSubList = new ArrayList<>();
+
+            sysTopicClientsMap.forEach((wildTopic, set) -> {
+                if (TopicUtils.match(topic, wildTopic)) {
+                    clientSubList.addAll(set);
+                }
+            });
+
+            return clientSubList;
+        });
     }
 
     @Override

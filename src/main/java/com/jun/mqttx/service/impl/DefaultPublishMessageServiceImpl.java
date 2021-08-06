@@ -79,6 +79,16 @@ public class DefaultPublishMessageServiceImpl implements IPublishMessageService 
     }
 
     @Override
+    public Mono<Void> _clear(String clientId) {
+        if (enableTestMode) {
+            pubMsgStore.remove(clientId);
+            return Mono.empty();
+        }
+
+        return reactiveRedisTemplate.delete(pubMsgSetPrefix+clientId).then();
+    }
+
+    @Override
     public void remove(String clientId, int messageId) {
         if (enableTestMode) {
             pubMsgStore.computeIfAbsent(clientId, s -> new ConcurrentHashMap<>()).remove(messageId);

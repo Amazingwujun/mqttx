@@ -80,4 +80,11 @@ public interface IPublishMessageService {
      * @param messageId 消息id
      */
     Mono<Long> _remove(String clientId, int messageId);
+
+    /**
+     * 清理与客户相关连的 publish 消息
+     *
+     * @param clientId 客户端id
+     */
+    Mono<?> _clear(String clientId);
 }

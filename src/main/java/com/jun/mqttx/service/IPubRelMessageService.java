@@ -16,6 +16,8 @@
 
 package com.jun.mqttx.service;
 
+import reactor.core.publisher.Mono;
+
 import java.util.List;
 
 /**
@@ -88,4 +90,16 @@ public interface IPubRelMessageService {
      * @param clientId 客户端ID
      */
     void clear(String clientId);
+
+
+    /*--------------------------------------------
+    |                 反应式接口                   |
+    ============================================*/
+
+    /**
+     * 清理掉客户所有的消息
+     *
+     * @param clientId 客户端ID
+     */
+    Mono<?> _clear(String clientId);
 }

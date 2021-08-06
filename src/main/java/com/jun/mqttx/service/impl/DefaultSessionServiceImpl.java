@@ -5,9 +5,11 @@ import com.jun.mqttx.entity.Session;
 import com.jun.mqttx.service.ISessionService;
 import com.jun.mqttx.utils.MessageIdUtils;
 import com.jun.mqttx.utils.Serializer;
+import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
+import reactor.core.publisher.Mono;
 
 import java.util.Map;
 import java.util.Optional;
@@ -25,12 +27,16 @@ public class DefaultSessionServiceImpl implements ISessionService {
     private final String clusterSessionHashKey;
     private final String messageIdPrefix;
     private final RedisTemplate<String, byte[]> redisTemplate;
+    private final ReactiveRedisTemplate<String, byte[]> reactiveRedisTemplate;
     private final Serializer serializer;
     private final boolean enableTestMode;
     private Map<String, Session> sessionStore;
 
-    public DefaultSessionServiceImpl(RedisTemplate<String, byte[]> redisTemplate, Serializer serializer,
+    public DefaultSessionServiceImpl(RedisTemplate<String, byte[]> redisTemplate,
+                                     ReactiveRedisTemplate<String, byte[]> reactiveRedisTemplate,
+                                     Serializer serializer,
                                      MqttxConfig mqttxConfig) {
+        this.reactiveRedisTemplate = reactiveRedisTemplate;
         MqttxConfig.Redis redis = mqttxConfig.getRedis();
         this.redisTemplate = redisTemplate;
         this.serializer = serializer;
@@ -58,6 +64,16 @@ public class DefaultSessionServiceImpl implements ISessionService {
     }
 
     @Override
+    public Mono<Boolean> _save(Session session) {
+        if (enableTestMode) {
+            sessionStore.put(session.getClientId(), session);
+            return Mono.just(true);
+        }
+
+        return reactiveRedisTemplate.opsForHash().put(clusterSessionHashKey, session.getClientId(),serializer.serialize(session));
+    }
+
+    @Override
     public Session find(String clientId) {
         if (enableTestMode) {
             return sessionStore.get(clientId);
@@ -70,6 +86,18 @@ public class DefaultSessionServiceImpl implements ISessionService {
     }
 
     @Override
+    public Mono<Session> _find(String clientId) {
+        if (enableTestMode) {
+            return Mono.just(sessionStore.get(clientId));
+        }
+
+        return reactiveRedisTemplate
+                .opsForHash()
+                .get(clusterSessionHashKey, clientId)
+                .map(e -> serializer.deserialize((byte[]) e, Session.class));
+    }
+
+    @Override
     public boolean clear(String clientId) {
         if (enableTestMode) {
             return sessionStore.remove(clientId) != null;
@@ -77,6 +105,18 @@ public class DefaultSessionServiceImpl implements ISessionService {
 
         redisTemplate.delete(messageIdPrefix + clientId);
         return redisTemplate.opsForHash().delete(clusterSessionHashKey, clientId) > 0;
+    }
+
+    @Override
+    public Mono<Boolean> _clear(String clientId) {
+        if (enableTestMode) {
+            return Mono.just(sessionStore.remove(clientId) != null);
+        }
+
+        return reactiveRedisTemplate
+                .delete(messageIdPrefix + clientId)
+                .then(reactiveRedisTemplate.opsForHash().remove(clusterSessionHashKey, clientId))
+                .map(e -> e > 0);
     }
 
     @Override

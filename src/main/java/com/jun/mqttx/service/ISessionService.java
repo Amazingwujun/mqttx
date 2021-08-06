@@ -17,6 +17,7 @@
 package com.jun.mqttx.service;
 
 import com.jun.mqttx.entity.Session;
+import reactor.core.publisher.Mono;
 
 /**
  * 会话相关业务
@@ -64,4 +65,34 @@ public interface ISessionService {
      * @return next message id
      */
     int nextMessageId(String clientId);
+
+
+
+    /*--------------------------------------------
+    |                 反应式接口                   |
+    ============================================*/
+
+    /**
+     * 存储
+     *
+     * @param session {@link Session}
+     */
+    Mono<Boolean> _save(Session session);
+
+    /**
+     * 清理会话
+     *
+     * @param clientId 客户端ID
+     * @return true if session exist
+     */
+    Mono<Boolean> _clear(String clientId);
+
+
+    /**
+     * 通过 clientId 获取会话
+     *
+     * @param clientId 客户端ID
+     * @return {@link Session}
+     */
+    Mono<Session> _find(String clientId);
 }

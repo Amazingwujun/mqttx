@@ -2,10 +2,12 @@ package com.jun.mqttx.service.impl;
 
 import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.service.IPubRelMessageService;
+import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
+import reactor.core.publisher.Mono;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -23,12 +25,15 @@ public class DefaultPubRelMessageServiceImpl implements IPubRelMessageService {
     private static final String IN = "_IN";
     private static final String OUT = "_OUT";
     private final RedisTemplate<String, byte[]> redisTemplate;
+    private final ReactiveRedisTemplate<String, byte[]> reactiveRedisTemplate;
     private final String pubRelMsgSetPrefix;
     private final boolean enableTestMode;
     private Map<String, Set<Integer>> clientMsgStore;
 
-    public DefaultPubRelMessageServiceImpl(RedisTemplate<String, byte[]> redisTemplate, MqttxConfig mqttxConfig) {
+    public DefaultPubRelMessageServiceImpl(RedisTemplate<String, byte[]> redisTemplate,
+                                           ReactiveRedisTemplate<String, byte[]> reactiveRedisTemplate, MqttxConfig mqttxConfig) {
         this.redisTemplate = redisTemplate;
+        this.reactiveRedisTemplate = reactiveRedisTemplate;
 
         this.pubRelMsgSetPrefix = mqttxConfig.getRedis().getPubRelMsgSetPrefix();
         this.enableTestMode = mqttxConfig.getEnableTestMode();
@@ -122,8 +127,18 @@ public class DefaultPubRelMessageServiceImpl implements IPubRelMessageService {
             return;
         }
 
-        redisTemplate.delete(inKey(clientId));
-        redisTemplate.delete(outKey(clientId));
+        redisTemplate.delete(Arrays.asList(inKey(clientId), outKey(clientId)));
+    }
+
+    @Override
+    public Mono<?> _clear(String clientId) {
+        if (enableTestMode) {
+            clientMsgStore.remove(outKey(clientId));
+            clientMsgStore.remove(inKey(clientId));
+            return Mono.empty();
+        }
+
+        return reactiveRedisTemplate.delete(inKey(clientId), outKey(clientId));
     }
 
     private String inKey(String clientId) {
