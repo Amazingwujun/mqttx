@@ -18,8 +18,6 @@ package com.jun.mqttx.service;
 
 import com.jun.mqttx.entity.Authentication;
 import com.jun.mqttx.entity.ClientAuthDTO;
-import com.jun.mqttx.exception.AuthenticationException;
-import com.jun.mqttx.exception.AuthorizationException;
 
 import java.util.function.Consumer;
 

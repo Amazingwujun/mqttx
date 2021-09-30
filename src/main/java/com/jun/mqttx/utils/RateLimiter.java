@@ -24,13 +24,13 @@ package com.jun.mqttx.utils;
 public class RateLimiter {
     //@formatter:off
 
-    private long lastRefreshed, lastTokens = -1;
     /** 令牌桶容量 */
     private final long capacity;
     /** 令牌补充速度 */
     private final int replenishRate;
     /** 每次请求需要消耗多少个令牌 */
     private final int tokenConsumedPerAcquire;
+    private long lastRefreshed, lastTokens = -1;
 
     //@formatter:on
 
