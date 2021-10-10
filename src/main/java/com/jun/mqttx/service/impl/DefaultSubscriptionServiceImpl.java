@@ -317,7 +317,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         final String topic = data.getTopic();
         final boolean cleanSession = data.isCleanSession();
         switch (type) {
-            case SUB: {
+            case SUB -> {
                 ClientSub clientSub = ClientSub.of(clientId, data.getQos(), topic, cleanSession);
                 if (cleanSession) {
                     inMemTopicClientsMap
@@ -332,10 +332,8 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
                         subscribeWithCache(ClientSub.of(clientId, data.getQos(), topic, false));
                     }
                 }
-
-                break;
             }
-            case UN_SUB: {
+            case UN_SUB -> {
                 if (data.isCleanSession()) {
                     data.getTopics().forEach(t -> {
                         ConcurrentHashMap.KeySetView<ClientSub, Boolean> clientSubs = inMemTopicClientsMap.get(t);
@@ -349,10 +347,8 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
                         unsubscribeWithCache(clientId, data.getTopics());
                     }
                 }
-
-                break;
             }
-            case DEL_TOPIC: {
+            case DEL_TOPIC -> {
                 // 移除内存中的数据
                 inMemTopics.remove(topic);
                 Optional.ofNullable(inMemTopicClientsMap.remove(topic))
@@ -367,10 +363,8 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
                 if (enableInnerCache) {
                     removeTopicWithCache(topic);
                 }
-                break;
             }
-            default:
-                log.error("非法的 ClientSubOrUnsubMsg type:" + type);
+            default -> log.error("非法的 ClientSubOrUnsubMsg type:" + type);
         }
     }
 

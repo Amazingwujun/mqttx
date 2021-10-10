@@ -21,8 +21,7 @@ import lombok.Data;
 import java.util.List;
 
 /**
- * 认证对象. 建议 {@link Authentication#clientId} equals {@link Authentication#username}, 以避免之前版本使用 username 作为
- * 默认 clientId 导致的 bug.
+ * 认证响应对象.
  *
  * @author Jun
  * @since 1.0.4
@@ -40,9 +39,14 @@ public class Authentication {
      */
     private List<String> authorizedPub;
 
+    /**
+     * 客户端id
+     */
     private String clientId;
 
-    private String username;
-
-    private String password;
+    public static Authentication of(String clientId) {
+        var auth = new Authentication();
+        auth.clientId = clientId;
+        return auth;
+    }
 }

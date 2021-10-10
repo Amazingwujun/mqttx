@@ -319,16 +319,16 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
         String host = socketAddress.getAddress().getHostAddress();
         int port = socketAddress.getPort();
 
-        if (evt instanceof IdleStateEvent) {
-            if (IdleState.ALL_IDLE.equals(((IdleStateEvent) evt).state())) {
+        if (evt instanceof IdleStateEvent ise) {
+            if (IdleState.ALL_IDLE.equals(ise.state())) {
                 log.info("R[{}:{}] 心跳超时", host, port);
 
                 // 关闭连接
                 ctx.close();
             }
-        } else if (evt instanceof SslHandshakeCompletionEvent) {
+        } else if (evt instanceof SslHandshakeCompletionEvent shce) {
             // 监听 ssl 握手事件
-            if (!((SslHandshakeCompletionEvent) evt).isSuccess()) {
+            if (!shce.isSuccess()) {
                 log.warn("R[{}:{}] ssl 握手失败", host, port);
                 ctx.close();
             }
@@ -346,8 +346,8 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
     @Override
     public void action(byte[] msg) {
         InternalMessage<Authentication> im;
-        if (serializer instanceof JsonSerializer) {
-            im = ((JsonSerializer) serializer).deserialize(msg, new TypeReference<InternalMessage<Authentication>>() {
+        if (serializer instanceof JsonSerializer s) {
+            im = s.deserialize(msg, new TypeReference<>() {
             });
         } else {
             //noinspection unchecked
@@ -355,11 +355,11 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
         }
         Authentication data = im.getData();
         // 目的是为了兼容 v1.0.2(含) 之前的版本
-        String clientId = ObjectUtils.isEmpty(data.getClientId()) ? data.getUsername() : data.getClientId();
+        String clientId = data.getClientId();
         List<String> authorizedPub = data.getAuthorizedPub();
         List<String> authorizedSub = data.getAuthorizedSub();
         if (ObjectUtils.isEmpty(clientId) || (CollectionUtils.isEmpty(authorizedPub) && CollectionUtils.isEmpty(authorizedSub))) {
-            log.info("权限修改参数非法:{}", im);
+            log.warn("权限修改参数非法:{}", im);
             return;
         }
         alterUserAuthorizedTopic(clientId, authorizedSub, authorizedPub);

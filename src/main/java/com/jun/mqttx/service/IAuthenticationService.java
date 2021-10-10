@@ -30,10 +30,7 @@ import java.util.concurrent.CompletableFuture;
 public interface IAuthenticationService {
 
     /**
-     * 异步认证.
-     * <p>
-     * mqttx 将由 JDK8 -> JDK17, 故采用jdk原生 HttpClient 替代 Okhttp
-     * </p>
+     * 使用 {@link java.net.http.HttpClient} 发起请求
      *
      * @param authDTO {@link ClientAuthDTO} 客户端认证对象
      */

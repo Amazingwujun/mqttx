@@ -41,6 +41,8 @@
 
 `Mqttx` 基于 [MQTT v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) 协议开发，旨在提供 ***易于使用*** 且 ***性能优越*** 的 **mqtt broker**。
 
+注意：分支 `v1.2` 要求 ***JDK17***, 其它分支要求 ***JDK8***
+
 ### 1.1 快速开始
 
 > 想通过 docker 快速体验？见 [docker 启动](#3-docker-启动)
@@ -211,7 +213,11 @@ docker 环境安装好后，执行`docker-compose -f ./docker-compose.yml up` �
 为了对 client 订阅 topic 进行限制，加入**topic 订阅&发布鉴权**机制:
 
 1. `mqttx.enable-topic-sub-pub-secure`: 功能开关，默认 `false`
-2. 使用时需要实现接口 `AuhenticationService` ，该接口返回对象中含有 `authorizedSub,authorizedPub` 存储 client 被授权订阅及发布的 `topic` 列表。
+
+2. broker 收到 conn 报文后，会抓取 `{clientId, username, password}` 发起请求给 `mqttx.auth.url` , 该接口返回对象中含有 `authorizedSub,authorizedPub` 存储 **client** 被授权订阅及发布的 `topic` 列表。
+
+   详见 [4.12 基础认证支持](#412-基础认证支持) 
+
 3. broker 在消息订阅及发布都会校验客户端权限
 
 支持的主题类型：
@@ -407,6 +413,57 @@ mqttx:
 
 可通过配置 `mqttx.serialize-strategy` 修改序列化实现。
 
+#### 4.12 基础认证支持
+
+升级至 **JDK17** 后，`mqttx` 提供基础客户端认证服务。
+
+配置项：
+
+1. `mqttx.auth.url`: 提供认证服务的接口地址。
+2. `mqttx.auth.timeout`: `HttpClient` 请求超时
+
+用户在配置文件中声明 `mqtt.auth.url` 后，对象 `com.jun.mqttx.service.impl.DefaultAuthenticationServiceImpl` 使用 `HttpClient` 发出 `POST` 请求给 `mqttx.auth.url`。 
+
+请求内容为 `mqtt conn` 报文中的 `username, password`.
+
+```curl
+POST / HTTP/1.1
+Host: mqttx.auth.url
+Content-Type: application/json
+Content-Length: 91
+
+{
+    "clientId": "device_id_test",
+    "username": "mqttx",
+    "password": "123456"
+}
+```
+
+认证成功后响应对象为 `json` 格式字符串:
+
+```json
+{
+    "authorizedSub": [
+        "subTopic1",
+        "subTopic2"
+    ],
+    "authorizedPub": [
+        "pubTopic1",
+        "pubTopic2"
+    ]
+}
+```
+
+认证成功返回响应可配合  [4.5 topic 安全支持](#45-topic-安全支持) 使用。
+
+注意：
+
+- **该功能仅 `v1.2` 分支版本支持**
+
+- 接口返回 `http status = 200` 即表明**认证成功**, 其它状态值一律为**认证失败**
+
+
+
 ## 5 开发者说
 
 1. `v1.0` 版本分支将作为支持 **mqttv3.1.1** 协议版本持续迭代
@@ -414,21 +471,24 @@ mqttx:
 2. 为使 ***mqttx*** 项目变得更好，请使用及学习该项目的同学主动反馈使用情况给我（提 issue 或加群反馈）
 
 3. 后续工作
-   - [x] `v1.0.7.RELEASE` 版本 ***Benchmark***
-   - [x] `v1.0.8.RELEASE` 版本开发
-   - [x] `v1.1.0.RELEASE` 版本开发  
-   - [x] `v2.0.0.RELEASE` 版本开发
+   - [ ] `v1.0.7.RELEASE` 版本 ***Benchmark***
+   - [ ] `v1.0.8.RELEASE` 版本开发
+   - [ ] `v1.1.0.RELEASE` 版本开发  
+   - [x] `v1.2.0.RELEASE` 版本开发
+   - [ ] `v2.0.0.RELEASE` 版本开发
    - [x] bug 修复
    
-4. `v2.0` 版本分支将作为 **mqttv5** 协议版本开始迭代
+4. `v1.2` 版本由 **JDK8** 升级至 **JDK17**
 
-5. 这段时间工作任务繁重，功能迭代暂时停止，当然 **bug** 我还是会优先处理🙂
+5. `v2.0` 版本分支将作为 **mqttv5** 协议版本开始迭代
 
-6. 请作者喝杯 **caffee** 😊
+6. 这段时间工作任务繁重，功能迭代暂时停止，当然 **bug** 我还是会优先处理🙂
+
+7. 请作者喝杯 **caffee** 😊
 
    <img src="https://z3.ax1x.com/2021/07/15/Wm53vj.jpg" alt="caffee" height="300" />
 
-7. 交流群
+8. 交流群
 
 <img src="https://s1.ax1x.com/2020/10/10/0ytoSx.jpg" alt="群二维码" height="300" />
 
@@ -458,6 +518,7 @@ mqttx:
 | `mqttx.enable-test-mode` | `false` | 测试模式开关，开启后系统进入测试模式; <br/>**注意：测试模式会禁用集群功能** |
 | `mqttx.ignore-client-self-pub` | `true` | 忽略 client 发送给自己的消息（当 client 发送消息给自己订阅的主题） |
 | `mqttx.serialize-strategy` | `json` | `broker` 采用的序列化策略，**集群策略*必须*一致**。 |
+| `mqttx.http-client-connect-timeout` | `10s` | HttpClient connectTimeout |
 | `mqttx.redis.cluster-session-hash-key` | `mqttx.session.key`             | redis map key；用于集群的会话存储                          |
 | `mqttx.redis.topic-prefix`              | `mqttx:topic:`                  | 主题前缀； topic <==> client 映射关系保存               |
 | `mqttx.redis.retain-message-prefix`    | `mqttx:retain:`                 | 保留消息前缀, 保存 retain 消息                            |
@@ -487,6 +548,8 @@ mqttx:
 | `mqttx.message-bridge.topics` | `null` | 需要桥接消息的主题列表 |
 | `mqttx.rate-limiter.enable` | `false` | 主题限流开关 |
 | `mqttx.rate-limiter.token-rate-limit` |  | 参见 [主题限流支持](#410-主题限流支持) 配置举例说明 |
+| `mqttx.auth.url` | `null` | mqtt conn username/password 认证服务接口地址 |
+| `mqttx.auth.timeout` | `3s` | readTimeout |
 
 ### 6.2 版本说明
 
@@ -494,11 +557,11 @@ mqttx:
 
 #### 6.2.1 v1.0
 
-- **v1.0.8.RELEASE（开发中）**
+- **v1.0.8.RELEASE**
     - [ ] 消息集中持久化到 `redis hmap` 数据结构中，`PubMsg` 仅保存 `hmap` 中的 `payloadId`, 该优化目的在于防止消息膨胀导致的 redis 内存耗用过大。（之前版本消息都是持久化到客户端各自的 `PubMsg`）
 - **v1.0.7.RELEASE**
     - [x] 增加序列化框架 ***Kryo*** 的支持
-    - [x]  系统主题新增客户端上下线通知主题
+    - [x] 系统主题新增客户端上下线通知主题
     - [x] 修复新增订阅触发 `retain` 消息后，消息分发给全部订阅者的 bug
     - [x] 修复遗嘱消息 `isWillRetain:true` 持久化的bug
     - [x] bug 修复及优化
@@ -536,7 +599,12 @@ mqttx:
 #### 6.2.3 v2.0
 
 - **v2.0.0.RELEASE（开发中）**
-  - [x] [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html) 支持
+  - [ ] [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html) 支持
+
+#### 6.2.4 v1.2
+
+- **v1.2.0.RELEASE (开发中)**
+  - [x] 项目依赖 JDK 升级，当前版本：***JDK8*** 目标版本：***JDK17***
 
 ### 6.3 Benchmark
 

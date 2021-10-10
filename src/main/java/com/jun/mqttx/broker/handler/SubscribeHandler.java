@@ -194,7 +194,7 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
     private void sysTopicSubscribeHandle(final ClientSub clientSub, final ChannelHandlerContext ctx) {
         final String topic = clientSub.getTopic();
         switch (topic) {
-            case TopicUtils.BROKER_VERSION: {
+            case TopicUtils.BROKER_VERSION -> {
                 byte[] version = BrokerStatus.builder()
                         .version(this.version)
                         .build().toJsonBytes();
@@ -206,9 +206,8 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
                         .payload(Unpooled.buffer(version.length).writeBytes(version))
                         .build();
                 ctx.writeAndFlush(versionResponse);
-                break;
             }
-            case TopicUtils.BROKER_CLIENTS_ACTIVE_CONNECTED_COUNT: {
+            case TopicUtils.BROKER_CLIENTS_ACTIVE_CONNECTED_COUNT -> {
                 byte[] activeConnected = BrokerStatus.builder()
                         .activeConnectCount(BrokerHandler.CHANNELS.size())
                         .build().toJsonBytes();
@@ -220,9 +219,8 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
                         .payload(Unpooled.buffer(activeConnected.length).writeBytes(activeConnected))
                         .build();
                 ctx.writeAndFlush(timeResponse);
-                break;
             }
-            case TopicUtils.BROKER_TIME: {
+            case TopicUtils.BROKER_TIME -> {
                 byte[] timestamp = BrokerStatus.builder()
                         .timestamp(LocalDateTime.now().toString())
                         .build().toJsonBytes();
@@ -234,9 +232,8 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
                         .payload(Unpooled.buffer(timestamp.length).writeBytes(timestamp))
                         .build();
                 ctx.writeAndFlush(timeResponse);
-                break;
             }
-            case TopicUtils.BROKER_MAX_CLIENTS_ACTIVE: {
+            case TopicUtils.BROKER_MAX_CLIENTS_ACTIVE -> {
                 byte[] maxAlive = BrokerStatus.builder()
                         .maxActiveConnectCount(BrokerHandler.MAX_ACTIVE_SIZE.get())
                         .build().toJsonBytes();
@@ -248,9 +245,8 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
                         .payload(Unpooled.buffer(maxAlive.length).writeBytes(maxAlive))
                         .build();
                 ctx.writeAndFlush(timeResponse);
-                break;
             }
-            case TopicUtils.BROKER_RECEIVED_MSG: {
+            case TopicUtils.BROKER_RECEIVED_MSG -> {
                 byte[] received = BrokerStatus.builder()
                         .receivedMsg(ProbeHandler.IN_MSG_SIZE.intValue())
                         .build().toJsonBytes();
@@ -262,10 +258,8 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
                         .payload(Unpooled.buffer(received.length).writeBytes(received))
                         .build();
                 ctx.writeAndFlush(timeResponse);
-
-                break;
             }
-            case TopicUtils.BROKER_SEND_MSG: {
+            case TopicUtils.BROKER_SEND_MSG -> {
                 byte[] send = BrokerStatus.builder()
                         .receivedMsg(ProbeHandler.OUT_MSG_SIZE.intValue())
                         .build().toJsonBytes();
@@ -277,10 +271,8 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
                         .payload(Unpooled.buffer(send.length).writeBytes(send))
                         .build();
                 ctx.writeAndFlush(timeResponse);
-
-                break;
             }
-            case TopicUtils.BROKER_UPTIME: {
+            case TopicUtils.BROKER_UPTIME -> {
                 byte[] uptime = BrokerStatus
                         .builder()
                         .uptime((int) ((System.currentTimeMillis() - BrokerHandler.START_TIME) / 1000))
@@ -293,11 +285,10 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
                         .payload(Unpooled.buffer(uptime.length).writeBytes(uptime))
                         .build();
                 ctx.writeAndFlush(uptimeResponse);
-                break;
             }
-            default:
-                // 订阅功能主题
-                subscriptionService.subscribeSys(clientSub);
+            default ->
+                    // 订阅功能主题
+                    subscriptionService.subscribeSys(clientSub);
         }
     }
 

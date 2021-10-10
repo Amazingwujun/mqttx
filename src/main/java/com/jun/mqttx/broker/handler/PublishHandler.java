@@ -190,10 +190,9 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
 
         // 响应
         switch (mqttQoS) {
-            case 0: // at most once
-                publish(pubMsg, ctx, false);
-                break;
-            case 1: // at least once
+            case 0 -> // at most once
+                    publish(pubMsg, ctx, false);
+            case 1 -> { // at least once
                 publish(pubMsg, ctx, false);
                 MqttMessage pubAck = MqttMessageFactory.newMessage(
                         new MqttFixedHeader(MqttMessageType.PUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
@@ -201,8 +200,8 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                         null
                 );
                 ctx.writeAndFlush(pubAck);
-                break;
-            case 2: // exactly once
+            }
+            case 2 -> { // exactly once
                 // 判断消息是否重复, 未重复的消息需要保存 messageId
                 if (isCleanSession(ctx)) {
                     Session session = getSession(ctx);
@@ -216,14 +215,13 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                         pubRelMessageService.saveIn(clientId(ctx), packetId);
                     }
                 }
-
                 MqttMessage pubRec = MqttMessageFactory.newMessage(
                         new MqttFixedHeader(MqttMessageType.PUBREC, false, MqttQoS.AT_MOST_ONCE, false, 0),
                         MqttMessageIdVariableHeader.from(packetId),
                         null
                 );
                 ctx.writeAndFlush(pubRec);
-                break;
+            }
         }
 
         // retain 消息处理
@@ -435,8 +433,8 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
     @Override
     public void action(byte[] msg) {
         InternalMessage<PubMsg> im;
-        if (serializer instanceof JsonSerializer) {
-            im = ((JsonSerializer) serializer).deserialize(msg, new TypeReference<InternalMessage<PubMsg>>() {
+        if (serializer instanceof JsonSerializer s) {
+            im = s.deserialize(msg, new TypeReference<>() {
             });
         } else {
             //noinspection unchecked

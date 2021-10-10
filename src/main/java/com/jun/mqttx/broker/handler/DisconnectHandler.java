@@ -72,8 +72,8 @@ public final class DisconnectHandler extends AbstractMqttSessionHandler implemen
     @Override
     public void action(byte[] msg) {
         InternalMessage<String> im;
-        if (serializer instanceof JsonSerializer) {
-            im = ((JsonSerializer) serializer).deserialize(msg, new TypeReference<InternalMessage<String>>() {
+        if (serializer instanceof JsonSerializer se) {
+            im = se.deserialize(msg, new TypeReference<>() {
             });
         } else {
             //noinspection unchecked

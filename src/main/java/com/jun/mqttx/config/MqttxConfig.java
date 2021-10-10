@@ -90,6 +90,9 @@ public class MqttxConfig {
      */
     private Boolean ignoreClientSelfPub = true;
 
+    /** {@link java.net.http.HttpClient} connectTimeout */
+    private Duration httpClientConnectTimeout = Duration.ofSeconds(10);
+
     /*--------------------------------------------
     |                 模块配置项                   |
     ============================================*/
@@ -111,6 +114,8 @@ public class MqttxConfig {
     private MessageBridge messageBridge = new MessageBridge();
 
     private RateLimiter rateLimiter = new RateLimiter();
+
+    private Auth auth = new Auth();
 
     /**
      * redis 配置
@@ -287,5 +292,15 @@ public class MqttxConfig {
 
         /** 限流主题配置 */
         private Set<TopicRateLimit> topicRateLimits;
+    }
+
+    @Data
+    public static class Auth {
+
+        /** 认证服务接口地址 */
+        private String url;
+
+        /** 类似 readTimeout, 见 {@link java.net.http.HttpRequest#timeout()} */
+        private Duration timeout = Duration.ofSeconds(3);
     }
 }
