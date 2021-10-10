@@ -5,7 +5,7 @@ import com.jun.mqttx.entity.ClientAuthDTO;
 import com.jun.mqttx.service.IAuthenticationService;
 import org.springframework.stereotype.Service;
 
-import java.util.function.Consumer;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * 认证服务
@@ -17,7 +17,7 @@ import java.util.function.Consumer;
 public class DefaultAuthenticationServiceImpl implements IAuthenticationService {
 
     @Override
-    public void asyncAuthenticate(ClientAuthDTO authDTO, Consumer<Authentication> onResponse, Consumer<Throwable> onFailure) {
-        onResponse.accept(null);
+    public CompletableFuture<Authentication> asyncAuthenticate(ClientAuthDTO authDTO) {
+        return CompletableFuture.supplyAsync(() -> null);
     }
 }

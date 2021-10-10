@@ -28,7 +28,6 @@ import com.jun.mqttx.entity.Authentication;
 import com.jun.mqttx.entity.ClientSub;
 import com.jun.mqttx.entity.InternalMessage;
 import com.jun.mqttx.entity.Session;
-import com.jun.mqttx.exception.AuthenticationException;
 import com.jun.mqttx.exception.AuthorizationException;
 import com.jun.mqttx.service.ISessionService;
 import com.jun.mqttx.service.ISubscriptionService;
@@ -52,7 +51,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
+import org.springframework.util.ObjectUtils;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -285,11 +284,6 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
                     .sessionPresent(false)
                     .returnCode(MqttConnectReturnCode.CONNECTION_REFUSED_UNACCEPTABLE_PROTOCOL_VERSION)
                     .build();
-        } else if (cause instanceof AuthenticationException) {
-            mqttConnAckMessage = MqttMessageBuilders.connAck()
-                    .sessionPresent(false)
-                    .returnCode(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD)
-                    .build();
         } else if (cause instanceof AuthorizationException) {
             mqttConnAckMessage = MqttMessageBuilders.connAck()
                     .sessionPresent(false)
@@ -361,10 +355,10 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
         }
         Authentication data = im.getData();
         // 目的是为了兼容 v1.0.2(含) 之前的版本
-        String clientId = StringUtils.isEmpty(data.getClientId()) ? data.getUsername() : data.getClientId();
+        String clientId = ObjectUtils.isEmpty(data.getClientId()) ? data.getUsername() : data.getClientId();
         List<String> authorizedPub = data.getAuthorizedPub();
         List<String> authorizedSub = data.getAuthorizedSub();
-        if (StringUtils.isEmpty(clientId) || (CollectionUtils.isEmpty(authorizedPub) && CollectionUtils.isEmpty(authorizedSub))) {
+        if (ObjectUtils.isEmpty(clientId) || (CollectionUtils.isEmpty(authorizedPub) && CollectionUtils.isEmpty(authorizedSub))) {
             log.info("权限修改参数非法:{}", im);
             return;
         }

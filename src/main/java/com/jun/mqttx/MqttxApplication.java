@@ -25,7 +25,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.util.StringUtils;
+import org.springframework.util.ObjectUtils;
 
 import java.util.Objects;
 
@@ -89,7 +89,7 @@ public class MqttxApplication {
         if (Boolean.TRUE.equals(enableCluster)) {
             Boolean enableInnerCache = mqttxConfig.getEnableInnerCache();
             String innerCacheConsistencyKey = cluster.getInnerCacheConsistencyKey();
-            if (Boolean.TRUE.equals(enableInnerCache) && StringUtils.isEmpty(innerCacheConsistencyKey)) {
+            if (Boolean.TRUE.equals(enableInnerCache) && ObjectUtils.isEmpty(innerCacheConsistencyKey)) {
                 throw new IllegalArgumentException("mqttx.cluster.innerCacheConsistencyKey 值不能为空");
             }
             StringRedisTemplate redisTemplate = ctx.getBean(StringRedisTemplate.class);

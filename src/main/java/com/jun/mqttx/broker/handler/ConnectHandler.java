@@ -35,7 +35,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
+import org.springframework.util.ObjectUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -121,11 +121,27 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
 
         // 用户名及密码校验
         if (variableHeader.hasPassword() && variableHeader.hasUserName()) {
-            authenticationService.asyncAuthenticate(
-                    ClientAuthDTO.of(username, password),
-                    authentication -> process0(ctx, msg, authentication),
-                    throwable -> {
-                        throw new AuthenticationException("登入失败", throwable);
+            authenticationService.asyncAuthenticate(ClientAuthDTO.of(username, password))
+                    .thenAccept(authentication -> process0(ctx, msg, authentication))
+                    .exceptionally(throwable -> {
+                        MqttConnAckMessage mqttConnAckMessage;
+                        if (throwable instanceof AuthenticationException) {
+                            mqttConnAckMessage = MqttMessageBuilders.connAck()
+                                    .sessionPresent(false)
+                                    .returnCode(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD)
+                                    .build();
+                        } else {
+                            mqttConnAckMessage = MqttMessageBuilders.connAck()
+                                    .sessionPresent(false)
+                                    .returnCode(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE)
+                                    .build();
+                        }
+                        log.error(String.format("client[id: %s, username: %s]登入失败", payload.clientIdentifier(), username), throwable);
+
+                        // 告知客户端并关闭连接
+                        ctx.writeAndFlush(mqttConnAckMessage);
+                        ctx.close();
+                        return null;
                     });
         } else {
             process0(ctx, msg, null);
@@ -152,7 +168,7 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
 
         // 获取clientId
         String clientId = mcm.payload().clientIdentifier();
-        if (StringUtils.isEmpty(clientId)) {
+        if (ObjectUtils.isEmpty(clientId)) {
             // [MQTT-3.1.3-8] If the Client supplies a zero-byte ClientId with CleanSession set to 0, the Server MUST
             // respond to the CONNECT Packet with a CONNACK return code 0x02 (Identifier rejected) and then close the
             // Network Connection.

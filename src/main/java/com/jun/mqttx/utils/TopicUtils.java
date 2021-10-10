@@ -20,7 +20,7 @@ import com.jun.mqttx.broker.handler.AbstractMqttSessionHandler;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.AttributeKey;
-import org.springframework.util.StringUtils;
+import org.springframework.util.ObjectUtils;
 
 import java.util.List;
 import java.util.Objects;
@@ -171,7 +171,7 @@ public class TopicUtils {
      * @return true if topic valid
      */
     public static boolean isValid(String subTopic) {
-        if (StringUtils.isEmpty(subTopic)) {
+        if (ObjectUtils.isEmpty(subTopic)) {
             return false;
         }
 
