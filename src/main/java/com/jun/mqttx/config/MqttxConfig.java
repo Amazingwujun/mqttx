@@ -112,6 +112,8 @@ public class MqttxConfig {
 
     private RateLimiter rateLimiter = new RateLimiter();
 
+    private Auth auth = new Auth();
+
     /**
      * redis 配置
      *
@@ -287,5 +289,18 @@ public class MqttxConfig {
 
         /** 限流主题配置 */
         private Set<TopicRateLimit> topicRateLimits;
+    }
+
+    @Data
+    public static class Auth {
+
+        /** 认证服务接口地址 */
+        private String url;
+
+        /** 类似 readTimeout */
+        private Duration readTimeout = Duration.ofSeconds(3);
+
+        /** connectTimeout */
+        private Duration connectTimeout = Duration.ofSeconds(3);
     }
 }

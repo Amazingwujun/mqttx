@@ -33,10 +33,13 @@ public class ClientAuthDTO {
 
     private String password;
 
-    public static ClientAuthDTO of(String username, byte[] password) {
+    private String clientId;
+
+    public static ClientAuthDTO of(String clientId, String username, byte[] password) {
         ClientAuthDTO authDTO = new ClientAuthDTO();
         authDTO.setPassword(new String(password, StandardCharsets.UTF_8));
         authDTO.setUsername(username);
+        authDTO.setClientId(clientId);
         return authDTO;
     }
 }

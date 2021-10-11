@@ -115,17 +115,41 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         MqttConnectMessage mcm = (MqttConnectMessage) msg;
         MqttConnectVariableHeader variableHeader = mcm.variableHeader();
         MqttConnectPayload payload = mcm.payload();
-
         final String username = payload.userName();
         final byte[] password = payload.passwordInBytes();
 
+        // 获取clientId
+        String clientIdentifier = mcm.payload().clientIdentifier();
+        if (ObjectUtils.isEmpty(clientIdentifier)) {
+            // [MQTT-3.1.3-8] If the Client supplies a zero-byte ClientId with CleanSession set to 0, the Server MUST
+            // respond to the CONNECT Packet with a CONNACK return code 0x02 (Identifier rejected) and then close the
+            // Network Connection.
+            if (!variableHeader.isCleanSession()) {
+                throw new MqttIdentifierRejectedException("Violation: zero-byte ClientId with CleanSession set to 0");
+            }
+
+            // broker  生成一个唯一ID
+            // [MQTT-3.1.3-6] A Server MAY allow a Client to supply a ClientId that has a length of zero bytes,
+            // however if it does so the Server MUST treat this as a special case and assign a unique ClientId to that Client.
+            // It MUST then process the CONNECT packet as if the Client had provided that unique ClientId
+            clientIdentifier = genClientId();
+        }
+        final String clientId = clientIdentifier;
+
         // 用户名及密码校验
         if (variableHeader.hasPassword() && variableHeader.hasUserName()) {
-            authenticationService.asyncAuthenticate(ClientAuthDTO.of(username, password))
-                    .thenAccept(authentication -> process0(ctx, msg, authentication))
+            authenticationService.asyncAuthenticate(ClientAuthDTO.of(clientId, username, password))
+                    .thenAccept(authentication -> {
+                        if (authentication == null) {
+                            authentication = Authentication.of(clientId);
+                        } else {
+                            authentication.setClientId(clientId);
+                        }
+                        process0(ctx, msg, authentication);
+                    })
                     .exceptionally(throwable -> {
                         MqttConnAckMessage mqttConnAckMessage;
-                        if (throwable instanceof AuthenticationException) {
+                        if (throwable.getCause() instanceof AuthenticationException) {
                             mqttConnAckMessage = MqttMessageBuilders.connAck()
                                     .sessionPresent(false)
                                     .returnCode(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD)
@@ -136,7 +160,7 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
                                     .returnCode(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE)
                                     .build();
                         }
-                        log.error(String.format("client[id: %s, username: %s]登入失败", payload.clientIdentifier(), username), throwable);
+                        log.error(String.format("client[id: %s, username: %s]登入失败", clientId, username), throwable);
 
                         // 告知客户端并关闭连接
                         ctx.writeAndFlush(mqttConnAckMessage);
@@ -144,7 +168,7 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
                         return null;
                     });
         } else {
-            process0(ctx, msg, null);
+            process0(ctx, msg, Authentication.of(clientId));
         }
     }
 
@@ -167,21 +191,7 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         MqttConnectPayload payload = mcm.payload();
 
         // 获取clientId
-        String clientId = mcm.payload().clientIdentifier();
-        if (ObjectUtils.isEmpty(clientId)) {
-            // [MQTT-3.1.3-8] If the Client supplies a zero-byte ClientId with CleanSession set to 0, the Server MUST
-            // respond to the CONNECT Packet with a CONNACK return code 0x02 (Identifier rejected) and then close the
-            // Network Connection.
-            if (!variableHeader.isCleanSession()) {
-                throw new MqttIdentifierRejectedException("Violation: zero-byte ClientId with CleanSession set to 0");
-            }
-
-            // broker  生成一个唯一ID
-            // [MQTT-3.1.3-6] A Server MAY allow a Client to supply a ClientId that has a length of zero bytes,
-            // however if it does so the Server MUST treat this as a special case and assign a unique ClientId to that Client.
-            // It MUST then process the CONNECT packet as if the Client had provided that unique ClientId
-            clientId = genClientId();
-        }
+        String clientId = auth.getClientId();
 
         // 关闭之前可能存在的tcp链接
         // [MQTT-3.1.4-2] If the ClientId represents a Client already connected to the Server then the Server MUST

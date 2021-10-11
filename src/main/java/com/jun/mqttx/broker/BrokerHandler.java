@@ -354,8 +354,7 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
             im = serializer.deserialize(msg, InternalMessage.class);
         }
         Authentication data = im.getData();
-        // 目的是为了兼容 v1.0.2(含) 之前的版本
-        String clientId = ObjectUtils.isEmpty(data.getClientId()) ? data.getUsername() : data.getClientId();
+        String clientId = data.getClientId();
         List<String> authorizedPub = data.getAuthorizedPub();
         List<String> authorizedSub = data.getAuthorizedSub();
         if (ObjectUtils.isEmpty(clientId) || (CollectionUtils.isEmpty(authorizedPub) && CollectionUtils.isEmpty(authorizedSub))) {
