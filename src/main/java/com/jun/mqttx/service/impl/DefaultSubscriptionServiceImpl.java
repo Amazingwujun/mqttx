@@ -202,29 +202,26 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
 
         // 未启用内部缓存机制，直接通过 redis 抓取
         Set<String> redisTopics = stringRedisTemplate.opsForSet().members(topicSetKey);
-        if (CollectionUtils.isEmpty(redisTopics)) {
-            return Collections.EMPTY_LIST;
+        if (!CollectionUtils.isEmpty(redisTopics)) {
+            redisTopics.stream().filter(t -> TopicUtils.match(topic, t)).
+                    forEach(t -> {
+                        Map<Object, Object> entries = stringRedisTemplate.opsForHash().entries(topicPrefix + t);
+                        if (!CollectionUtils.isEmpty(entries)) {
+                            entries.forEach((k, v) -> {
+                                String clientId = (String) k;
+                                String qosStr = (String) v;
+                                ClientSub clientSub = ClientSub.of(clientId, Integer.parseInt(qosStr), t, false);
+                                clientSubList.add(clientSub);
+                            });
+                        }
+                    });
         }
-
-        List<ClientSub> clientSubList = new ArrayList<>();
-        redisTopics.stream()
-                .filter(e -> TopicUtils.match(topic, e))
-                .forEach(e -> {
-                    Map<Object, Object> entries = stringRedisTemplate.opsForHash().entries(topicPrefix + e);
-                    if (!CollectionUtils.isEmpty(entries)) {
-                        entries.forEach((k, v) -> {
-                            String key = (String) k;
-                            String val = (String) v;
-                            clientSubList.add(ClientSub.of(key, Integer.parseInt(val), e, false));
-                        });
-                    }
-                });
 
         // cleanSession 的主题
         inMemTopics.stream()
                 .filter(e -> TopicUtils.match(topic, e))
                 .forEach(e -> {
-                    ConcurrentHashMap.KeySetView<ClientSub, Boolean> clientSubs = inMemTopicClientsMap.get(topic);
+                    ConcurrentHashMap.KeySetView<ClientSub, Boolean> clientSubs = inMemTopicClientsMap.get(e);
                     if (!CollectionUtils.isEmpty(clientSubs)) {
                         clientSubList.addAll(clientSubs);
                     }
