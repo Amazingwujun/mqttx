@@ -41,6 +41,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 
 import java.time.Instant;
@@ -406,17 +407,25 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         byte[] payload = pubMsg.getPayload();
         String topic = pubMsg.getTopic();
         int qos = pubMsg.getQoS();
-        
-        //TODO 保留消息的处理和协议官方描述不符
 
-        // 如果 retain = 1 且 payload bytes.size = 0
-        if (payload == null || payload.length == 0) {
-            subscriptionService.removeTopic(topic);
-            return;
-        }
-
-        // 如果 qos = 0 且  retain = 1
-        if (MqttQoS.AT_MOST_ONCE.value() == qos) {
+        // with issue https://github.com/Amazingwujun/mqttx/issues/14 And PR
+        // https://github.com/Amazingwujun/mqttx/pull/15
+        // If the Server receives a QoS 0 message with the RETAIN flag set to 1 it
+        // MUST discard any message previously retained for that topic. It SHOULD
+        // store the new QoS 0 message as the new retained message for that topic,
+        // but MAY choose to discard it at any time - if this happens there will be
+        // no retained message for that topic [MQTT-3.3.1-7].
+        // [MQTT-3.3.1-7] 当 broker 收到 qos 为 0 并且 RETAIN = 1 的消息 必须抛弃该主题保留
+        // 之前的消息（注意：是 retained 消息）, 同时 broker 可以选择保留或抛弃当前的消息，MQTTX
+        // 的选择是抛弃.
+        // A PUBLISH Packet with a RETAIN flag set to 1 and a payload containing zero
+        // bytes will be processed as normal by the Server and sent to Clients with a
+        // subscription matching the topic name. Additionally any existing retained
+        // message with the same topic name MUST be removed and any future subscribers
+        // for the topic will not receive a retained message [MQTT-3.3.1-10].
+        // [MQTT-3.3.1-10] 注意 [Additionally] 内容， broker 收到 retain 消息载荷（payload）
+        // 为空时，broker 必须移除 topic 关联的 retained 消息.
+        if (MqttQoS.AT_MOST_ONCE.value() == qos || ObjectUtils.isEmpty(payload)) {
             retainMessageService.remove(topic);
             return;
         }
