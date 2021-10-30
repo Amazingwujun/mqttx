@@ -224,7 +224,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         inMemTopics.stream()
                 .filter(e -> TopicUtils.match(topic, e))
                 .forEach(e -> {
-                    ConcurrentHashMap.KeySetView<ClientSub, Boolean> clientSubs = inMemTopicClientsMap.get(topic);
+                    ConcurrentHashMap.KeySetView<ClientSub, Boolean> clientSubs = inMemTopicClientsMap.get(e);
                     if (!CollectionUtils.isEmpty(clientSubs)) {
                         clientSubList.addAll(clientSubs);
                     }
