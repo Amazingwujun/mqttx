@@ -192,7 +192,6 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
      * @param topic 主题
      * @return 客户ID列表
      */
-    @SuppressWarnings("unchecked")
     @Override
     public List<ClientSub> searchSubscribeClientList(String topic) {
         // 启用内部缓存机制
@@ -201,6 +200,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         }
 
         // 未启用内部缓存机制，直接通过 redis 抓取
+        List<ClientSub> clientSubList = new ArrayList<>();
         Set<String> redisTopics = stringRedisTemplate.opsForSet().members(topicSetKey);
         if (!CollectionUtils.isEmpty(redisTopics)) {
             redisTopics.stream().filter(t -> TopicUtils.match(topic, t)).
