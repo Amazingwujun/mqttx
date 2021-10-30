@@ -406,6 +406,8 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         byte[] payload = pubMsg.getPayload();
         String topic = pubMsg.getTopic();
         int qos = pubMsg.getQoS();
+        
+        //TODO 保留消息的处理和协议官方描述不符
 
         // 如果 retain = 1 且 payload bytes.size = 0
         if (payload == null || payload.length == 0) {
