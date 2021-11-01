@@ -50,3 +50,6 @@ public class Authentication {
         return auth;
     }
 }
+
+    private String password;
+}
