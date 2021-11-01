@@ -302,7 +302,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
     public void action(byte[] msg) {
         InternalMessage<ClientSubOrUnsubMsg> im;
         if (serializer instanceof JsonSerializer) {
-            im = ((JsonSerializer) serializer).deserialize(msg, new TypeReference<InternalMessage<ClientSubOrUnsubMsg>>() {
+            im = ((JsonSerializer) serializer).deserialize(msg, new TypeReference<>() {
             });
         } else {
             //noinspection unchecked

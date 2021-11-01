@@ -352,9 +352,7 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
                 Optional
                         .ofNullable(CLIENT_MAP.get(clientSub.getClientId()))
                         .map(BrokerHandler.CHANNELS::find)
-                        .ifPresent(channel -> {
-                            channel.writeAndFlush(mpm.retain());
-                        });
+                        .ifPresent(channel -> channel.writeAndFlush(mpm.retain()));
             }
 
             // 必须最后释放
