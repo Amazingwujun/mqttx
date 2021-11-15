@@ -404,7 +404,6 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
     public void handleRetainMsg(PubMsg pubMsg) {
         byte[] payload = pubMsg.getPayload();
         String topic = pubMsg.getTopic();
-        int qos = pubMsg.getQoS();
 
         // with issue https://github.com/Amazingwujun/mqttx/issues/14 And PR
         // https://github.com/Amazingwujun/mqttx/pull/15
@@ -415,7 +414,8 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         // no retained message for that topic [MQTT-3.3.1-7].
         // [MQTT-3.3.1-7] 当 broker 收到 qos 为 0 并且 RETAIN = 1 的消息 必须抛弃该主题保留
         // 之前的消息（注意：是 retained 消息）, 同时 broker 可以选择保留或抛弃当前的消息，MQTTX
-        // 的选择是抛弃.
+        // 的选择是保留.
+
         // A PUBLISH Packet with a RETAIN flag set to 1 and a payload containing zero
         // bytes will be processed as normal by the Server and sent to Clients with a
         // subscription matching the topic name. Additionally any existing retained
@@ -423,7 +423,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         // for the topic will not receive a retained message [MQTT-3.3.1-10].
         // [MQTT-3.3.1-10] 注意 [Additionally] 内容， broker 收到 retain 消息载荷（payload）
         // 为空时，broker 必须移除 topic 关联的 retained 消息.
-        if (MqttQoS.AT_MOST_ONCE.value() == qos || ObjectUtils.isEmpty(payload)) {
+        if (ObjectUtils.isEmpty(payload)) {
             retainMessageService.remove(topic);
             return;
         }

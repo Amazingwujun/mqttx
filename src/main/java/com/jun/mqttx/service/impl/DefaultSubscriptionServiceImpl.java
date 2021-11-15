@@ -253,39 +253,6 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         }
     }
 
-    /**
-     * 移除 topic
-     *
-     * @param topic 主题
-     */
-    @Override
-    public void removeTopic(String topic) {
-        inMemTopics.remove(topic);
-        Optional.ofNullable(inMemTopicClientsMap.remove(topic))
-                .ifPresent(e -> e.forEach(
-                        clientSub -> Optional.
-                                ofNullable(inMemClientTopicsMap.get(clientSub.getClientId()))
-                                .ifPresent(t -> t.remove(topic)))
-                );
-        stringRedisTemplate.opsForSet().remove(topicSetKey, topic);
-
-        // 抓取订阅主题的全部 clientId, 通过 clientId 移除所有其订阅的 topic
-        Set<Object> keys = stringRedisTemplate.opsForHash().keys(topicPrefix + topic);
-        keys.forEach(t -> stringRedisTemplate.opsForSet().remove(clientTopicsPrefix + t, topic));
-        stringRedisTemplate.delete(topicPrefix + topic);
-
-        if (enableInnerCache) {
-            removeTopicWithCache(topic);
-
-            // 集群广播
-            if (enableCluster) {
-                ClientSubOrUnsubMsg clientSubOrUnsubMsg = new ClientSubOrUnsubMsg(null, 0, topic, false, null, DEL_TOPIC);
-                InternalMessage<ClientSubOrUnsubMsg> im = new InternalMessage<>(clientSubOrUnsubMsg, System.currentTimeMillis(), brokerId);
-                internalMessagePublishService.publish(im, InternalMessageEnum.SUB_UNSUB.getChannel());
-            }
-        }
-    }
-
     @Override
     public void clearUnAuthorizedClientSub(String clientId, List<String> authorizedSub) {
         List<String> collect = inDiskTopics

@@ -64,13 +64,6 @@ public interface ISubscriptionService {
     void clearClientSubscriptions(String clientId, boolean cleanSession);
 
     /**
-     * 移除指定 topic
-     *
-     * @param topic 主题
-     */
-    void removeTopic(String topic);
-
-    /**
      * 移除未包含在 authorizedSub 集合中的客户端订阅
      *
      * @param clientId      客户端ID
