@@ -139,11 +139,33 @@
 
 ## 3 docker 启动
 
-> 镜像已上传至  docker-hub , 点击访问：[fantasywujun/mqttx - Docker Hub](https://hub.docker.com/r/fantasywujun/mqttx)
+镜像已上传至  **docker-hub** , 访问：[fantasywujun/mqttx - Docker Hub](https://hub.docker.com/r/fantasywujun/mqttx) 全部镜像
 
-docker 环境安装好后，执行`docker-compose -f ./docker-compose.yml up` 启动, 效果见下图：
+docker 环境安装好后，执行 `docker-compose -f ./docker-compose.yml up` 启动, 效果见下图：
 
 ![y3R3tI.md.png](https://s3.ax1x.com/2021/02/04/y3R3tI.md.png)
+
+| Docker Pull Command                    | 说明                                   |
+| -------------------------------------- | -------------------------------------- |
+| `docker pull fantasywujun/mqttx:1.2.0` | 基于 `jdk17.0.1` 的 `mqttx:1.2.0` 版本 |
+
+**docker-compose** 文件内容：
+
+```yaml
+version: "2"
+services:
+  redis:
+    container_name: redis-for-mqttx
+    image: redis
+  mqttx:
+    container_name: mqttx
+    image: fantasywujun/mqttx:1.2.0
+    ports:
+      - 1883:1883
+      - 8083:8083
+```
+
+
 
 ## 4 功能说明
 
@@ -469,6 +491,8 @@ Content-Length: 91
 
 1. `v1.0` 版本分支将作为支持 **mqttv3.1.1** 协议版本持续迭代
 
+   一旦 [OpenJDK: Loom (java.net)](http://openjdk.java.net/projects/loom/) release，`v1.0` 版本将不再维护，替代版本为 `v1.2`
+
 2. 为使 ***mqttx*** 项目变得更好，请使用及学习该项目的同学主动反馈使用情况给我（提 issue 或加群反馈）
 
 3. 后续工作
@@ -478,7 +502,7 @@ Content-Length: 91
    - [x] `v1.2.0.RELEASE` 版本开发
    - [ ] `v2.0.0.RELEASE` 版本开发
    - [x] bug 修复
-   
+
 4. `v1.2` 版本由 **JDK8** 升级至 **JDK17**
 
 5. `v2.0` 版本分支将作为 **mqttv5** 协议版本开始迭代
