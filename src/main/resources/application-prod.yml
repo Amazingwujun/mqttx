@@ -1,1 +1,18 @@
-# 生产环境配置文件
+# 开发环境配置文件
+
+spring:
+  redis:
+    host: redis-for-mqttx
+
+mqttx:
+  web-socket:
+    enable: true
+  sys-topic:
+    enable: true
+
+logging:
+  level:
+    root: info
+  file:
+    path: /mqttx/logs
+  config: /mqttx/logback-spring.xml

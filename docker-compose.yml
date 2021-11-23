@@ -1,11 +1,11 @@
 version: "2"
 services:
   redis:
-    container_name: redis
+    container_name: redis-for-mqttx
     image: redis
   mqttx:
     container_name: mqttx
-    image: fantasywujun/mqttx
+    image: fantasywujun/mqttx:1.2.0
     ports:
       - 1883:1883
       - 8083:8083

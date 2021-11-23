@@ -13,5 +13,3 @@ mqttx:
   broker-id: @broker.id@
   # kryo 比 json 更具优势
   serialize-strategy: kryo
-  auth:
-    url: "http://localhost:8080/auth"

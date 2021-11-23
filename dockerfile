@@ -1,6 +1,8 @@
-FROM openjdk:8-jdk-alpine AS builder
-WORKDIR target/dependency
-ARG APPJAR=target/*.jar
-COPY ${APPJAR} app.jar
+FROM openjdk:17.0.1
+WORKDIR /mqttx
+ARG EXECUTABLE_JAR=target/*.jar
+COPY ${EXECUTABLE_JAR} app.jar
+COPY target/classes/*.yml ./
+COPY src/main/resources/logback-spring.xml ./
 
-ENTRYPOINT ["java","-jar","-Xms1g","-Xmx1g","app.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar", "--spring.config.location=/mqttx/"]
