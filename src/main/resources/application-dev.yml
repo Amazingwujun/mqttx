@@ -2,7 +2,7 @@
 
 spring:
   redis:
-    host: redis-for-mqttx
+    host: localhost
 
 mqttx:
   web-socket:
@@ -11,8 +11,10 @@ mqttx:
     enable: true
 
 logging:
-  pattern:
-    console: "%clr(%d{${LOG_DATEFORMAT_PATTERN:yyyy-MM-dd HH:mm:ss.SSS}}){faint} %clr(${LOG_LEVEL_PATTERN:-%5p}) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger){cyan} %clr([%4.4L]){cyan} %clr(:){faint} %m%n"
+  level:
+    root: info
+  file:
+    path: d:/mqttx/logs
 
 #mqttx 配置项说明见 readme.md #6.1 配置项
 #下方是配置示例，供参考

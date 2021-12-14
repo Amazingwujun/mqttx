@@ -45,7 +45,7 @@ public class PubRecHandler extends AbstractMqttSessionHandler {
     @Override
     public void process(ChannelHandlerContext ctx, MqttMessage msg) {
         // 移除消息
-        MqttMessageIdVariableHeader mqttMessageIdVariableHeader = (MqttMessageIdVariableHeader) msg.variableHeader();
+        final var mqttMessageIdVariableHeader = (MqttMessageIdVariableHeader) msg.variableHeader();
         int messageId = mqttMessageIdVariableHeader.messageId();
         if (isCleanSession(ctx)) {
             Session session = getSession(ctx);
@@ -59,7 +59,7 @@ public class PubRecHandler extends AbstractMqttSessionHandler {
             pubRelMessageService.saveOut(clientId, messageId);
         }
 
-        MqttMessage mqttMessage = MqttMessageFactory.newMessage(
+        final var mqttMessage = MqttMessageFactory.newMessage(
                 new MqttFixedHeader(MqttMessageType.PUBREL, false, MqttQoS.AT_LEAST_ONCE, false, 0),
                 MqttMessageIdVariableHeader.from(messageId),
                 null

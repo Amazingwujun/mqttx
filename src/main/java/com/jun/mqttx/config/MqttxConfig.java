@@ -161,7 +161,7 @@ public class MqttxConfig {
      * 集群配置
      */
     @Data
-    public static class Cluster{
+    public static class Cluster {
 
         /** 用于集群内部缓存开启状态一致性检查 */
         private String innerCacheConsistencyKey = "mqttx:cache_consistence";
@@ -272,7 +272,7 @@ public class MqttxConfig {
      *
      */
     @Data
-    public static class MessageBridge{
+    public static class MessageBridge {
 
         /** 开关 */
         private Boolean enable = false;
@@ -285,7 +285,7 @@ public class MqttxConfig {
      * 主题限流配置
      */
     @Data
-    public static class RateLimiter{
+    public static class RateLimiter {
 
         /** 开关 */
         private Boolean enable = false;

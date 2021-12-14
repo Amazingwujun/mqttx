@@ -32,7 +32,6 @@ import com.jun.mqttx.utils.JsonSerializer;
 import com.jun.mqttx.utils.RateLimiter;
 import com.jun.mqttx.utils.Serializer;
 import com.jun.mqttx.utils.TopicUtils;
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -149,17 +148,17 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
      */
     @Override
     public void process(ChannelHandlerContext ctx, MqttMessage msg) {
-        MqttPublishMessage mpm = (MqttPublishMessage) msg;
-        MqttFixedHeader mqttFixedHeader = mpm.fixedHeader();
-        MqttPublishVariableHeader mqttPublishVariableHeader = mpm.variableHeader();
-        ByteBuf payload = mpm.payload();
+        final var mpm = (MqttPublishMessage) msg;
+        final var mqttFixedHeader = mpm.fixedHeader();
+        final var mqttPublishVariableHeader = mpm.variableHeader();
+        final var payload = mpm.payload();
 
         // 获取qos、topic、packetId、retain、payload
-        int mqttQoS = mqttFixedHeader.qosLevel().value();
-        String topic = mqttPublishVariableHeader.topicName();
-        int packetId = mqttPublishVariableHeader.packetId();
-        boolean retain = mqttFixedHeader.isRetain();
-        byte[] data = new byte[payload.readableBytes()];
+        final var qos = mqttFixedHeader.qosLevel();
+        final var topic = mqttPublishVariableHeader.topicName();
+        final var packetId = mqttPublishVariableHeader.packetId();
+        final var retain = mqttFixedHeader.isRetain();
+        final var data = new byte[payload.readableBytes()];
         payload.readBytes(data);
 
         // 发布权限判定
@@ -180,20 +179,19 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         // 4 令牌获取失败
         // 被限流的消息就会被直接丢弃
         if (enableRateLimiter &&
-                mqttQoS == MqttQoS.AT_MOST_ONCE.value() &&
+                qos == MqttQoS.AT_MOST_ONCE &&
                 rateLimiterMap.containsKey(topic) &&
                 !rateLimiterMap.get(topic).acquire(Instant.now().getEpochSecond())) {
             return;
         }
 
         // 组装消息
-        PubMsg pubMsg = PubMsg.of(mqttQoS, topic, retain, data);
+        final var pubMsg = PubMsg.of(qos.value(), topic, retain, data);
 
         // 响应
-        switch (mqttQoS) {
-            case 0 -> // at most once
-                    publish(pubMsg, ctx, false);
-            case 1 -> { // at least once
+        switch (qos) {
+            case AT_MOST_ONCE -> publish(pubMsg, ctx, false);
+            case AT_LEAST_ONCE -> {
                 publish(pubMsg, ctx, false);
                 MqttMessage pubAck = MqttMessageFactory.newMessage(
                         new MqttFixedHeader(MqttMessageType.PUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
@@ -202,7 +200,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                 );
                 ctx.writeAndFlush(pubAck);
             }
-            case 2 -> { // exactly once
+            case EXACTLY_ONCE -> {
                 // 判断消息是否重复, 未重复的消息需要保存 messageId
                 if (isCleanSession(ctx)) {
                     Session session = getSession(ctx);
@@ -216,7 +214,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                         pubRelMessageService.saveIn(clientId(ctx), packetId);
                     }
                 }
-                MqttMessage pubRec = MqttMessageFactory.newMessage(
+                var pubRec = MqttMessageFactory.newMessage(
                         new MqttFixedHeader(MqttMessageType.PUBREC, false, MqttQoS.AT_MOST_ONCE, false, 0),
                         MqttMessageIdVariableHeader.from(packetId),
                         null
