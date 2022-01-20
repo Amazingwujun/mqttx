@@ -13,6 +13,7 @@
     <version>1.2.0</version>
     <name>mqttx</name>
     <description>mqtt broker</description>
+    <url>https://github.com/Amazingwujun/mqttx</url>
 
     <properties>
         <!--  broker 的 id 必须唯一  -->
