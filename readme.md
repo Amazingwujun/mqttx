@@ -45,6 +45,8 @@
 
 注意：分支 `v1.2` 要求 ***JDK17***, 其它分支要求 ***JDK8***
 
+关联项目: [Mqttx-Client](https://github.com/Amazingwujun/mqttx-client) 实现&使用极为简单的 mqttv3.1.1 客户端.
+
 ### 1.1 快速开始
 
 > 想通过 docker 快速体验？见 [docker 启动](#3-docker-启动)
