@@ -297,7 +297,7 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
             }
 
             MqttMessage mqttMessage = MqttMessageFactory.newMessage(
-                    new MqttFixedHeader(MqttMessageType.PUBLISH, true, MqttQoS.valueOf(pubMsg.getQoS()), false, 0),
+                    new MqttFixedHeader(MqttMessageType.PUBLISH, true, MqttQoS.valueOf(pubMsg.getQoS()), pubMsg.isRetain(), 0),
                     new MqttPublishVariableHeader(topic, pubMsg.getMessageId()),
                     // 这是一个浅拷贝，任何对pubMsg中payload的修改都会反馈到wrappedBuffer
                     Unpooled.wrappedBuffer(pubMsg.getPayload())
