@@ -143,6 +143,10 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
             String topicFilter = mqttTopicSubscription.topicName();
             retainMessageService.searchListByTopicFilter(topicFilter)
                     .forEach(pubMsg -> {
+                        // When sending a PUBLISH Packet to a Client the Server MUST set the RETAIN flag to 1 if a
+                        // message is sent as a result of a new subscription being made by a Client [MQTT-3.3.1-8].
+                        pubMsg.setRetain(true);
+
                         // 指定 clientId
                         pubMsg.setAppointedClientId(clientId);
                         publishHandler.publish(pubMsg, ctx, false);
@@ -317,10 +321,8 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
                     .uptime((int) ((System.currentTimeMillis() - BrokerHandler.START_TIME) / 1000))
                     .version(this.version)
                     .build().toJsonBytes();
-            final ByteBuf payload = Unpooled.buffer(bytes.length).writeBytes(bytes);
-            payload.markReaderIndex();
-
-            MqttPublishMessage mpm = MqttMessageBuilders.publish()
+            final var payload = Unpooled.wrappedBuffer(bytes);
+            var mpm = MqttMessageBuilders.publish()
                     .qos(MqttQoS.AT_MOST_ONCE)
                     .retained(false)
                     .topicName(brokerStatusTopic)
@@ -328,12 +330,10 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
                     .build();
 
             // 发布消息
-            for (ClientSub clientSub : clientSubs) {
+            for (var clientSub : clientSubs) {
                 Optional.ofNullable(ConnectHandler.CLIENT_MAP.get(clientSub.getClientId()))
                         .map(BrokerHandler.CHANNELS::find)
-                        .ifPresent(channel -> {
-                            channel.writeAndFlush(mpm.retain());
-                        });
+                        .ifPresent(channel -> channel.writeAndFlush(mpm.retain()));
             }
 
             // 释放引用

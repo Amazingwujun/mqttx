@@ -33,7 +33,6 @@ import com.jun.mqttx.utils.RateLimiter;
 import com.jun.mqttx.utils.Serializer;
 import com.jun.mqttx.utils.TopicUtils;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -186,7 +185,12 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         }
 
         // 组装消息
-        final var pubMsg = PubMsg.of(qos.value(), topic, retain, data);
+        // When sending a PUBLISH Packet to a Client the Server MUST set the RETAIN flag to 1 if a message is sent as a
+        // result of a new subscription being made by a Client [MQTT-3.3.1-8]. It MUST set the RETAIN flag to 0 when a
+        // PUBLISH Packet is sent to a Client because it matches an established subscription regardless of how the flag
+        // was set in the message it received [MQTT-3.3.1-9].
+        // 当新 topic 订阅触发 retain 消息时，retain flag 才应该置 1，其它状况都是 0.
+        final var pubMsg = PubMsg.of(qos.value(), topic, false, data);
 
         // 响应
         switch (qos) {
@@ -224,7 +228,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         }
 
         // retain 消息处理
-        if (mqttFixedHeader.isRetain()) {
+        if (retain) {
             handleRetainMsg(pubMsg);
         }
     }
@@ -318,18 +322,20 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         // clientId, channel, topic
         final String clientId = clientSub.getClientId();
         final boolean isCleanSession = clientSub.isCleanSession();
-        Channel channel = Optional.of(clientId)
+        final var channel = Optional.of(clientId)
                 .map(ConnectHandler.CLIENT_MAP::get)
                 .map(BrokerHandler.CHANNELS::find)
                 .orElse(null);
-        String topic = pubMsg.getTopic();
+        final var topic = pubMsg.getTopic();
 
         // 计算Qos
-        int pubQos = pubMsg.getQoS();
-        int subQos = clientSub.getQos();
-        MqttQoS qos = subQos >= pubQos ? MqttQoS.valueOf(pubQos) : MqttQoS.valueOf(subQos);
-        byte[] payload = pubMsg.getPayload();
-        boolean isDup = pubMsg.isDup();
+        final var pubQos = pubMsg.getQoS();
+        final var subQos = clientSub.getQos();
+        final var qos = subQos >= pubQos ? MqttQoS.valueOf(pubQos) : MqttQoS.valueOf(subQos);
+
+        // payload, retained flag
+        final var payload = pubMsg.getPayload();
+        final var retained = pubMsg.isRetain();
 
         // 接下来的处理分四种情况
         // 1. channel == null && cleanSession  => 直接返回，由集群中其它的 broker 处理（pubMsg 无 messageId）
@@ -383,13 +389,13 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
             }
         }
 
-        // It MUST set the RETAIN flag to 0 when a PUBLISH Packet is sent to a Client because it matches an established
-        // subscription regardless of how the flag was set in the message it received [MQTT-3.3.1-9].
         // 发送报文给 client
-        MqttPublishMessage mpm = new MqttPublishMessage(
-                new MqttFixedHeader(MqttMessageType.PUBLISH, isDup, qos, false, 0),
+        // mqttx 只有 ConnectHandler#republish(ChannelHandlerContext) 方法有必要将 dup flag 设置为 true(qos > 0), 其它应该为 false.
+        var mpm = new MqttPublishMessage(
+                new MqttFixedHeader(MqttMessageType.PUBLISH, false, qos, retained, 0),
                 new MqttPublishVariableHeader(topic, messageId),
-                Unpooled.wrappedBuffer(payload));
+                Unpooled.wrappedBuffer(payload)
+        );
 
         channel.writeAndFlush(mpm);
     }
@@ -435,7 +441,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
      * @param pubMsg {@link PubMsg}
      */
     private void internalMessagePublish(PubMsg pubMsg) {
-        InternalMessage<PubMsg> im = new InternalMessage<>(pubMsg, System.currentTimeMillis(), brokerId);
+        var im = new InternalMessage<>(pubMsg, System.currentTimeMillis(), brokerId);
         internalMessagePublishService.publish(im, InternalMessageEnum.PUB.getChannel());
     }
 

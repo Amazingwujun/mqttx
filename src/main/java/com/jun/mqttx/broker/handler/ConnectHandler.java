@@ -289,17 +289,19 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         final String clientId = clientId(ctx);
         List<PubMsg> pubMsgList = publishMessageService.search(clientId);
         pubMsgList.forEach(pubMsg -> {
-            // fixedHeader dup flag 置为 true
-            pubMsg.setDup(true);
-
             final var topic = pubMsg.getTopic();
+            final var qos = pubMsg.getQoS();
             // 订阅权限判定
             if (enableTopicSubPubSecure && !hasAuthToSubTopic(ctx, topic)) {
                 return;
             }
 
+            // It MUST set the RETAIN flag to 0 when a PUBLISH Packet is sent to a Client because it matches an
+            // established subscription regardless of how the flag was set in the message it received [MQTT-3.3.1-9].
+            // The DUP flag MUST be set to 0 for all QoS 0 messages [MQTT-3.3.1-2].
+            final var dupFlag = qos != MqttQoS.AT_MOST_ONCE.value();
             final var mqttMessage = MqttMessageFactory.newMessage(
-                    new MqttFixedHeader(MqttMessageType.PUBLISH, true, MqttQoS.valueOf(pubMsg.getQoS()), pubMsg.isRetain(), 0),
+                    new MqttFixedHeader(MqttMessageType.PUBLISH, dupFlag, MqttQoS.valueOf(pubMsg.getQoS()), false, 0),
                     new MqttPublishVariableHeader(topic, pubMsg.getMessageId()),
                     // 这是一个浅拷贝，任何对pubMsg中payload的修改都会反馈到wrappedBuffer
                     Unpooled.wrappedBuffer(pubMsg.getPayload())
