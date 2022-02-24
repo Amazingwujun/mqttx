@@ -473,4 +473,26 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
     public void clearClientSysSub(String clientId) {
         sysTopicClientsMap.forEach((topic, clientSubs) -> clientSubs.remove(ClientSub.of(clientId, 0, topic, false)));
     }
+
+    @Override
+    public Set<String> searchTopicsByClientId(String clientId, boolean cleanSession) {
+        if (enableTestMode) {
+            return inDiskTopicClientsMap.values()
+                    .stream()
+                    .flatMap(Collection::stream)
+                    .map(ClientSub::getClientId)
+                    .filter(id -> Objects.equals(clientId, id))
+                    .collect(Collectors.toSet());
+        } else {
+            if (cleanSession) {
+                return inMemClientTopicsMap.getOrDefault(clientId, ConcurrentHashMap.newKeySet());
+            } else {
+                var topics = stringRedisTemplate.opsForSet().members(clientTopicsPrefix + clientId);
+                if (topics == null) {
+                    topics = new HashSet<>();
+                }
+                return topics;
+            }
+        }
+    }
 }
