@@ -33,7 +33,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -90,13 +89,10 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
     @Override
     public void process(final ChannelHandlerContext ctx, MqttMessage msg) {
         // 获取订阅的topic、clientId
-        final var mqttSubscribeMessage = (MqttSubscribeMessage) msg;
-        final var messageId = mqttSubscribeMessage.variableHeader().messageId();
-        final var mqttTopicSubscriptions = mqttSubscribeMessage.payload().topicSubscriptions();
-        final var clientId = clientId(ctx);
-
-        // 获取 clientId 已经订阅的 topic
-        final var establishedTopics = subscriptionService.searchTopicsByClientId(clientId, isCleanSession(ctx));
+        MqttSubscribeMessage mqttSubscribeMessage = (MqttSubscribeMessage) msg;
+        int messageId = mqttSubscribeMessage.variableHeader().messageId();
+        List<MqttTopicSubscription> mqttTopicSubscriptions = mqttSubscribeMessage.payload().topicSubscriptions();
+        String clientId = clientId(ctx);
 
         // 保存用户订阅
         // 考虑到某些 topic 的订阅可能不开放给某些 client，针对这些 topic，我们有必要增加权限校验。实现办法有很多，目前的校验机制：
@@ -147,13 +143,9 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
             String topicFilter = mqttTopicSubscription.topicName();
             retainMessageService.searchListByTopicFilter(topicFilter)
                     .forEach(pubMsg -> {
-                        // When sending a PUBLISH Packet to a Client the Server MUST set the RETAIN flag to 1 if a message is sent as a
-                        // result of a new subscription being made by a Client [MQTT-3.3.1-8].
-                        // It MUST set the RETAIN flag to 0 when a PUBLISH Packet is sent to a Client
-                        // because it matches an established subscription regardless of how the flag was set in the message it received [MQTT-3.3.1-9].
-                        // 新订阅：retain flag 设置为 1(true)
-                        // 旧订阅: retain flag 设置为 0(false)
-                        pubMsg.setRetain(!establishedTopics.contains(topicFilter));
+                        // When sending a PUBLISH Packet to a Client the Server MUST set the RETAIN flag to 1 if a
+                        // message is sent as a result of a new subscription being made by a Client [MQTT-3.3.1-8].
+                        pubMsg.setRetain(true);
 
                         // 指定 clientId
                         pubMsg.setAppointedClientId(clientId);

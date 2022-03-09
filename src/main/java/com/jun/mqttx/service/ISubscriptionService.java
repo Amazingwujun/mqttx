@@ -19,7 +19,6 @@ package com.jun.mqttx.service;
 import com.jun.mqttx.entity.ClientSub;
 
 import java.util.List;
-import java.util.Set;
 
 /**
  * 订阅相关服务, 为两种主题提供服务:
@@ -101,12 +100,4 @@ public interface ISubscriptionService {
      * @param clientId 客户 id
      */
     void clearClientSysSub(String clientId);
-
-    /**
-     * 获取 clientId 已订阅的主题集合
-     *
-     * @param clientId 客户 id
-     * @param cleanSession 当前 client cleanSession 状态值
-     */
-    Set<String> searchTopicsByClientId(String clientId, boolean cleanSession);
 }
