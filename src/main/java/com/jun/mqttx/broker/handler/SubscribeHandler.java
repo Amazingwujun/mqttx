@@ -33,6 +33,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -89,10 +90,10 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
     @Override
     public void process(final ChannelHandlerContext ctx, MqttMessage msg) {
         // 获取订阅的topic、clientId
-        MqttSubscribeMessage mqttSubscribeMessage = (MqttSubscribeMessage) msg;
-        int messageId = mqttSubscribeMessage.variableHeader().messageId();
-        List<MqttTopicSubscription> mqttTopicSubscriptions = mqttSubscribeMessage.payload().topicSubscriptions();
-        String clientId = clientId(ctx);
+        final MqttSubscribeMessage mqttSubscribeMessage = (MqttSubscribeMessage) msg;
+        final int messageId = mqttSubscribeMessage.variableHeader().messageId();
+        final List<MqttTopicSubscription> mqttTopicSubscriptions = mqttSubscribeMessage.payload().topicSubscriptions();
+        final String clientId = clientId(ctx);
 
         // 保存用户订阅
         // 考虑到某些 topic 的订阅可能不开放给某些 client，针对这些 topic，我们有必要增加权限校验。实现办法有很多，目前的校验机制：
@@ -143,6 +144,10 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
             String topicFilter = mqttTopicSubscription.topicName();
             retainMessageService.searchListByTopicFilter(topicFilter)
                     .forEach(pubMsg -> {
+                        // When sending a PUBLISH Packet to a Client the Server MUST set the RETAIN flag to 1 if a message is sent as a
+                        // result of a new subscription being made by a Client [MQTT-3.3.1-8].
+                        pubMsg.setRetain(true);
+
                         // 指定 clientId
                         pubMsg.setAppointedClientId(clientId);
                         publishHandler.publish(pubMsg, ctx, false);
@@ -327,8 +332,6 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
                     .version(this.version)
                     .build().toJsonBytes();
             final ByteBuf payload = Unpooled.buffer(bytes.length).writeBytes(bytes);
-            payload.markReaderIndex();
-
             MqttPublishMessage mpm = MqttMessageBuilders.publish()
                     .qos(MqttQoS.AT_MOST_ONCE)
                     .retained(false)

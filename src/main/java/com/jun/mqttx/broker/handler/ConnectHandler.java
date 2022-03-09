@@ -287,17 +287,18 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         final String clientId = clientId(ctx);
         List<PubMsg> pubMsgList = publishMessageService.search(clientId);
         pubMsgList.forEach(pubMsg -> {
-            // fixedHeader dup flag 置为 true
-            pubMsg.setDup(true);
+            final int qos = pubMsg.getQoS();
+            final String topic = pubMsg.getTopic();
 
-            String topic = pubMsg.getTopic();
             // 订阅权限判定
             if (enableTopicSubPubSecure && !hasAuthToSubTopic(ctx, topic)) {
                 return;
             }
 
+            // The DUP flag MUST be set to 0 for all QoS 0 messages [MQTT-3.3.1-2].
+            final boolean isDup = qos != MqttQoS.AT_MOST_ONCE.value();
             MqttMessage mqttMessage = MqttMessageFactory.newMessage(
-                    new MqttFixedHeader(MqttMessageType.PUBLISH, true, MqttQoS.valueOf(pubMsg.getQoS()), pubMsg.isRetain(), 0),
+                    new MqttFixedHeader(MqttMessageType.PUBLISH, isDup, MqttQoS.valueOf(pubMsg.getQoS()), pubMsg.isRetain(), 0),
                     new MqttPublishVariableHeader(topic, pubMsg.getMessageId()),
                     // 这是一个浅拷贝，任何对pubMsg中payload的修改都会反馈到wrappedBuffer
                     Unpooled.wrappedBuffer(pubMsg.getPayload())
