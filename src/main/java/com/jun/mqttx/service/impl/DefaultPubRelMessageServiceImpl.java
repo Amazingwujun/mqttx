@@ -2,16 +2,13 @@ package com.jun.mqttx.service.impl;
 
 import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.service.IPubRelMessageService;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
-import org.springframework.util.CollectionUtils;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * 基于 redis 的实现
@@ -24,10 +21,10 @@ public class DefaultPubRelMessageServiceImpl implements IPubRelMessageService {
 
     private static final String IN = "_IN";
     private static final String OUT = "_OUT";
-    private final RedisTemplate<String, byte[]> redisTemplate;
+    private final ReactiveRedisTemplate<String, byte[]> redisTemplate;
     private final String pubRelMsgSetPrefix;
 
-    public DefaultPubRelMessageServiceImpl(RedisTemplate<String, byte[]> redisTemplate, MqttxConfig mqttxConfig) {
+    public DefaultPubRelMessageServiceImpl(ReactiveRedisTemplate<String, byte[]> redisTemplate, MqttxConfig mqttxConfig) {
         this.redisTemplate = redisTemplate;
 
         this.pubRelMsgSetPrefix = mqttxConfig.getRedis().getPubRelMsgSetPrefix();
@@ -35,52 +32,49 @@ public class DefaultPubRelMessageServiceImpl implements IPubRelMessageService {
     }
 
     @Override
-    public void saveOut(String clientId, int messageId) {
-        redisTemplate.opsForSet()
-                .add(outKey(clientId), int2bytes(messageId));
+    public Mono<Void> saveOut(String clientId, int messageId) {
+        return redisTemplate.opsForSet()
+                .add(outKey(clientId), int2bytes(messageId))
+                .then();
     }
 
     @Override
-    public void saveIn(String clientId, int messageId) {
-        redisTemplate.opsForSet()
-                .add(inKey(clientId), int2bytes(messageId));
+    public Mono<Void> saveIn(String clientId, int messageId) {
+        return redisTemplate.opsForSet()
+                .add(inKey(clientId), int2bytes(messageId))
+                .then();
     }
 
     @Override
-    public boolean isInMsgDup(String clientId, int messageId) {
-        Boolean member = redisTemplate.opsForSet()
-                .isMember(inKey(clientId), int2bytes(messageId));
-        return Boolean.TRUE.equals(member);
+    public Mono<Boolean> isInMsgDup(String clientId, int messageId) {
+        return redisTemplate.opsForSet()
+                .isMember(inKey(clientId), int2bytes(messageId))
+                .switchIfEmpty(Mono.just(false));
     }
 
     @Override
-    public void removeIn(String clientId, int messageId) {
-        redisTemplate.opsForSet()
-                .remove(inKey(clientId), (Object) int2bytes(messageId));
+    public Mono<Void> removeIn(String clientId, int messageId) {
+        return redisTemplate.opsForSet()
+                .remove(inKey(clientId), (Object) int2bytes(messageId))
+                .then();
     }
 
     @Override
-    public void removeOut(String clientId, int messageId) {
-        redisTemplate.opsForSet()
-                .remove(outKey(clientId), (Object) int2bytes(messageId));
+    public Mono<Void> removeOut(String clientId, int messageId) {
+        return redisTemplate.opsForSet()
+                .remove(outKey(clientId), (Object) int2bytes(messageId))
+                .then();
     }
 
     @Override
-    public List<Integer> searchOut(String clientId) {
-        Set<byte[]> members = redisTemplate.opsForSet().members(outKey(clientId));
-        if (CollectionUtils.isEmpty(members)) {
-            //noinspection unchecked
-            return Collections.EMPTY_LIST;
-        }
-
-        return members.stream()
-                .map(this::bytes2int)
-                .collect(Collectors.toList());
+    public Flux<Integer> searchOut(String clientId) {
+        return redisTemplate.opsForSet().members(outKey(clientId))
+                .map(this::bytes2int);
     }
 
     @Override
-    public void clear(String clientId) {
-        redisTemplate.delete(Arrays.asList(inKey(clientId), outKey(clientId)));
+    public Mono<Void> clear(String clientId) {
+        return redisTemplate.delete(inKey(clientId), outKey(clientId)).then();
     }
 
     private String inKey(String clientId) {

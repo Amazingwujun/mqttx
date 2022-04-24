@@ -7,20 +7,24 @@ import com.jun.mqttx.consumer.Watcher;
 import com.jun.mqttx.entity.ClientSub;
 import com.jun.mqttx.entity.ClientSubOrUnsubMsg;
 import com.jun.mqttx.entity.InternalMessage;
+import com.jun.mqttx.entity.Tuple2;
 import com.jun.mqttx.service.IInternalMessagePublishService;
 import com.jun.mqttx.service.ISubscriptionService;
 import com.jun.mqttx.utils.JsonSerializer;
 import com.jun.mqttx.utils.Serializer;
 import com.jun.mqttx.utils.TopicUtils;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -39,7 +43,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
     private static final int ASSUME_COUNT = 100_000;
     /** 按顺序 -> 订阅，解除订阅，删除 topic */
     private static final int SUB = 1, UN_SUB = 2, DEL_TOPIC = 3;
-    private final StringRedisTemplate stringRedisTemplate;
+    private final ReactiveStringRedisTemplate stringRedisTemplate;
     private final Serializer serializer;
     private final IInternalMessagePublishService internalMessagePublishService;
     /** client订阅主题, 订阅主题前缀, 主题集合 */
@@ -70,7 +74,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
 
     //@formatter:on
 
-    public DefaultSubscriptionServiceImpl(StringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig, Serializer serializer,
+    public DefaultSubscriptionServiceImpl(ReactiveStringRedisTemplate stringRedisTemplate, MqttxConfig mqttxConfig, Serializer serializer,
                                           @Nullable IInternalMessagePublishService internalMessagePublishService) {
         Assert.notNull(stringRedisTemplate, "stringRedisTemplate can't be null");
 
@@ -100,7 +104,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
      * @param clientSub 客户订阅信息
      */
     @Override
-    public void subscribe(ClientSub clientSub) {
+    public Mono<Void> subscribe(ClientSub clientSub) {
         String topic = clientSub.getTopic();
         String clientId = clientSub.getClientId();
         int qos = clientSub.getQos();
@@ -118,23 +122,35 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
             inMemClientTopicsMap
                     .computeIfAbsent(clientId, s -> ConcurrentHashMap.newKeySet())
                     .add(topic);
-        } else {
-            stringRedisTemplate.opsForHash()
-                    .put(topicPrefix + topic, clientId, String.valueOf(qos));
-            stringRedisTemplate.opsForSet().add(topicSetKey, topic);
-            stringRedisTemplate.opsForSet().add(clientTopicsPrefix + clientId, topic);
-            if (enableInnerCache) {
-                subscribeWithCache(clientSub);
-            }
-        }
 
-        if (enableCluster) {
-            InternalMessage<ClientSubOrUnsubMsg> im = new InternalMessage<>(
-                    new ClientSubOrUnsubMsg(clientId, qos, topic, cleanSession, null, SUB),
-                    System.currentTimeMillis(),
-                    brokerId
-            );
-            internalMessagePublishService.publish(im, InternalMessageEnum.SUB_UNSUB.getChannel());
+            if (enableCluster) {
+                InternalMessage<ClientSubOrUnsubMsg> im = new InternalMessage<>(
+                        new ClientSubOrUnsubMsg(clientId, qos, topic, cleanSession, null, SUB),
+                        System.currentTimeMillis(),
+                        brokerId
+                );
+                internalMessagePublishService.publish(im, InternalMessageEnum.SUB_UNSUB.getChannel());
+            }
+            return Mono.empty();
+        } else {
+            return Mono.when(
+                    stringRedisTemplate.opsForHash().put(topicPrefix + topic, clientId, String.valueOf(qos)),
+                    stringRedisTemplate.opsForSet().add(topicSetKey, topic),
+                    stringRedisTemplate.opsForSet().add(clientTopicsPrefix + clientId, topic)
+            ).then(Mono.fromRunnable(() -> {
+                if (enableInnerCache) {
+                    subscribeWithCache(clientSub);
+                }
+
+                if (enableCluster) {
+                    InternalMessage<ClientSubOrUnsubMsg> im = new InternalMessage<>(
+                            new ClientSubOrUnsubMsg(clientId, qos, topic, false, null, SUB),
+                            System.currentTimeMillis(),
+                            brokerId
+                    );
+                    internalMessagePublishService.publish(im, InternalMessageEnum.SUB_UNSUB.getChannel());
+                }
+            }));
         }
     }
 
@@ -146,9 +162,9 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
      * @param topics       主题列表
      */
     @Override
-    public void unsubscribe(String clientId, boolean cleanSession, List<String> topics) {
+    public Mono<Void> unsubscribe(String clientId, boolean cleanSession, List<String> topics) {
         if (CollectionUtils.isEmpty(topics)) {
-            return;
+            return Mono.empty();
         }
 
         if (cleanSession) {
@@ -159,19 +175,32 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
                 }
             });
             Optional.ofNullable(inMemClientTopicsMap.get(clientId)).ifPresent(t -> t.removeAll(topics));
-        } else {
-            topics.forEach(topic -> stringRedisTemplate.opsForHash().delete(topicPrefix + topic, clientId));
-            stringRedisTemplate.opsForSet().remove(clientTopicsPrefix + clientId, topics.toArray());
-            if (enableInnerCache) {
-                unsubscribeWithCache(clientId, topics);
-            }
-        }
 
-        // 集群广播
-        if (enableCluster) {
-            ClientSubOrUnsubMsg clientSubOrUnsubMsg = new ClientSubOrUnsubMsg(clientId, 0, null, cleanSession, topics, UN_SUB);
-            InternalMessage<ClientSubOrUnsubMsg> im = new InternalMessage<>(clientSubOrUnsubMsg, System.currentTimeMillis(), brokerId);
-            internalMessagePublishService.publish(im, InternalMessageEnum.SUB_UNSUB.getChannel());
+            // 集群广播
+            if (enableCluster) {
+                ClientSubOrUnsubMsg clientSubOrUnsubMsg = new ClientSubOrUnsubMsg(clientId, 0, null, cleanSession, topics, UN_SUB);
+                InternalMessage<ClientSubOrUnsubMsg> im = new InternalMessage<>(clientSubOrUnsubMsg, System.currentTimeMillis(), brokerId);
+                internalMessagePublishService.publish(im, InternalMessageEnum.SUB_UNSUB.getChannel());
+            }
+            return Mono.empty();
+        } else {
+            List<Mono<Long>> monos = topics.stream()
+                    .map(e -> stringRedisTemplate.opsForHash().remove(topicPrefix + e, clientId))
+                    .toList();
+            return Mono.when(monos)
+                    .then(stringRedisTemplate.opsForSet().remove(clientTopicsPrefix + clientId, topics).then())
+                    .doOnSuccess(unused -> {
+                        if (enableInnerCache) {
+                            unsubscribeWithCache(clientId, topics);
+                        }
+
+                        // 集群广播
+                        if (enableCluster) {
+                            ClientSubOrUnsubMsg clientSubOrUnsubMsg = new ClientSubOrUnsubMsg(clientId, 0, null, cleanSession, topics, UN_SUB);
+                            InternalMessage<ClientSubOrUnsubMsg> im = new InternalMessage<>(clientSubOrUnsubMsg, System.currentTimeMillis(), brokerId);
+                            internalMessagePublishService.publish(im, InternalMessageEnum.SUB_UNSUB.getChannel());
+                        }
+                    });
         }
     }
 
@@ -184,29 +213,14 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
      * @return 客户ID列表
      */
     @Override
-    public List<ClientSub> searchSubscribeClientList(String topic) {
+    public Flux<ClientSub> searchSubscribeClientList(String topic) {
         // 启用内部缓存机制
         if (enableInnerCache) {
-            return searchSubscribeClientListByCache(topic);
+            return Flux.fromIterable(searchSubscribeClientListByCache(topic));
         }
 
         // 未启用内部缓存机制，直接通过 redis 抓取
         List<ClientSub> clientSubList = new ArrayList<>();
-        Set<String> redisTopics = stringRedisTemplate.opsForSet().members(topicSetKey);
-        if (!CollectionUtils.isEmpty(redisTopics)) {
-            redisTopics.stream().filter(t -> TopicUtils.match(topic, t)).
-                    forEach(t -> {
-                        Map<Object, Object> entries = stringRedisTemplate.opsForHash().entries(topicPrefix + t);
-                        if (!CollectionUtils.isEmpty(entries)) {
-                            entries.forEach((k, v) -> {
-                                String clientId = (String) k;
-                                String qosStr = (String) v;
-                                ClientSub clientSub = ClientSub.of(clientId, Integer.parseInt(qosStr), t, false);
-                                clientSubList.add(clientSub);
-                            });
-                        }
-                    });
-        }
 
         // cleanSession 的主题
         inMemTopics.stream()
@@ -217,37 +231,45 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
                         clientSubList.addAll(clientSubs);
                     }
                 });
-
-        return clientSubList;
+        return stringRedisTemplate.opsForSet().members(topicSetKey)
+                .filter(t -> TopicUtils.match(topic, t))
+                .flatMap(t -> stringRedisTemplate.opsForHash().entries(topicPrefix + t)
+                        .map(entry -> {
+                            String clientId = (String) entry.getKey();
+                            String qosStr = (String) entry.getValue();
+                            return ClientSub.of(clientId, Integer.parseInt(qosStr), t, false);
+                        })
+                ).concatWith(Flux.fromIterable(clientSubList));
     }
 
     @Override
-    public void clearClientSubscriptions(String clientId, boolean cleanSession) {
+    public Mono<Void> clearClientSubscriptions(String clientId, boolean cleanSession) {
         Set<String> keys;
         if (cleanSession) {
             keys = inMemClientTopicsMap.remove(clientId);
             if (CollectionUtils.isEmpty(keys)) {
-                return;
+                return Mono.empty();
             }
+            unsubscribe(clientId, cleanSession, new ArrayList<>(keys));
+            return Mono.empty();
         } else {
-            keys = stringRedisTemplate.opsForSet().members(clientTopicsPrefix + clientId);
-            if (CollectionUtils.isEmpty(keys)) {
-                return;
-            }
-            stringRedisTemplate.delete(clientTopicsPrefix + clientId);
+            return stringRedisTemplate.opsForSet().members(clientTopicsPrefix + clientId)
+                    .collectList()
+                    .flatMap(e -> stringRedisTemplate.delete(clientTopicsPrefix + clientId).thenReturn(e))
+                    .doOnSuccess(e -> {
+                        unsubscribe(clientId, cleanSession, new ArrayList<>(e));
+                    })
+                    .then();
         }
-        unsubscribe(clientId, cleanSession, new ArrayList<>(keys));
     }
 
     @Override
-    public void clearUnAuthorizedClientSub(String clientId, List<String> authorizedSub) {
+    public Mono<Void> clearUnAuthorizedClientSub(String clientId, List<String> authorizedSub) {
         List<String> collect = inDiskTopics
                 .stream()
                 .filter(topic -> !authorizedSub.contains(topic))
                 .collect(Collectors.toList());
-
-        unsubscribe(clientId, false, collect);
-        unsubscribe(clientId, true, collect);
+        return Mono.when(unsubscribe(clientId, false, collect), unsubscribe(clientId, true, collect));
     }
 
 
@@ -307,12 +329,15 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
                                         ofNullable(inMemClientTopicsMap.get(clientId))
                                         .ifPresent(t -> t.remove(topic)))
                         );
-                stringRedisTemplate.opsForSet().remove(topicSetKey, topic);
-
-                // 移除缓存中的数据
-                if (enableInnerCache) {
-                    removeTopicWithCache(topic);
-                }
+                stringRedisTemplate.opsForSet().remove(topicSetKey, topic)
+                        .doOnSuccess(l -> {
+                            // 移除缓存中的数据
+                            if (enableInnerCache) {
+                                removeTopicWithCache(topic);
+                            }
+                        })
+                        .subscribe(e -> {
+                        }, e -> log.error(e.getMessage(), e));
             }
             default -> log.error("非法的 ClientSubOrUnsubMsg type:" + type);
         }
@@ -326,30 +351,25 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
     /**
      * 初始化内部缓存。目前的策略是全部加载，其实可以按需加载，按业务需求来吧。
      */
-    private void initInnerCache(final StringRedisTemplate redisTemplate) {
+    private void initInnerCache(final ReactiveStringRedisTemplate redisTemplate) {
         log.info("enableInnerCache=true, 开始加载缓存...");
 
-        final Set<String> allTopic = redisTemplate.opsForSet().members(topicSetKey);
-        if (!CollectionUtils.isEmpty(allTopic)) {
-            inDiskTopics.addAll(allTopic);
-
-            allTopic.forEach(topic -> {
-                Map<Object, Object> entries = redisTemplate.opsForHash().entries(topicPrefix + topic);
-                if (!CollectionUtils.isEmpty(entries)) {
-                    entries.forEach((k, v) -> {
-                        String key = (String) k;
-                        String val = (String) v;
-                        inDiskTopicClientsMap
-                                .computeIfAbsent(topic, s -> ConcurrentHashMap.newKeySet())
-                                .add(ClientSub.of(key, Integer.parseInt(val), topic, false));
-                    });
-                }
-            });
-        } else {
-            log.warn("redis 存储的 topic 列表为空");
-        }
-
-        log.info("缓存加载完成...");
+        redisTemplate.opsForSet().members(topicSetKey)
+                .collectList()
+                .doOnSuccess(inDiskTopics::addAll)
+                .flatMapIterable(Function.identity())
+                .flatMap(topic -> redisTemplate.opsForHash().entries(topicPrefix + topic).map(e -> new Tuple2<>(topic, e)))
+                .doOnNext(e -> {
+                    String topic = e.t0();
+                    String k = (String) e.t1().getKey();
+                    String v = (String) e.t1().getValue();
+                    inDiskTopicClientsMap.computeIfAbsent(topic, s -> ConcurrentHashMap.newKeySet())
+                            .add(ClientSub.of(k, Integer.parseInt(v), topic, false));
+                })
+                .then()
+                .doOnError(t -> log.error(t.getMessage(), t))
+                // 这里我们应该阻塞
+                .block();
     }
 
     /**
@@ -424,7 +444,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
     }
 
     @Override
-    public List<ClientSub> searchSysTopicClients(String topic) {
+    public Flux<ClientSub> searchSysTopicClients(String topic) {
         // result
         List<ClientSub> clientSubList = new ArrayList<>();
 
@@ -434,26 +454,30 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
             }
         });
 
-        return clientSubList;
+        return Flux.fromIterable(clientSubList);
     }
 
     @Override
-    public void subscribeSys(ClientSub clientSub) {
+    public Mono<Void> subscribeSys(ClientSub clientSub) {
         sysTopicClientsMap.computeIfAbsent(clientSub.getTopic(), k -> ConcurrentHashMap.newKeySet()).add(clientSub);
+        return Mono.empty();
     }
 
     @Override
-    public void unsubscribeSys(String clientId, List<String> topics) {
+    public Mono<Void> unsubscribeSys(String clientId, List<String> topics) {
         for (String topic : topics) {
             ConcurrentHashMap.KeySetView<ClientSub, Boolean> clientSubs = sysTopicClientsMap.get(topic);
             if (!CollectionUtils.isEmpty(clientSubs)) {
                 clientSubs.remove(ClientSub.of(clientId, 0, topic, false));
             }
         }
+
+        return Mono.empty();
     }
 
     @Override
-    public void clearClientSysSub(String clientId) {
+    public Mono<Void> clearClientSysSub(String clientId) {
         sysTopicClientsMap.forEach((topic, clientSubs) -> clientSubs.remove(ClientSub.of(clientId, 0, topic, false)));
+        return Mono.empty();
     }
 }

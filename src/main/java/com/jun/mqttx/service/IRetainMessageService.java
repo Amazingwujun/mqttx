@@ -17,8 +17,8 @@
 package com.jun.mqttx.service;
 
 import com.jun.mqttx.entity.PubMsg;
-
-import java.util.List;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * retain 消息服务
@@ -34,7 +34,7 @@ public interface IRetainMessageService {
      * @param newSubTopic 客户端新订阅主题
      * @return 匹配的消息列表
      */
-    List<PubMsg> searchListByTopicFilter(String newSubTopic);
+    Flux<PubMsg> searchListByTopicFilter(String newSubTopic);
 
     /**
      * 存储当前 topic 的 retain 消息
@@ -42,14 +42,14 @@ public interface IRetainMessageService {
      * @param topic  主题
      * @param pubMsg 发布消息
      */
-    void save(String topic, PubMsg pubMsg);
+    Mono<Void> save(String topic, PubMsg pubMsg);
 
     /**
      * 移除 topic 的 retain 消息
      *
      * @param topic 主题
      */
-    void remove(String topic);
+    Mono<Void> remove(String topic);
 
     /**
      * 获取订阅主题的保留信息
@@ -57,5 +57,5 @@ public interface IRetainMessageService {
      * @param topic 主题
      * @return {@link PubMsg}
      */
-    PubMsg get(String topic);
+    Mono<PubMsg> get(String topic);
 }

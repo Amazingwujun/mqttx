@@ -17,6 +17,8 @@
 package com.jun.mqttx.service;
 
 import com.jun.mqttx.entity.ClientSub;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 
@@ -37,7 +39,7 @@ public interface ISubscriptionService {
      *
      * @param clientSub 客户订阅
      */
-    void subscribe(ClientSub clientSub);
+    Mono<Void> subscribe(ClientSub clientSub);
 
     /**
      * 解除订阅
@@ -45,7 +47,7 @@ public interface ISubscriptionService {
      * @param clientId 客户id
      * @param topics   主题列表
      */
-    void unsubscribe(String clientId, boolean cleanSession, List<String> topics);
+    Mono<Void> unsubscribe(String clientId, boolean cleanSession, List<String> topics);
 
     /**
      * 获取订阅了 topic 的客户id
@@ -53,7 +55,7 @@ public interface ISubscriptionService {
      * @param topic 主题
      * @return 订阅了主题的客户id列表
      */
-    List<ClientSub> searchSubscribeClientList(String topic);
+    Flux<ClientSub> searchSubscribeClientList(String topic);
 
     /**
      * 移除客户订阅
@@ -61,7 +63,7 @@ public interface ISubscriptionService {
      * @param clientId     客户ID
      * @param cleanSession 清理类型，true 清理 cleanSession = 1, false清理 cleanSession = 0
      */
-    void clearClientSubscriptions(String clientId, boolean cleanSession);
+    Mono<Void> clearClientSubscriptions(String clientId, boolean cleanSession);
 
     /**
      * 移除未包含在 authorizedSub 集合中的客户端订阅
@@ -69,7 +71,7 @@ public interface ISubscriptionService {
      * @param clientId      客户端ID
      * @param authorizedSub 客户端被允许订阅的 topic 集合
      */
-    void clearUnAuthorizedClientSub(String clientId, List<String> authorizedSub);
+    Mono<Void> clearUnAuthorizedClientSub(String clientId, List<String> authorizedSub);
 
 
     /**
@@ -77,14 +79,14 @@ public interface ISubscriptionService {
      *
      * @param topic 系统主题
      */
-    List<ClientSub> searchSysTopicClients(String topic);
+    Flux<ClientSub> searchSysTopicClients(String topic);
 
     /**
      * 保存系统主题客户订阅
      *
      * @param clientSub 客户订阅
      */
-    void subscribeSys(ClientSub clientSub);
+    Mono<Void> subscribeSys(ClientSub clientSub);
 
     /**
      * 解除客户系统主题订阅
@@ -92,12 +94,12 @@ public interface ISubscriptionService {
      * @param clientId 客户 id
      * @param topics   主题列表
      */
-    void unsubscribeSys(String clientId, List<String> topics);
+    Mono<Void> unsubscribeSys(String clientId, List<String> topics);
 
     /**
      * 清理客户订阅的系统主题
      *
      * @param clientId 客户 id
      */
-    void clearClientSysSub(String clientId);
+    Mono<Void> clearClientSysSub(String clientId);
 }

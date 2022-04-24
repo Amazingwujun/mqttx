@@ -4,11 +4,12 @@ import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.entity.Session;
 import com.jun.mqttx.service.ISessionService;
 import com.jun.mqttx.utils.Serializer;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
+import reactor.core.publisher.Mono;
 
-import java.util.Optional;
+import java.util.Objects;
 
 /**
  * 会话服务
@@ -21,10 +22,10 @@ public class DefaultSessionServiceImpl implements ISessionService {
 
     private final String clusterSessionHashKey;
     private final String messageIdPrefix;
-    private final RedisTemplate<String, byte[]> redisTemplate;
+    private final ReactiveRedisTemplate<String, byte[]> redisTemplate;
     private final Serializer serializer;
 
-    public DefaultSessionServiceImpl(RedisTemplate<String, byte[]> redisTemplate,
+    public DefaultSessionServiceImpl(ReactiveRedisTemplate<String, byte[]> redisTemplate,
                                      Serializer serializer,
                                      MqttxConfig mqttxConfig) {
         MqttxConfig.Redis redis = mqttxConfig.getRedis();
@@ -38,38 +39,41 @@ public class DefaultSessionServiceImpl implements ISessionService {
     }
 
     @Override
-    public void save(Session session) {
-        redisTemplate.opsForHash()
-                .put(clusterSessionHashKey, session.getClientId(), serializer.serialize(session));
+    public Mono<Void> save(Session session) {
+        return redisTemplate.opsForHash()
+                .put(clusterSessionHashKey, session.getClientId(), serializer.serialize(session))
+                .then(Mono.empty());
     }
 
     @Override
-    public Session find(String clientId) {
-        byte[] sessionStr = (byte[]) redisTemplate.opsForHash().get(clusterSessionHashKey, clientId);
-        return Optional.ofNullable(sessionStr)
-                .map(e -> serializer.deserialize(e, Session.class))
-                .orElse(null);
+    public Mono<Session> find(String clientId) {
+        return redisTemplate.opsForHash().get(clusterSessionHashKey, clientId)
+                .map(e -> serializer.deserialize((byte[]) e, Session.class))
+                .switchIfEmpty(Mono.empty());
     }
 
     @Override
-    public boolean clear(String clientId) {
-        redisTemplate.delete(messageIdPrefix + clientId);
-        return redisTemplate.opsForHash().delete(clusterSessionHashKey, clientId) > 0;
+    public Mono<Boolean> clear(String clientId) {
+        return redisTemplate.delete(messageIdPrefix + clientId)
+                .then(redisTemplate.opsForHash().remove(clusterSessionHashKey, clientId))
+                .switchIfEmpty(Mono.just(-1L))
+                .map(e -> e > 0);
     }
 
     @Override
-    public boolean hasKey(String clientId) {
+    public Mono<Boolean> hasKey(String clientId) {
         return redisTemplate.opsForHash().hasKey(clusterSessionHashKey, clientId);
     }
 
-    @SuppressWarnings("ConstantConditions")
     @Override
-    public int nextMessageId(String clientId) {
-        int messageId = Math.toIntExact(redisTemplate.opsForValue().increment(messageIdPrefix + clientId));
-        if (messageId == 0) {
-            messageId = Math.toIntExact(redisTemplate.opsForValue().increment(messageIdPrefix + clientId));
-        }
-
-        return messageId;
+    public Mono<Integer> nextMessageId(String clientId) {
+        return redisTemplate.opsForValue().increment(messageIdPrefix + clientId)
+                .flatMap(e -> {
+                    if (Objects.equals(e, 0L)) {
+                        return redisTemplate.opsForValue().increment(messageIdPrefix + clientId);
+                    }
+                    return Mono.just(e);
+                })
+                .map(Math::toIntExact);
     }
 }

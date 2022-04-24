@@ -4,14 +4,11 @@ import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.entity.PubMsg;
 import com.jun.mqttx.service.IPublishMessageService;
 import com.jun.mqttx.utils.Serializer;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
-import org.springframework.util.CollectionUtils;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * publish message store by redis
@@ -22,11 +19,11 @@ import java.util.stream.Collectors;
 @Service
 public class DefaultPublishMessageServiceImpl implements IPublishMessageService {
 
-    private final RedisTemplate<String, byte[]> redisTemplate;
+    private final ReactiveRedisTemplate<String, byte[]> redisTemplate;
     private final Serializer serializer;
     private final String pubMsgSetPrefix;
 
-    public DefaultPublishMessageServiceImpl(RedisTemplate<String, byte[]> redisTemplate,
+    public DefaultPublishMessageServiceImpl(ReactiveRedisTemplate<String, byte[]> redisTemplate,
                                             Serializer serializer,
                                             MqttxConfig mqttxConfig) {
         this.redisTemplate = redisTemplate;
@@ -37,35 +34,26 @@ public class DefaultPublishMessageServiceImpl implements IPublishMessageService 
     }
 
     @Override
-    public void save(String clientId, PubMsg pubMsg) {
-        redisTemplate.opsForHash().put(pubMsgSetPrefix + clientId,
-                String.valueOf(pubMsg.getMessageId()), serializer.serialize(pubMsg));
+    public Mono<Void> save(String clientId, PubMsg pubMsg) {
+        return redisTemplate.opsForHash()
+                .put(pubMsgSetPrefix + clientId, String.valueOf(pubMsg.getMessageId()), serializer.serialize(pubMsg))
+                .then();
     }
 
     @Override
-    public void clear(String clientId) {
-        redisTemplate.delete(pubMsgSetPrefix + clientId);
+    public Mono<Void> clear(String clientId) {
+        return redisTemplate.delete(pubMsgSetPrefix + clientId).then();
     }
 
     @Override
-    public void remove(String clientId, int messageId) {
-        redisTemplate.opsForHash().delete(
-                key(clientId),
-                String.valueOf(messageId)
-        );
+    public Mono<Void> remove(String clientId, int messageId) {
+        return redisTemplate.opsForHash().remove(key(clientId), String.valueOf(messageId)).then();
     }
 
     @Override
-    public List<PubMsg> search(String clientId) {
-        List<Object> values = redisTemplate.opsForHash().values(key(clientId));
-        if (CollectionUtils.isEmpty(values)) {
-            // noinspection unchecked
-            return Collections.EMPTY_LIST;
-        }
-
-        return values.stream()
-                .map(o -> serializer.deserialize((byte[]) o, PubMsg.class))
-                .collect(Collectors.toList());
+    public Flux<PubMsg> search(String clientId) {
+        return redisTemplate.opsForHash().values(key(clientId))
+                .map(e -> serializer.deserialize((byte[]) e, PubMsg.class));
     }
 
     private String key(String client) {

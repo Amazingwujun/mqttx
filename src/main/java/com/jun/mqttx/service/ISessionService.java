@@ -17,6 +17,7 @@
 package com.jun.mqttx.service;
 
 import com.jun.mqttx.entity.Session;
+import reactor.core.publisher.Mono;
 
 /**
  * 会话相关业务
@@ -31,7 +32,7 @@ public interface ISessionService {
      *
      * @param session {@link Session}
      */
-    void save(Session session);
+    Mono<Void> save(Session session);
 
     /**
      * 通过 clientId 获取会话
@@ -39,7 +40,7 @@ public interface ISessionService {
      * @param clientId 客户端ID
      * @return {@link Session}
      */
-    Session find(String clientId);
+    Mono<Session> find(String clientId);
 
     /**
      * 清理会话
@@ -47,7 +48,7 @@ public interface ISessionService {
      * @param clientId 客户端ID
      * @return true if session exist
      */
-    boolean clear(String clientId);
+    Mono<Boolean> clear(String clientId);
 
     /**
      * 检查 clientId 关联的 session 是否存在
@@ -55,7 +56,7 @@ public interface ISessionService {
      * @param clientId 客户端ID
      * @return true if session exist
      */
-    boolean hasKey(String clientId);
+    Mono<Boolean> hasKey(String clientId);
 
     /**
      * 获取 client 的下一个 messageId
@@ -63,5 +64,5 @@ public interface ISessionService {
      * @param clientId 客户端ID
      * @return next message id
      */
-    int nextMessageId(String clientId);
+    Mono<Integer> nextMessageId(String clientId);
 }

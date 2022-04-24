@@ -16,7 +16,8 @@
 
 package com.jun.mqttx.service;
 
-import java.util.List;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * pubRel 消息相关服务，主要是crud相关.
@@ -39,7 +40,7 @@ public interface IPubRelMessageService {
      * @param clientId  客户端ID
      * @param messageId 报文ID
      */
-    void saveOut(String clientId, int messageId);
+    Mono<Void> saveOut(String clientId, int messageId);
 
     /**
      * 保存 pubRel 消息 messageId(方向为 client -> broker)
@@ -47,7 +48,7 @@ public interface IPubRelMessageService {
      * @param clientId  客户端ID
      * @param messageId 报文ID
      */
-    void saveIn(String clientId, int messageId);
+    Mono<Void> saveIn(String clientId, int messageId);
 
     /**
      * 校验消息是否已存在
@@ -56,7 +57,7 @@ public interface IPubRelMessageService {
      * @param messageId 消息ID
      * @return true if msg exist
      */
-    boolean isInMsgDup(String clientId, int messageId);
+    Mono<Boolean> isInMsgDup(String clientId, int messageId);
 
     /**
      * 移除 pubRel 标志(方向为 client -> broker)
@@ -64,7 +65,7 @@ public interface IPubRelMessageService {
      * @param messageId 消息ID
      * @param clientId  客户端ID
      */
-    void removeIn(String clientId, int messageId);
+    Mono<Void> removeIn(String clientId, int messageId);
 
     /**
      * 移除 pubRel 标志(方向为 broker -> client)
@@ -72,7 +73,7 @@ public interface IPubRelMessageService {
      * @param messageId 消息ID
      * @param clientId  客户端ID
      */
-    void removeOut(String clientId, int messageId);
+    Mono<Void> removeOut(String clientId, int messageId);
 
     /**
      * 获取客户端未完成的 pubRel 消息
@@ -80,12 +81,12 @@ public interface IPubRelMessageService {
      * @param clientId 客户端ID
      * @return 未完成 pubRel messageId 列表
      */
-    List<Integer> searchOut(String clientId);
+    Flux<Integer> searchOut(String clientId);
 
     /**
      * 清理掉客户所有的消息
      *
      * @param clientId 客户端ID
      */
-    void clear(String clientId);
+    Mono<Void> clear(String clientId);
 }
