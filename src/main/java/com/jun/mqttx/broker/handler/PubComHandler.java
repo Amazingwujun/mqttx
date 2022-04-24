@@ -35,7 +35,7 @@ public class PubComHandler extends AbstractMqttSessionHandler {
     private final IPubRelMessageService pubRelMessageService;
 
     public PubComHandler(IPubRelMessageService pubRelMessageService, MqttxConfig config) {
-        super(config.getEnableTestMode(), config.getCluster().getEnable());
+        super(config.getCluster().getEnable());
         this.pubRelMessageService = pubRelMessageService;
     }
 

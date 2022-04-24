@@ -39,7 +39,7 @@ public class UnsubscribeHandler extends AbstractMqttSessionHandler {
     private final ISubscriptionService subscriptionService;
 
     public UnsubscribeHandler(MqttxConfig config, ISubscriptionService subscriptionService) {
-        super(config.getEnableTestMode(), config.getCluster().getEnable());
+        super(config.getCluster().getEnable());
         this.enableSysTopic = config.getSysTopic().getEnable();
         this.subscriptionService = subscriptionService;
     }

@@ -79,7 +79,7 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
     public ConnectHandler(IAuthenticationService authenticationService, ISessionService sessionService,
                           ISubscriptionService subscriptionService, IPublishMessageService publishMessageService,
                           IPubRelMessageService pubRelMessageService, MqttxConfig config, @Nullable IInternalMessagePublishService internalMessagePublishService) {
-        super(config.getEnableTestMode(), config.getCluster().getEnable());
+        super(config.getCluster().getEnable());
         Assert.notNull(authenticationService, "authentication can't be null");
         Assert.notNull(sessionService, "sessionService can't be null");
         Assert.notNull(subscriptionService, "subscriptionService can't be null");

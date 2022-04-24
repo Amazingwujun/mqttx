@@ -70,13 +70,6 @@ public class MqttxConfig {
     private Boolean enableInnerCache = true;
 
     /**
-     * 功能测试模式：
-     * 1. 不依赖 redis, 使用内存保存消息
-     * 2. 关闭集群
-     */
-    private Boolean enableTestMode = false;
-
-    /**
      * 序列化策略选择:
      * <ol>
      *     <li>{@link SerializeStrategy#JSON}: 默认项(兼容早期版本)</li>

@@ -34,10 +34,9 @@ public abstract class AbstractMqttSessionHandler implements MqttMessageHandler {
 
     public static final String AUTHORIZED_PUB_TOPICS = "authorizedPubTopics";
     public static final String AUTHORIZED_SUB_TOPICS = "authorizedSubTopics";
-    final boolean enableTestMode, enableCluster;
+    final boolean enableCluster;
 
-    public AbstractMqttSessionHandler(boolean enableTestMode, boolean enableCluster) {
-        this.enableTestMode = enableTestMode;
+    public AbstractMqttSessionHandler(boolean enableCluster) {
         this.enableCluster = enableCluster;
     }
 
@@ -166,6 +165,6 @@ public abstract class AbstractMqttSessionHandler implements MqttMessageHandler {
      * @return true if mqttx broker enter cluster mode
      */
     boolean isClusterMode() {
-        return enableCluster && !enableTestMode;
+        return enableCluster;
     }
 }

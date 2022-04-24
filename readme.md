@@ -52,8 +52,6 @@
 > 想通过 docker 快速体验？见 [docker 启动](#3-docker-启动)
 
 1. 打包
-    - 测试模式：运行  `mvnw -P test -DskipTests=true clean package`
-
     - 开发模式：
         1. 启动 `redis` 实例
         2. 运行 `mvnw -P dev -DskipTests=true clean package`
@@ -72,7 +70,7 @@
 - 开发模式
     1. 消息会持久化到 `redis`, 默认连接 `localhost:6376` 无密码
 
-所谓**测试模式**、**开发模式**只是方便同学们快速启动项目，方便测试功能测试。熟悉项目后，同学们可通过修改 ***[6.1 配置项](#61-配置项)*** 开启或关闭 `mqttx` 提供的各项功能。
+所谓**开发模式**只是方便同学们快速启动项目，方便测试功能测试。熟悉项目后，同学们可通过修改 ***[6.1 配置项](#61-配置项)*** 开启或关闭 `mqttx` 提供的各项功能。
 
 > `mqttx` 默认依赖 `redis` 实现消息持久化、集群等功能，使用其它中间件（`mysql`, `mongodb`, `kafka` 等）同样能够实现，而 `springboot` 具备 `spring-boot-starter-***`  等各种可插拔组件，方便大家修改默认的实现
 
@@ -541,7 +539,6 @@ Content-Length: 91
 | `mqttx.so-backlog`                      | `512`                           | tcp 连接处理队列                                             |
 | `mqttx.enable-topic-sub-pub-secure`  | `false`                         | 客户订阅/发布主题安全功能，开启后将限制客户端发布/订阅的主题 |
 | `mqttx.enable-inner-cache` | `true`                          | 发布消息每次都需要查询 redis 来获取订阅的客户端列表。开启此功能后，将在内存中建立一个主题-客户端关系映射, 应用直接访问内存中的数据即可 |
-| `mqttx.enable-test-mode` | `false` | 测试模式开关，开启后系统进入测试模式; <br/>**注意：测试模式会禁用集群功能** |
 | `mqttx.ignore-client-self-pub` | `true` | 忽略 client 发送给自己的消息（当 client 发送消息给自己订阅的主题） |
 | `mqttx.serialize-strategy` | `json` | `broker` 采用的序列化策略，**集群策略*必须*一致**。 |
 | `mqttx.redis.cluster-session-hash-key` | `mqttx.session.key`             | redis map key；用于集群的会话存储                          |

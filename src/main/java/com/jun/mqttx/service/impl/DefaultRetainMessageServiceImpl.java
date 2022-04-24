@@ -10,8 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -28,8 +26,6 @@ public class DefaultRetainMessageServiceImpl implements IRetainMessageService {
     private final String retainMessageHashKey;
     private final RedisTemplate<String, byte[]> redisTemplate;
     private final Serializer serializer;
-    private final boolean enableTestMode;
-    private Map<String, PubMsg> pubMsgStore;
     //@formatter:on
 
     public DefaultRetainMessageServiceImpl(RedisTemplate<String, byte[]> redisTemplate, Serializer serializer,
@@ -39,23 +35,11 @@ public class DefaultRetainMessageServiceImpl implements IRetainMessageService {
         this.redisTemplate = redisTemplate;
         this.serializer = serializer;
         this.retainMessageHashKey = mqttxConfig.getRedis().getRetainMessagePrefix();
-        this.enableTestMode = mqttxConfig.getEnableTestMode();
-        if (enableTestMode) {
-            pubMsgStore = new ConcurrentHashMap<>();
-        }
-
         Assert.hasText(retainMessageHashKey, "retainMessagePrefix can't be null");
     }
 
     @Override
     public List<PubMsg> searchListByTopicFilter(String newSubTopic) {
-        if (enableTestMode) {
-            return pubMsgStore.entrySet().stream()
-                    .filter(stringPubMsgEntry -> TopicUtils.match(stringPubMsgEntry.getKey(), newSubTopic))
-                    .map(Map.Entry::getValue)
-                    .collect(Collectors.toList());
-        }
-
         List<Object> collect = redisTemplate.opsForHash()
                 .keys(retainMessageHashKey)
                 .stream()
@@ -69,30 +53,16 @@ public class DefaultRetainMessageServiceImpl implements IRetainMessageService {
 
     @Override
     public void save(String topic, PubMsg pubMsg) {
-        if (enableTestMode) {
-            pubMsgStore.put(topic, pubMsg);
-            return;
-        }
-
         redisTemplate.opsForHash().put(retainMessageHashKey, topic, serializer.serialize(pubMsg));
     }
 
     @Override
     public void remove(String topic) {
-        if (enableTestMode) {
-            pubMsgStore.remove(topic);
-            return;
-        }
-
         redisTemplate.opsForHash().delete(retainMessageHashKey, topic);
     }
 
     @Override
     public PubMsg get(String topic) {
-        if (enableTestMode) {
-            return pubMsgStore.get(topic);
-        }
-
         byte[] pubMsg = (byte[]) redisTemplate.opsForHash().get(retainMessageHashKey, topic);
         return serializer.deserialize(pubMsg, PubMsg.class);
     }

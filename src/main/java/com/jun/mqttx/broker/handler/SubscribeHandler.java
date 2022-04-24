@@ -23,7 +23,6 @@ import com.jun.mqttx.entity.ClientSub;
 import com.jun.mqttx.service.IRetainMessageService;
 import com.jun.mqttx.service.ISubscriptionService;
 import com.jun.mqttx.utils.TopicUtils;
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
@@ -63,7 +62,7 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
 
     public SubscribeHandler(IRetainMessageService retainMessageService, ISubscriptionService subscriptionService,
                             PublishHandler publishHandler, MqttxConfig config) {
-        super(config.getEnableTestMode(), config.getCluster().getEnable());
+        super(config.getCluster().getEnable());
         this.retainMessageService = retainMessageService;
         this.publishHandler = publishHandler;
         this.subscriptionService = subscriptionService;

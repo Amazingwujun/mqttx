@@ -54,7 +54,7 @@ import static com.jun.mqttx.constants.InternalMessageEnum.*;
  * @since 1.0.4
  */
 @Configuration
-@ConditionalOnExpression("${mqttx.cluster.enable:false} && !${mqttx.enable-test-mode:false}")
+@ConditionalOnExpression("${mqttx.cluster.enable:false}")
 public class ClusterConfig {
 
     public static final String REDIS = "redis";
