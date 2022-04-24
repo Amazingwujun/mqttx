@@ -22,7 +22,6 @@ import com.jun.mqttx.constants.InternalMessageEnum;
 import com.jun.mqttx.entity.*;
 import com.jun.mqttx.exception.AuthenticationException;
 import com.jun.mqttx.service.*;
-import com.jun.mqttx.utils.GlobalExecutor;
 import com.jun.mqttx.utils.TopicUtils;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -34,12 +33,11 @@ import io.netty.handler.timeout.IdleStateHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
-import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
+import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -215,68 +213,113 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         // 这部分是 client 遵守的规则
         // [MQTT-3.1.2-6] State data associated with this Session MUST NOT be reused in any subsequent Session - 针对
         // clearSession == 1 的情况，需要清理之前保存的会话状态
-        boolean isCleanSession = variableHeader.isCleanSession();
+        final var isCleanSession = variableHeader.isCleanSession();
         if (isCleanSession) {
-            actionOnCleanSession(clientId);
-        }
+            actionOnCleanSession(clientId)
+                    .then(Mono.fromSupplier(() -> {
+                        // 新建会话并保存会话，同时判断sessionPresent
+                        Session session;
+                        boolean sessionPresent = false;
+                        session = Session.of(clientId, true);
+                        CLIENT_MAP.put(clientId, ctx.channel().id());
+                        saveSessionWithChannel(ctx, session);
+                        if (enableTopicSubPubSecure) {
+                            saveAuthorizedTopics(ctx, auth);
+                        }
 
-        // 新建会话并保存会话，同时判断sessionPresent
-        Session session;
-        boolean sessionPresent = false;
-        if (isCleanSession) {
-            session = Session.of(clientId, true);
+                        // 处理遗嘱消息
+                        // [MQTT-3.1.2-8] If the Will Flag is set to 1 this indicates that, if the Connect request is accepted, a Will
+                        // Message MUST be stored on the Server and associated with the Network Connection. The Will Message MUST be
+                        // published when the Network Connection is subsequently closed unless the Will Message has been deleted by the
+                        // Server on receipt of a DISCONNECT Packet.
+                        boolean willFlag = variableHeader.isWillFlag();
+                        if (willFlag) {
+                            PubMsg pubMsg = PubMsg.of(variableHeader.willQos(), payload.willTopic(),
+                                    variableHeader.isWillRetain(), payload.willMessageInBytes());
+                            pubMsg.setWillFlag(true);
+                            session.setWillMessage(pubMsg);
+                        }
+
+                        // 返回连接响应
+                        MqttConnAckMessage acceptAck = MqttMessageBuilders.connAck()
+                                .sessionPresent(sessionPresent)
+                                .returnCode(MqttConnectReturnCode.CONNECTION_ACCEPTED)
+                                .build();
+                        ctx.writeAndFlush(acceptAck);
+
+                        // 连接成功相关处理
+                        return onClientConnectSuccess(ctx)
+                                .then(Mono.fromRunnable(() -> {
+                                    // 心跳超时设置
+                                    // [MQTT-3.1.2-24] If the Keep Alive value is non-zero and the Server does not receive a Control Packet from
+                                    // the Client within one and a half times the Keep Alive time period, it MUST disconnect the Network Connection
+                                    // to the Client as if the network had failed
+                                    double heartbeat = variableHeader.keepAliveTimeSeconds() * 1.5;
+                                    if (heartbeat > 0) {
+                                        // 替换掉 NioChannelSocket 初始化时加入的 idleHandler
+                                        ctx.pipeline().replace(IdleStateHandler.class, "idleHandler", new IdleStateHandler(
+                                                0, 0, (int) heartbeat));
+                                    }
+                                }));
+                    })).subscribe();
         } else {
-            session = sessionService.find(clientId);
-            if (session == null) {
-                session = Session.of(clientId, false);
-                sessionService.save(session);
-            } else {
-                sessionPresent = true;
-            }
-        }
-        CLIENT_MAP.put(clientId, ctx.channel().id());
-        saveSessionWithChannel(ctx, session);
-        if (enableTopicSubPubSecure) {
-            saveAuthorizedTopics(ctx, auth);
-        }
+            // 新建会话并保存会话，同时判断sessionPresent
+            sessionService.find(clientId)
+                    .doOnSuccess(s -> {
+                        Session session = s;
+                        boolean sessionPresent = false;
+                        if (session == null) {
+                            session = Session.of(clientId, false);
+                        } else {
+                            sessionPresent = true;
+                        }
 
-        // 处理遗嘱消息
-        // [MQTT-3.1.2-8] If the Will Flag is set to 1 this indicates that, if the Connect request is accepted, a Will
-        // Message MUST be stored on the Server and associated with the Network Connection. The Will Message MUST be
-        // published when the Network Connection is subsequently closed unless the Will Message has been deleted by the
-        // Server on receipt of a DISCONNECT Packet.
-        boolean willFlag = variableHeader.isWillFlag();
-        if (willFlag) {
-            PubMsg pubMsg = PubMsg.of(variableHeader.willQos(), payload.willTopic(),
-                    variableHeader.isWillRetain(), payload.willMessageInBytes());
-            pubMsg.setWillFlag(true);
-            session.setWillMessage(pubMsg);
-        }
+                        CLIENT_MAP.put(clientId, ctx.channel().id());
+                        saveSessionWithChannel(ctx, session);
+                        if (enableTopicSubPubSecure) {
+                            saveAuthorizedTopics(ctx, auth);
+                        }
 
-        // 返回连接响应
-        MqttConnAckMessage acceptAck = MqttMessageBuilders.connAck()
-                .sessionPresent(sessionPresent)
-                .returnCode(MqttConnectReturnCode.CONNECTION_ACCEPTED)
-                .build();
-        ctx.writeAndFlush(acceptAck);
+                        // 处理遗嘱消息
+                        // [MQTT-3.1.2-8] If the Will Flag is set to 1 this indicates that, if the Connect request is accepted, a Will
+                        // Message MUST be stored on the Server and associated with the Network Connection. The Will Message MUST be
+                        // published when the Network Connection is subsequently closed unless the Will Message has been deleted by the
+                        // Server on receipt of a DISCONNECT Packet.
+                        boolean willFlag = variableHeader.isWillFlag();
+                        if (willFlag) {
+                            PubMsg pubMsg = PubMsg.of(variableHeader.willQos(), payload.willTopic(),
+                                    variableHeader.isWillRetain(), payload.willMessageInBytes());
+                            pubMsg.setWillFlag(true);
+                            session.setWillMessage(pubMsg);
+                        }
 
-        // 连接成功相关处理
-        onClientConnectSuccess(ctx);
+                        // 返回连接响应
+                        MqttConnAckMessage acceptAck = MqttMessageBuilders.connAck()
+                                .sessionPresent(sessionPresent)
+                                .returnCode(MqttConnectReturnCode.CONNECTION_ACCEPTED)
+                                .build();
+                        ctx.writeAndFlush(acceptAck);
 
-        // 心跳超时设置
-        // [MQTT-3.1.2-24] If the Keep Alive value is non-zero and the Server does not receive a Control Packet from
-        // the Client within one and a half times the Keep Alive time period, it MUST disconnect the Network Connection
-        // to the Client as if the network had failed
-        double heartbeat = variableHeader.keepAliveTimeSeconds() * 1.5;
-        if (heartbeat > 0) {
-            // 替换掉 NioChannelSocket 初始化时加入的 idleHandler
-            ctx.pipeline().replace(IdleStateHandler.class, "idleHandler", new IdleStateHandler(
-                    0, 0, (int) heartbeat));
-        }
+                        // 连接成功相关处理
+                        onClientConnectSuccess(ctx).subscribe(unused -> {
+                        }, t -> log.error(t.getMessage(), t));
 
-        // 根据协议补发 qos1,与 qos2 的消息
-        if (!isCleanSession) {
-            GlobalExecutor.execute("pub 消息补发任务", () -> republish(ctx));
+                        // 心跳超时设置
+                        // [MQTT-3.1.2-24] If the Keep Alive value is non-zero and the Server does not receive a Control Packet from
+                        // the Client within one and a half times the Keep Alive time period, it MUST disconnect the Network Connection
+                        // to the Client as if the network had failed
+                        double heartbeat = variableHeader.keepAliveTimeSeconds() * 1.5;
+                        if (heartbeat > 0) {
+                            // 替换掉 NioChannelSocket 初始化时加入的 idleHandler
+                            ctx.pipeline().replace(IdleStateHandler.class, "idleHandler", new IdleStateHandler(
+                                    0, 0, (int) heartbeat));
+                        }
+
+                        // 根据协议补发 qos1,与 qos2 的消息
+                        republish(ctx).subscribe(unused -> {
+                        }, t -> log.error(t.getMessage(), t));
+                    }).subscribe(unused -> {
+                    }, t -> log.error(t.getMessage(), t));
         }
     }
 
@@ -285,42 +328,42 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
      *
      * @param ctx {@link ChannelHandlerContext}
      */
-    private void republish(ChannelHandlerContext ctx) {
+    private Mono<Void> republish(ChannelHandlerContext ctx) {
         final String clientId = clientId(ctx);
-        List<PubMsg> pubMsgList = publishMessageService.search(clientId);
-        pubMsgList.forEach(pubMsg -> {
-            final var topic = pubMsg.getTopic();
-            final var qos = pubMsg.getQoS();
-            // 订阅权限判定
-            if (enableTopicSubPubSecure && !hasAuthToSubTopic(ctx, topic)) {
-                return;
-            }
+        return publishMessageService.search(clientId)
+                .doOnNext(pubMsg -> {
+                    final var topic = pubMsg.getTopic();
+                    final var qos = pubMsg.getQoS();
+                    // 订阅权限判定
+                    if (enableTopicSubPubSecure && !hasAuthToSubTopic(ctx, topic)) {
+                        return;
+                    }
 
-            // It MUST set the RETAIN flag to 0 when a PUBLISH Packet is sent to a Client because it matches an
-            // established subscription regardless of how the flag was set in the message it received [MQTT-3.3.1-9].
-            // The DUP flag MUST be set to 0 for all QoS 0 messages [MQTT-3.3.1-2].
-            final var dupFlag = qos != MqttQoS.AT_MOST_ONCE.value();
-            final var mqttMessage = MqttMessageFactory.newMessage(
-                    new MqttFixedHeader(MqttMessageType.PUBLISH, dupFlag, MqttQoS.valueOf(pubMsg.getQoS()), false, 0),
-                    new MqttPublishVariableHeader(topic, pubMsg.getMessageId()),
-                    // 这是一个浅拷贝，任何对pubMsg中payload的修改都会反馈到wrappedBuffer
-                    Unpooled.wrappedBuffer(pubMsg.getPayload())
-            );
+                    // It MUST set the RETAIN flag to 0 when a PUBLISH Packet is sent to a Client because it matches an
+                    // established subscription regardless of how the flag was set in the message it received [MQTT-3.3.1-9].
+                    // The DUP flag MUST be set to 0 for all QoS 0 messages [MQTT-3.3.1-2].
+                    final var dupFlag = qos != MqttQoS.AT_MOST_ONCE.value();
+                    final var mqttMessage = MqttMessageFactory.newMessage(
+                            new MqttFixedHeader(MqttMessageType.PUBLISH, dupFlag, MqttQoS.valueOf(pubMsg.getQoS()), false, 0),
+                            new MqttPublishVariableHeader(topic, pubMsg.getMessageId()),
+                            // 这是一个浅拷贝，任何对pubMsg中payload的修改都会反馈到wrappedBuffer
+                            Unpooled.wrappedBuffer(pubMsg.getPayload())
+                    );
 
-            ctx.writeAndFlush(mqttMessage);
-        });
+                    ctx.writeAndFlush(mqttMessage);
+                })
+                .thenMany(pubRelMessageService.searchOut(clientId))
+                .doOnNext(messageId -> {
+                    MqttMessage mqttMessage = MqttMessageFactory.newMessage(
+                            // pubRel 的 fixHeader 是固定死了的 [0,1,1,0,0,0,1,0]
+                            new MqttFixedHeader(MqttMessageType.PUBREL, false, MqttQoS.AT_LEAST_ONCE, false, 0),
+                            MqttMessageIdVariableHeader.from(messageId),
+                            null
+                    );
 
-        List<Integer> pubRelList = pubRelMessageService.searchOut(clientId);
-        pubRelList.forEach(messageId -> {
-            MqttMessage mqttMessage = MqttMessageFactory.newMessage(
-                    // pubRel 的 fixHeader 是固定死了的 [0,1,1,0,0,0,1,0]
-                    new MqttFixedHeader(MqttMessageType.PUBREL, false, MqttQoS.AT_LEAST_ONCE, false, 0),
-                    MqttMessageIdVariableHeader.from(messageId),
-                    null
-            );
-
-            ctx.writeAndFlush(mqttMessage);
-        });
+                    ctx.writeAndFlush(mqttMessage);
+                })
+                .then();
     }
 
     /**
@@ -328,15 +371,9 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
      *
      * @param ctx {@link ChannelHandlerContext}
      */
-    private void onClientConnectSuccess(ChannelHandlerContext ctx) {
+    private Mono<Void> onClientConnectSuccess(ChannelHandlerContext ctx) {
         if (enableSysTopic) {
             final String topic = String.format(TopicUtils.BROKER_CLIENT_CONNECT, brokerId, clientId(ctx));
-
-            // 抓取订阅了该主题的客户
-            List<ClientSub> clientSubs = subscriptionService.searchSysTopicClients(topic);
-            if (CollectionUtils.isEmpty(clientSubs)) {
-                return;
-            }
 
             // publish 对象组装
             byte[] bytes = LocalDateTime.now().toString().getBytes(StandardCharsets.UTF_8);
@@ -349,17 +386,14 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
                     .payload(connectTime)
                     .build();
 
-            // 消息发布
-            for (ClientSub clientSub : clientSubs) {
-                Optional
-                        .ofNullable(CLIENT_MAP.get(clientSub.getClientId()))
-                        .map(BrokerHandler.CHANNELS::find)
-                        .ifPresent(channel -> channel.writeAndFlush(mpm.retain()));
-            }
-
-            // 必须最后释放
-            mpm.release();
+            // 发表消息
+            return subscriptionService.searchSysTopicClients(topic)
+                    .map(clientSub -> CLIENT_MAP.get(clientSub.getClientId()))
+                    .map(BrokerHandler.CHANNELS::find)
+                    .map(channel -> channel.writeAndFlush(mpm.retain()))
+                    .then(Mono.fromRunnable(mpm::release));
         }
+        return Mono.empty();
     }
 
     /**
@@ -384,13 +418,19 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
      *
      * @param clientId 客户ID
      */
-    private void actionOnCleanSession(String clientId) {
+    private Mono<Void> actionOnCleanSession(String clientId) {
         // sessionService.clear(String ClientId) 方法返回 true 则表明该 clientId 之前的 cleanSession = false, 那么应该继续清理
         // 订阅信息、pub 信息、 pubRel 信息, 否则无需清理
-        if (sessionService.clear(clientId)) {
-            subscriptionService.clearClientSubscriptions(clientId, false);
-            publishMessageService.clear(clientId);
-            pubRelMessageService.clear(clientId);
-        }
+        return sessionService.clear(clientId)
+                .doOnSuccess(e -> {
+                    if (e) {
+                        Mono.when(
+                                subscriptionService.clearClientSubscriptions(clientId, false),
+                                publishMessageService.clear(clientId),
+                                pubRelMessageService.clear(clientId)
+                        );
+                    }
+                })
+                .then();
     }
 }

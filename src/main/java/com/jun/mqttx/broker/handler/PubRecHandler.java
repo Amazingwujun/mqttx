@@ -51,19 +51,26 @@ public class PubRecHandler extends AbstractMqttSessionHandler {
             Session session = getSession(ctx);
             session.removePubMsg(messageId);
             session.savePubRelOutMsg(messageId);
+
+            final var mqttMessage = MqttMessageFactory.newMessage(
+                    new MqttFixedHeader(MqttMessageType.PUBREL, false, MqttQoS.AT_LEAST_ONCE, false, 0),
+                    MqttMessageIdVariableHeader.from(messageId),
+                    null
+            );
+            ctx.writeAndFlush(mqttMessage);
         } else {
             String clientId = clientId(ctx);
-            publishMessageService.remove(clientId, messageId);
-
-            // 保存 pubRec
-            pubRelMessageService.saveOut(clientId, messageId);
+            publishMessageService.remove(clientId, messageId)
+                    .then(pubRelMessageService.saveOut(clientId, messageId))
+                    .doOnSuccess(unused -> {
+                        final var mqttMessage = MqttMessageFactory.newMessage(
+                                new MqttFixedHeader(MqttMessageType.PUBREL, false, MqttQoS.AT_LEAST_ONCE, false, 0),
+                                MqttMessageIdVariableHeader.from(messageId),
+                                null
+                        );
+                        ctx.writeAndFlush(mqttMessage);
+                    })
+                    .subscribe();
         }
-
-        final var mqttMessage = MqttMessageFactory.newMessage(
-                new MqttFixedHeader(MqttMessageType.PUBREL, false, MqttQoS.AT_LEAST_ONCE, false, 0),
-                MqttMessageIdVariableHeader.from(messageId),
-                null
-        );
-        ctx.writeAndFlush(mqttMessage);
     }
 }

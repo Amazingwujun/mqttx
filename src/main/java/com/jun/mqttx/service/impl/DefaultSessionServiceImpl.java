@@ -48,8 +48,7 @@ public class DefaultSessionServiceImpl implements ISessionService {
     @Override
     public Mono<Session> find(String clientId) {
         return redisTemplate.opsForHash().get(clusterSessionHashKey, clientId)
-                .map(e -> serializer.deserialize((byte[]) e, Session.class))
-                .switchIfEmpty(Mono.empty());
+                .map(e -> serializer.deserialize((byte[]) e, Session.class));
     }
 
     @Override

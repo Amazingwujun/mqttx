@@ -26,7 +26,7 @@ import com.jun.mqttx.utils.TopicUtils;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
-import org.springframework.util.CollectionUtils;
+import reactor.core.publisher.Flux;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -98,6 +98,7 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
         // 当 client 连接并调用认证服务时，认证服务返回 client 具备的哪些 topic 订阅权限，当 enableTopicSubscribeSecure = true 时，
         // 程序将校验 client 当前想要订阅的 topic 是否被授权
         List<Integer> grantedQosLevels = new ArrayList<>(mqttTopicSubscriptions.size());
+        var needSave = new ArrayList<ClientSub>();
         mqttTopicSubscriptions.forEach(mqttTopicSubscription -> {
             final String topic = mqttTopicSubscription.topicName();
             int qos = mqttTopicSubscription.qualityOfService().value();
@@ -120,7 +121,7 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
                             qos = 0x80;
                         } else {
                             ClientSub clientSub = ClientSub.of(clientId, qos, topic, isCleanSession(ctx));
-                            subscriptionService.subscribe(clientSub);
+                            needSave.add(clientSub);
                         }
                     }
                 }
@@ -128,29 +129,34 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
             grantedQosLevels.add(qos);
         });
 
-        // acknowledge
-        MqttMessage mqttMessage = MqttMessageFactory.newMessage(
-                new MqttFixedHeader(MqttMessageType.SUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
-                MqttMessageIdVariableHeader.from(messageId),
-                new MqttSubAckPayload(grantedQosLevels));
-        ctx.writeAndFlush(mqttMessage);
+        // 开始订阅
+        Flux.fromIterable(needSave)
+                .flatMap(subscriptionService::subscribe)
+                .doOnComplete(() -> {
+                    // acknowledge
+                    MqttMessage mqttMessage = MqttMessageFactory.newMessage(
+                            new MqttFixedHeader(MqttMessageType.SUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
+                            MqttMessageIdVariableHeader.from(messageId),
+                            new MqttSubAckPayload(grantedQosLevels));
+                    ctx.writeAndFlush(mqttMessage);
 
-        // When a new subscription is established, the last retained message, if any,
-        // on each matching topic name MUST be sent to the subscriber [MQTT-3.3.1-6]
-        // 获取所有存在保留消息的 topic, 当 TopicUtils.match(topic, newSubTopic) = true 时，将保留消息发送给客户端
-        mqttTopicSubscriptions.forEach(mqttTopicSubscription -> {
-            String topicFilter = mqttTopicSubscription.topicName();
-            retainMessageService.searchListByTopicFilter(topicFilter)
-                    .forEach(pubMsg -> {
-                        // When sending a PUBLISH Packet to a Client the Server MUST set the RETAIN flag to 1 if a
-                        // message is sent as a result of a new subscription being made by a Client [MQTT-3.3.1-8].
-                        pubMsg.setRetain(true);
+                    // When a new subscription is established, the last retained message, if any,
+                    // on each matching topic name MUST be sent to the subscriber [MQTT-3.3.1-6]
+                    // 获取所有存在保留消息的 topic, 当 TopicUtils.match(topic, newSubTopic) = true 时，将保留消息发送给客户端
+                    mqttTopicSubscriptions.forEach(mqttTopicSubscription -> {
+                        String topicFilter = mqttTopicSubscription.topicName();
+                        retainMessageService.searchListByTopicFilter(topicFilter)
+                                .doOnNext(pubMsg -> {
+                                    // When sending a PUBLISH Packet to a Client the Server MUST set the RETAIN flag to 1 if a
+                                    // message is sent as a result of a new subscription being made by a Client [MQTT-3.3.1-8].
+                                    pubMsg.setRetain(true);
 
-                        // 指定 clientId
-                        pubMsg.setAppointedClientId(clientId);
-                        publishHandler.publish(pubMsg, ctx, false);
+                                    // 指定 clientId
+                                    pubMsg.setAppointedClientId(clientId);
+                                    publishHandler.publish(pubMsg, ctx, false);
+                                }).subscribe();
                     });
-        });
+                }).subscribe();
     }
 
     /**
@@ -303,12 +309,6 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
             // 发布主题
             final String brokerStatusTopic = String.format(TopicUtils.BROKER_STATUS, brokerId);
 
-            // 获取订阅客户端组
-            List<ClientSub> clientSubs = subscriptionService.searchSysTopicClients(brokerStatusTopic);
-            if (CollectionUtils.isEmpty(clientSubs)) {
-                return;
-            }
-
             // broker 状态
             LocalDateTime now = LocalDateTime.now();
             byte[] bytes = BrokerStatus.builder()
@@ -328,15 +328,15 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
                     .payload(payload)
                     .build();
 
-            // 发布消息
-            for (var clientSub : clientSubs) {
-                Optional.ofNullable(ConnectHandler.CLIENT_MAP.get(clientSub.getClientId()))
-                        .map(BrokerHandler.CHANNELS::find)
-                        .ifPresent(channel -> channel.writeAndFlush(mpm.retain()));
-            }
-
-            // 释放引用
-            mpm.release();
+            // 获取订阅客户端组
+            subscriptionService.searchSysTopicClients(brokerStatusTopic)
+                    .doOnNext(clientSub -> {
+                        // 发布消息
+                        Optional.ofNullable(ConnectHandler.CLIENT_MAP.get(clientSub.getClientId()))
+                                .map(BrokerHandler.CHANNELS::find)
+                                .ifPresent(channel -> channel.writeAndFlush(mpm.retain()));
+                    })
+                    .doOnComplete(mpm::release).subscribe();
         }, 0, interval, TimeUnit.SECONDS);
     }
 }

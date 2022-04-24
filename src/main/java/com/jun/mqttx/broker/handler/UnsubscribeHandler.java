@@ -21,6 +21,7 @@ import com.jun.mqttx.service.ISubscriptionService;
 import com.jun.mqttx.utils.TopicUtils;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
+import reactor.core.publisher.Mono;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -56,18 +57,30 @@ public class UnsubscribeHandler extends AbstractMqttSessionHandler {
             List<String> unSubSysTopics = collect.stream().filter(TopicUtils::isSys).collect(Collectors.toList());
             collect.removeAll(unSubSysTopics);
             unsubscribeSysTopics(unSubSysTopics, ctx);
+            Mono.when(unsubscribeSysTopics(unSubSysTopics, ctx), subscriptionService.unsubscribe(clientId(ctx), isCleanSession(ctx), collect))
+                    .doOnSuccess(unused -> {
+                        // response
+                        MqttMessage mqttMessage = MqttMessageFactory.newMessage(
+                                new MqttFixedHeader(MqttMessageType.UNSUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
+                                MqttMessageIdVariableHeader.from(messageId),
+                                null
+                        );
+                        ctx.writeAndFlush(mqttMessage);
+                    }).subscribe();
+            return;
         }
 
         // 非系统主题
-        subscriptionService.unsubscribe(clientId(ctx), isCleanSession(ctx), collect);
-
-        // response
-        MqttMessage mqttMessage = MqttMessageFactory.newMessage(
-                new MqttFixedHeader(MqttMessageType.UNSUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
-                MqttMessageIdVariableHeader.from(messageId),
-                null
-        );
-        ctx.writeAndFlush(mqttMessage);
+        subscriptionService.unsubscribe(clientId(ctx), isCleanSession(ctx), collect)
+                .doOnSuccess(unused -> {
+                    // response
+                    MqttMessage mqttMessage = MqttMessageFactory.newMessage(
+                            new MqttFixedHeader(MqttMessageType.UNSUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
+                            MqttMessageIdVariableHeader.from(messageId),
+                            null
+                    );
+                    ctx.writeAndFlush(mqttMessage);
+                }).subscribe();
     }
 
     /**
@@ -76,7 +89,7 @@ public class UnsubscribeHandler extends AbstractMqttSessionHandler {
      * @param unSubSysTopics 解除订阅的主题列表
      * @param ctx            {@link ChannelHandlerContext}
      */
-    private void unsubscribeSysTopics(List<String> unSubSysTopics, ChannelHandlerContext ctx) {
-        subscriptionService.unsubscribeSys(clientId(ctx), unSubSysTopics);
+    private Mono<Void> unsubscribeSysTopics(List<String> unSubSysTopics, ChannelHandlerContext ctx) {
+        return subscriptionService.unsubscribeSys(clientId(ctx), unSubSysTopics);
     }
 }

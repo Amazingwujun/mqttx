@@ -46,15 +46,23 @@ public class PubRelHandler extends AbstractMqttSessionHandler {
         int messageId = mqttMessageIdVariableHeader.messageId();
         if (isCleanSession(ctx)) {
             getSession(ctx).removePubRelInMsg(messageId);
-        } else {
-            pubRelMessageService.removeIn(clientId(ctx), messageId);
-        }
 
-        MqttMessage mqttMessage = MqttMessageFactory.newMessage(
-                new MqttFixedHeader(MqttMessageType.PUBCOMP, false, MqttQoS.AT_MOST_ONCE, false, 0),
-                MqttMessageIdVariableHeader.from(messageId),
-                null
-        );
-        ctx.writeAndFlush(mqttMessage);
+            MqttMessage mqttMessage = MqttMessageFactory.newMessage(
+                    new MqttFixedHeader(MqttMessageType.PUBCOMP, false, MqttQoS.AT_MOST_ONCE, false, 0),
+                    MqttMessageIdVariableHeader.from(messageId),
+                    null
+            );
+            ctx.writeAndFlush(mqttMessage);
+        } else {
+            pubRelMessageService.removeIn(clientId(ctx), messageId)
+                    .doOnSuccess(unused -> {
+                        MqttMessage mqttMessage = MqttMessageFactory.newMessage(
+                                new MqttFixedHeader(MqttMessageType.PUBCOMP, false, MqttQoS.AT_MOST_ONCE, false, 0),
+                                MqttMessageIdVariableHeader.from(messageId),
+                                null
+                        );
+                        ctx.writeAndFlush(mqttMessage);
+                    }).subscribe();
+        }
     }
 }

@@ -47,7 +47,7 @@ public class PubComHandler extends AbstractMqttSessionHandler {
             getSession(ctx).removePubRelOutMsg(messageId);
         } else {
             String clientId = clientId(ctx);
-            pubRelMessageService.removeOut(clientId, messageId);
+            pubRelMessageService.removeOut(clientId, messageId).subscribe();
         }
     }
 
