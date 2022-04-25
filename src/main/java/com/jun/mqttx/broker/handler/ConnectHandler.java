@@ -215,110 +215,103 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         // clearSession == 1 的情况，需要清理之前保存的会话状态
         final var isCleanSession = variableHeader.isCleanSession();
         if (isCleanSession) {
-            actionOnCleanSession(clientId)
-                    .then(Mono.fromSupplier(() -> {
-                        // 新建会话并保存会话，同时判断sessionPresent
-                        boolean sessionPresent = false;
-                        final var session = Session.of(clientId, true);
-                        CLIENT_MAP.put(clientId, ctx.channel().id());
-                        saveSessionWithChannel(ctx, session);
-                        if (enableTopicSubPubSecure) {
-                            saveAuthorizedTopics(ctx, auth);
-                        }
+            actionOnCleanSession(clientId).doOnSuccess(unused -> {
+                // 新建会话并保存会话，同时判断sessionPresent
+                final var session = Session.of(clientId, true);
+                CLIENT_MAP.put(clientId, ctx.channel().id());
+                saveSessionWithChannel(ctx, session);
+                if (enableTopicSubPubSecure) {
+                    saveAuthorizedTopics(ctx, auth);
+                }
 
-                        // 处理遗嘱消息
-                        // [MQTT-3.1.2-8] If the Will Flag is set to 1 this indicates that, if the Connect request is accepted, a Will
-                        // Message MUST be stored on the Server and associated with the Network Connection. The Will Message MUST be
-                        // published when the Network Connection is subsequently closed unless the Will Message has been deleted by the
-                        // Server on receipt of a DISCONNECT Packet.
-                        boolean willFlag = variableHeader.isWillFlag();
-                        if (willFlag) {
-                            PubMsg pubMsg = PubMsg.of(variableHeader.willQos(), payload.willTopic(),
-                                    variableHeader.isWillRetain(), payload.willMessageInBytes());
-                            pubMsg.setWillFlag(true);
-                            session.setWillMessage(pubMsg);
-                        }
+                // 处理遗嘱消息
+                // [MQTT-3.1.2-8] If the Will Flag is set to 1 this indicates that, if the Connect request is accepted, a Will
+                // Message MUST be stored on the Server and associated with the Network Connection. The Will Message MUST be
+                // published when the Network Connection is subsequently closed unless the Will Message has been deleted by the
+                // Server on receipt of a DISCONNECT Packet.
+                boolean willFlag = variableHeader.isWillFlag();
+                if (willFlag) {
+                    PubMsg pubMsg = PubMsg.of(variableHeader.willQos(), payload.willTopic(),
+                            variableHeader.isWillRetain(), payload.willMessageInBytes());
+                    pubMsg.setWillFlag(true);
+                    session.setWillMessage(pubMsg);
+                }
 
-                        // 返回连接响应
-                        MqttConnAckMessage acceptAck = MqttMessageBuilders.connAck()
-                                .sessionPresent(sessionPresent)
-                                .returnCode(MqttConnectReturnCode.CONNECTION_ACCEPTED)
-                                .build();
-                        ctx.writeAndFlush(acceptAck);
+                // 返回连接响应
+                MqttConnAckMessage acceptAck = MqttMessageBuilders.connAck()
+                        .sessionPresent(false)
+                        .returnCode(MqttConnectReturnCode.CONNECTION_ACCEPTED)
+                        .build();
+                ctx.writeAndFlush(acceptAck);
 
-                        // 连接成功相关处理
-                        return onClientConnectSuccess(ctx)
-                                .then(Mono.fromRunnable(() -> {
-                                    // 心跳超时设置
-                                    // [MQTT-3.1.2-24] If the Keep Alive value is non-zero and the Server does not receive a Control Packet from
-                                    // the Client within one and a half times the Keep Alive time period, it MUST disconnect the Network Connection
-                                    // to the Client as if the network had failed
-                                    double heartbeat = variableHeader.keepAliveTimeSeconds() * 1.5;
-                                    if (heartbeat > 0) {
-                                        // 替换掉 NioChannelSocket 初始化时加入的 idleHandler
-                                        ctx.pipeline().replace(IdleStateHandler.class, "idleHandler", new IdleStateHandler(
-                                                0, 0, (int) heartbeat));
-                                    }
-                                }));
-                    })).subscribe();
+                // 连接成功相关处理
+                onClientConnectSuccess(ctx).doOnSuccess(v -> {
+                    // 心跳超时设置
+                    // [MQTT-3.1.2-24] If the Keep Alive value is non-zero and the Server does not receive a Control Packet from
+                    // the Client within one and a half times the Keep Alive time period, it MUST disconnect the Network Connection
+                    // to the Client as if the network had failed
+                    double heartbeat = variableHeader.keepAliveTimeSeconds() * 1.5;
+                    if (heartbeat > 0) {
+                        // 替换掉 NioChannelSocket 初始化时加入的 idleHandler
+                        ctx.pipeline().replace(IdleStateHandler.class, "idleHandler", new IdleStateHandler(
+                                0, 0, (int) heartbeat));
+                    }
+                }).subscribe();
+            }).subscribe();
         } else {
             // 新建会话并保存会话，同时判断sessionPresent
-            sessionService.find(clientId)
-                    .doOnSuccess(s -> {
-                        Session session = s;
-                        boolean sessionPresent = false;
-                        if (session == null) {
-                            session = Session.of(clientId, false);
-                        } else {
-                            sessionPresent = true;
-                        }
+            sessionService.find(clientId).doOnSuccess(s -> {
+                Session session = s;
+                boolean sessionPresent = false;
+                if (session == null) {
+                    session = Session.of(clientId, false);
+                } else {
+                    sessionPresent = true;
+                }
 
-                        CLIENT_MAP.put(clientId, ctx.channel().id());
-                        saveSessionWithChannel(ctx, session);
-                        if (enableTopicSubPubSecure) {
-                            saveAuthorizedTopics(ctx, auth);
-                        }
+                CLIENT_MAP.put(clientId, ctx.channel().id());
+                saveSessionWithChannel(ctx, session);
+                if (enableTopicSubPubSecure) {
+                    saveAuthorizedTopics(ctx, auth);
+                }
 
-                        // 处理遗嘱消息
-                        // [MQTT-3.1.2-8] If the Will Flag is set to 1 this indicates that, if the Connect request is accepted, a Will
-                        // Message MUST be stored on the Server and associated with the Network Connection. The Will Message MUST be
-                        // published when the Network Connection is subsequently closed unless the Will Message has been deleted by the
-                        // Server on receipt of a DISCONNECT Packet.
-                        boolean willFlag = variableHeader.isWillFlag();
-                        if (willFlag) {
-                            PubMsg pubMsg = PubMsg.of(variableHeader.willQos(), payload.willTopic(),
-                                    variableHeader.isWillRetain(), payload.willMessageInBytes());
-                            pubMsg.setWillFlag(true);
-                            session.setWillMessage(pubMsg);
-                        }
+                // 处理遗嘱消息
+                // [MQTT-3.1.2-8] If the Will Flag is set to 1 this indicates that, if the Connect request is accepted, a Will
+                // Message MUST be stored on the Server and associated with the Network Connection. The Will Message MUST be
+                // published when the Network Connection is subsequently closed unless the Will Message has been deleted by the
+                // Server on receipt of a DISCONNECT Packet.
+                boolean willFlag = variableHeader.isWillFlag();
+                if (willFlag) {
+                    PubMsg pubMsg = PubMsg.of(variableHeader.willQos(), payload.willTopic(),
+                            variableHeader.isWillRetain(), payload.willMessageInBytes());
+                    pubMsg.setWillFlag(true);
+                    session.setWillMessage(pubMsg);
+                }
 
-                        // 返回连接响应
-                        MqttConnAckMessage acceptAck = MqttMessageBuilders.connAck()
-                                .sessionPresent(sessionPresent)
-                                .returnCode(MqttConnectReturnCode.CONNECTION_ACCEPTED)
-                                .build();
-                        ctx.writeAndFlush(acceptAck);
+                // 返回连接响应
+                MqttConnAckMessage acceptAck = MqttMessageBuilders.connAck()
+                        .sessionPresent(sessionPresent)
+                        .returnCode(MqttConnectReturnCode.CONNECTION_ACCEPTED)
+                        .build();
+                ctx.writeAndFlush(acceptAck);
 
-                        // 连接成功相关处理
-                        onClientConnectSuccess(ctx).subscribe(unused -> {
-                        }, t -> log.error(t.getMessage(), t));
+                // 连接成功相关处理
+                onClientConnectSuccess(ctx).subscribe();
 
-                        // 心跳超时设置
-                        // [MQTT-3.1.2-24] If the Keep Alive value is non-zero and the Server does not receive a Control Packet from
-                        // the Client within one and a half times the Keep Alive time period, it MUST disconnect the Network Connection
-                        // to the Client as if the network had failed
-                        double heartbeat = variableHeader.keepAliveTimeSeconds() * 1.5;
-                        if (heartbeat > 0) {
-                            // 替换掉 NioChannelSocket 初始化时加入的 idleHandler
-                            ctx.pipeline().replace(IdleStateHandler.class, "idleHandler", new IdleStateHandler(
-                                    0, 0, (int) heartbeat));
-                        }
+                // 心跳超时设置
+                // [MQTT-3.1.2-24] If the Keep Alive value is non-zero and the Server does not receive a Control Packet from
+                // the Client within one and a half times the Keep Alive time period, it MUST disconnect the Network Connection
+                // to the Client as if the network had failed
+                double heartbeat = variableHeader.keepAliveTimeSeconds() * 1.5;
+                if (heartbeat > 0) {
+                    // 替换掉 NioChannelSocket 初始化时加入的 idleHandler
+                    ctx.pipeline().replace(IdleStateHandler.class, "idleHandler", new IdleStateHandler(
+                            0, 0, (int) heartbeat));
+                }
 
-                        // 根据协议补发 qos1,与 qos2 的消息
-                        republish(ctx).subscribe(unused -> {
-                        }, t -> log.error(t.getMessage(), t));
-                    }).subscribe(unused -> {
-                    }, t -> log.error(t.getMessage(), t));
+                // 根据协议补发 qos1,与 qos2 的消息
+                republish(ctx).subscribe();
+            }).subscribe();
         }
     }
 
@@ -387,10 +380,14 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
 
             // 发表消息
             return subscriptionService.searchSysTopicClients(topic)
-                    .map(clientSub -> CLIENT_MAP.get(clientSub.getClientId()))
-                    .map(BrokerHandler.CHANNELS::find)
-                    .map(channel -> channel.writeAndFlush(mpm.retain()))
-                    .then(Mono.fromRunnable(mpm::release));
+                    .doOnNext(clientSub -> {
+                        log.info("消息订阅: {}", clientSub);
+                        Optional.ofNullable(ConnectHandler.CLIENT_MAP.get(clientSub.getClientId()))
+                                .map(BrokerHandler.CHANNELS::find)
+                                .ifPresent(channel -> channel.writeAndFlush(mpm.retain()));
+                    })
+                    .doOnComplete(mpm::release)
+                    .then();
         }
         return Mono.empty();
     }
