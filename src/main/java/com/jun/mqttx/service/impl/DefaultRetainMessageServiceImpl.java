@@ -8,6 +8,7 @@ import com.jun.mqttx.utils.TopicUtils;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
+import org.springframework.util.ObjectUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -45,7 +46,13 @@ public class DefaultRetainMessageServiceImpl implements IRetainMessageService {
                 .keys(retainMessageHashKey)
                 .filter(t -> TopicUtils.match((String) t, newSubTopic))
                 .collectList()
-                .flatMap(t -> redisTemplate.opsForHash().multiGet(retainMessageHashKey, t))
+                .flatMap(t -> {
+                    if (!ObjectUtils.isEmpty(t)) {
+                        return redisTemplate.opsForHash().multiGet(retainMessageHashKey, t);
+                    }else {
+                        return Mono.empty();
+                    }
+                })
                 .flatMapIterable(Function.identity())
                 .map(o -> serializer.deserialize((byte[]) o, PubMsg.class));
     }
