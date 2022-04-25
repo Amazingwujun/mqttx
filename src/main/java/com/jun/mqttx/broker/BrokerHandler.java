@@ -193,9 +193,10 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
                             subscriptionService.clearClientSysSub(clientId)
                                     .doOnSuccess(v -> offlineNotice(clientId).subscribe())
                                     .subscribe();
+                        } else {
+                            offlineNotice(clientId).subscribe();
                         }
                     })
-                    .then(offlineNotice(clientId))
                     .subscribe();
         } else {
             sessionService.save(session)
@@ -224,11 +225,11 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
                 .payload(disconnectTime)
                 .build();
         return subscriptionService.searchSysTopicClients(topic)
-                .doOnNext(clientSub -> {
-                    Optional.ofNullable(ConnectHandler.CLIENT_MAP.get(clientSub.getClientId()))
-                            .map(BrokerHandler.CHANNELS::find)
-                            .ifPresent(channel -> channel.writeAndFlush(mpm.retain()));
-                })
+                .doOnNext(clientSub ->
+                        Optional.ofNullable(ConnectHandler.CLIENT_MAP.get(clientSub.getClientId()))
+                                .map(BrokerHandler.CHANNELS::find)
+                                .ifPresent(channel -> channel.writeAndFlush(mpm.retain()))
+                )
                 .doOnComplete(mpm::release)
                 .then();
     }
