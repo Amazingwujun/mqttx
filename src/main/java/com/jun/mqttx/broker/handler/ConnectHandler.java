@@ -218,9 +218,8 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
             actionOnCleanSession(clientId)
                     .then(Mono.fromSupplier(() -> {
                         // 新建会话并保存会话，同时判断sessionPresent
-                        Session session;
                         boolean sessionPresent = false;
-                        session = Session.of(clientId, true);
+                        final var session = Session.of(clientId, true);
                         CLIENT_MAP.put(clientId, ctx.channel().id());
                         saveSessionWithChannel(ctx, session);
                         if (enableTopicSubPubSecure) {

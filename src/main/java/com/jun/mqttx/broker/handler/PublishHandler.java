@@ -196,7 +196,11 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
 
         // 响应
         switch (qos) {
-            case AT_MOST_ONCE -> publish(pubMsg, ctx, false).subscribe();
+            case AT_MOST_ONCE -> publish(pubMsg, ctx, false).doOnSuccess(unused -> {
+                if (retain) {
+                    handleRetainMsg(pubMsg).subscribe();
+                }
+            }).subscribe();
             case AT_LEAST_ONCE -> {
                 publish(pubMsg, ctx, false)
                         .doOnSuccess(unused -> {
@@ -206,6 +210,11 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                                     null
                             );
                             ctx.writeAndFlush(pubAck);
+
+                            // retain 消息处理
+                            if (retain) {
+                                handleRetainMsg(pubMsg).subscribe();
+                            }
                         }).subscribe();
             }
             case EXACTLY_ONCE -> {
@@ -216,6 +225,18 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                         publish(pubMsg, ctx, false);
                         session.savePubRelInMsg(packetId);
                     }
+
+                    var pubRec = MqttMessageFactory.newMessage(
+                            new MqttFixedHeader(MqttMessageType.PUBREC, false, MqttQoS.AT_MOST_ONCE, false, 0),
+                            MqttMessageIdVariableHeader.from(packetId),
+                            null
+                    );
+                    ctx.writeAndFlush(pubRec);
+
+                    // retain 消息处理
+                    if (retain) {
+                        handleRetainMsg(pubMsg).subscribe();
+                    }
                 } else {
                     pubRelMessageService.isInMsgDup(clientId(ctx), packetId)
                             .flatMap(b -> {
@@ -223,9 +244,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                                     return Mono.empty();
                                 } else {
                                     return publish(pubMsg, ctx, false)
-                                            .doOnSuccess(unused -> {
-                                                pubRelMessageService.saveIn(clientId(ctx), packetId).subscribe();
-                                            });
+                                            .doOnSuccess(unused -> pubRelMessageService.saveIn(clientId(ctx), packetId).subscribe());
                                 }
                             })
                             .doOnSuccess(unused -> {
@@ -235,15 +254,15 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                                         null
                                 );
                                 ctx.writeAndFlush(pubRec);
+
+                                // retain 消息处理
+                                if (retain) {
+                                    handleRetainMsg(pubMsg).subscribe();
+                                }
                             })
                             .subscribe();
                 }
             }
-        }
-
-        // retain 消息处理
-        if (retain) {
-            handleRetainMsg(pubMsg);
         }
     }
 
@@ -497,7 +516,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
             im = serializer.deserialize(msg, InternalMessage.class);
         }
         PubMsg data = im.getData();
-        publish(data, null, true);
+        publish(data, null, true).subscribe();
     }
 
     @Override
