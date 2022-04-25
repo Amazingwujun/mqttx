@@ -25,7 +25,6 @@ import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.constants.InternalMessageEnum;
 import com.jun.mqttx.consumer.Watcher;
 import com.jun.mqttx.entity.Authentication;
-import com.jun.mqttx.entity.ClientSub;
 import com.jun.mqttx.entity.InternalMessage;
 import com.jun.mqttx.entity.Session;
 import com.jun.mqttx.exception.AuthorizationException;
@@ -52,6 +51,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
+import reactor.core.publisher.Mono;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -173,9 +173,11 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
                 .ifPresent(msg -> {
                     // 解决遗嘱消息无法 retain 的 bug
                     if (msg.isRetain()) {
-                        publishHandler.handleRetainMsg(msg);
+                        publishHandler.handleRetainMsg(msg)
+                                .flatMap(unused -> publishHandler.publish(msg, ctx, false))
+                                .subscribe();
                     }
-                    publishHandler.publish(msg, ctx, false);
+                    publishHandler.publish(msg, ctx, false).subscribe();
                 });
 
         // session 处理
@@ -184,42 +186,51 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
             // 当 cleanSession = 1，清理会话状态。
             // MQTTX 为了提升性能，将 session/pub/pubRel 等信息保存在内存中，这部分信息关联 {@link io.netty.channel.Channel} 无需 clean 由 GC 自动回收.
             // 订阅信息则不同，此类信息通过常驻内存，需要明确调用清理的 API
-            subscriptionService.clearClientSubscriptions(clientId, true);
-
-            // 清理系统主题订阅
-            if (enableSysTopic) {
-                subscriptionService.clearClientSysSub(clientId);
-            }
+            subscriptionService.clearClientSubscriptions(clientId, true)
+                    .doOnSuccess(unused -> {
+                        // 清理系统主题订阅
+                        if (enableSysTopic) {
+                            subscriptionService.clearClientSysSub(clientId)
+                                    .doOnSuccess(v -> offlineNotice(clientId).subscribe())
+                                    .subscribe();
+                        }
+                    })
+                    .then(offlineNotice(clientId))
+                    .subscribe();
         } else {
-            sessionService.save(session);
+            sessionService.save(session)
+                    .doOnSuccess(unused -> offlineNotice(clientId).subscribe())
+                    .subscribe();
+        }
+    }
+
+    /**
+     * 离线消息提醒
+     *
+     * @param clientId 客户端id
+     */
+    private Mono<Void> offlineNotice(String clientId) {
+        if (!enableSysTopic) {
+            return Mono.empty();
         }
 
-        // 下线通知
-        if (enableSysTopic) {
-            final String topic = String.format(TopicUtils.BROKER_CLIENT_DISCONNECT, brokerId, clientId);
-            List<ClientSub> clientSubs = subscriptionService.searchSysTopicClients(topic);
-            if (CollectionUtils.isEmpty(clientSubs)) {
-                return;
-            }
-
-            byte[] bytes = LocalDateTime.now().toString().getBytes(StandardCharsets.UTF_8);
-            ByteBuf disconnectTime = Unpooled.buffer(bytes.length).writeBytes(bytes);
-            MqttPublishMessage mpm = MqttMessageBuilders.publish()
-                    .qos(MqttQoS.AT_MOST_ONCE)
-                    .retained(false)
-                    .topicName(topic)
-                    .payload(disconnectTime)
-                    .build();
-
-            for (ClientSub clientSub : clientSubs) {
-                Optional.ofNullable(ConnectHandler.CLIENT_MAP.get(clientSub.getClientId()))
-                        .map(BrokerHandler.CHANNELS::find)
-                        .ifPresent(channel -> channel.writeAndFlush(mpm.retain()));
-            }
-
-            // 必须最后释放
-            mpm.release();
-        }
+        final String topic = String.format(TopicUtils.BROKER_CLIENT_DISCONNECT, brokerId, clientId);
+        byte[] bytes = LocalDateTime.now().toString().getBytes(StandardCharsets.UTF_8);
+        ByteBuf disconnectTime = Unpooled.buffer(bytes.length).writeBytes(bytes);
+        MqttPublishMessage mpm = MqttMessageBuilders.publish()
+                .qos(MqttQoS.AT_MOST_ONCE)
+                .retained(false)
+                .topicName(topic)
+                .payload(disconnectTime)
+                .build();
+        return subscriptionService.searchSysTopicClients(topic)
+                .doOnNext(clientSub -> {
+                    Optional.ofNullable(ConnectHandler.CLIENT_MAP.get(clientSub.getClientId()))
+                            .map(BrokerHandler.CHANNELS::find)
+                            .ifPresent(channel -> channel.writeAndFlush(mpm.retain()));
+                })
+                .doOnComplete(mpm::release)
+                .then();
     }
 
     /**
