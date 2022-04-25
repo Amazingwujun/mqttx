@@ -22,6 +22,7 @@ import com.jun.mqttx.exception.GlobalException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -40,7 +41,7 @@ import java.util.Objects;
  * @author Jun
  */
 @Slf4j
-@SpringBootApplication
+@SpringBootApplication(exclude = RedisRepositoriesAutoConfiguration.class)
 public class MqttxApplication {
 
     public static void main(String[] args) throws InterruptedException {
