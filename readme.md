@@ -216,7 +216,6 @@ services:
 1. `v1.0.5.RELEASE` 之前的版本集群功能存在 bug，无法使用。
 
 2. 如需使用 `kafka` 实现集群消息，需要手动修改配置 `application-*.yml`, 可参考 `application-dev.yml` 中的配置示例 ***3. kafka 集群***。
-3. 测试模式开启后，集群功能 **强制** 关闭
 
 #### 4.4 ssl 支持
 
@@ -492,16 +491,20 @@ Content-Length: 91
 
    一旦 [OpenJDK: Loom (java.net)](http://openjdk.java.net/projects/loom/) release，`v1.0` 版本将不再维护，替代版本为 `v1.2`
 
+   > Loom 来的有点慢，这些时间有不少问题都归因至 redis 阻塞式 IO ，v1.2.1.ALPHA 尝试使用
+   >
+   > reactor 模式。
+
 2. 为使 ***mqttx*** 项目变得更好，请使用及学习该项目的同学主动反馈使用情况给我（提 issue 或加群反馈）
 
 3. 后续工作
    - [ ] `v1.0.7.RELEASE` 版本 ***Benchmark***
    - [ ] `v1.0.8.RELEASE` 版本开发
    - [ ] `v1.1.0.RELEASE` 版本开发  
-   - [x] `v1.2.0.RELEASE` 版本开发
-   - [ ] `v2.0.0.RELEASE` 版本开发
-   - [x] bug 修复
-
+   - [x] `v1.2` 版本开发
+   - [ ] `v2.0` 版本开发
+- [x] bug 修复
+   
 4. `v1.2` 版本由 **JDK8** 升级至 **JDK17**
 
 5. `v2.0` 版本分支将作为 **mqttv5** 协议版本开始迭代
@@ -620,15 +623,20 @@ Content-Length: 91
 
 #### 6.2.3 v2.0
 
-- **v2.0.0.RELEASE（开发中）**
+- **v2.0.0.RELEASE**
   - [ ] [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html) 支持
 
 #### 6.2.4 v1.2
 
-- **v1.2.0.RELEASE (开发中)**
+- **v1.2.0.RELEASE**
   - [x] 项目依赖 JDK 升级，当前版本：***JDK8*** 目标版本：***JDK17***
 
+- **v1.2.1.ALPHA**
+  - [X] reactor 改造。
+
 ### 6.3 Benchmark
+
+> 版本过低，此 Benchmark 已不可靠
 
 测试条件简陋，结果仅供参考。
 
