@@ -378,7 +378,7 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
 
         // 移除 cache&redis 中客户端订阅的 topic
         if (!CollectionUtils.isEmpty(authorizedSub)) {
-            subscriptionService.clearUnAuthorizedClientSub(clientId, authorizedSub);
+            subscriptionService.clearUnAuthorizedClientSub(clientId, authorizedSub).subscribe();
         }
     }
 
