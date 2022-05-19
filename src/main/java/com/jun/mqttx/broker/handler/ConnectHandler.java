@@ -418,15 +418,16 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         // sessionService.clear(String ClientId) 方法返回 true 则表明该 clientId 之前的 cleanSession = false, 那么应该继续清理
         // 订阅信息、pub 信息、 pubRel 信息, 否则无需清理
         return sessionService.clear(clientId)
-                .doOnSuccess(e -> {
+                .flatMap(e -> {
                     if (e) {
-                        Mono.when(
+                        return Mono.when(
                                 subscriptionService.clearClientSubscriptions(clientId, false),
                                 publishMessageService.clear(clientId),
                                 pubRelMessageService.clear(clientId)
                         );
+                    } else {
+                        return Mono.empty();
                     }
-                })
-                .then();
+                });
     }
 }
