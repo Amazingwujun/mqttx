@@ -222,20 +222,34 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                 if (isCleanSession(ctx)) {
                     Session session = getSession(ctx);
                     if (!session.isDupMsg(packetId)) {
-                        publish(pubMsg, ctx, false);
                         session.savePubRelInMsg(packetId);
-                    }
+                        publish(pubMsg, ctx, false)
+                                .doOnSuccess(unused -> {
+                                    var pubRec = MqttMessageFactory.newMessage(
+                                            new MqttFixedHeader(MqttMessageType.PUBREC, false, MqttQoS.AT_MOST_ONCE, false, 0),
+                                            MqttMessageIdVariableHeader.from(packetId),
+                                            null
+                                    );
+                                    ctx.writeAndFlush(pubRec);
 
-                    var pubRec = MqttMessageFactory.newMessage(
-                            new MqttFixedHeader(MqttMessageType.PUBREC, false, MqttQoS.AT_MOST_ONCE, false, 0),
-                            MqttMessageIdVariableHeader.from(packetId),
-                            null
-                    );
-                    ctx.writeAndFlush(pubRec);
+                                    // retain 消息处理
+                                    if (retain) {
+                                        handleRetainMsg(pubMsg).subscribe();
+                                    }
+                                })
+                                .subscribe();
+                    } else {
+                        var pubRec = MqttMessageFactory.newMessage(
+                                new MqttFixedHeader(MqttMessageType.PUBREC, false, MqttQoS.AT_MOST_ONCE, false, 0),
+                                MqttMessageIdVariableHeader.from(packetId),
+                                null
+                        );
+                        ctx.writeAndFlush(pubRec);
 
-                    // retain 消息处理
-                    if (retain) {
-                        handleRetainMsg(pubMsg).subscribe();
+                        // retain 消息处理
+                        if (retain) {
+                            handleRetainMsg(pubMsg).subscribe();
+                        }
                     }
                 } else {
                     pubRelMessageService.isInMsgDup(clientId(ctx), packetId)
