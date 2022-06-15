@@ -52,6 +52,7 @@ import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -187,10 +188,12 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
             // MQTTX 为了提升性能，将 session/pub/pubRel 等信息保存在内存中，这部分信息关联 {@link io.netty.channel.Channel} 无需 clean 由 GC 自动回收.
             // 订阅信息则不同，此类信息通过常驻内存，需要明确调用清理的 API
             subscriptionService.clearClientSubscriptions(clientId, true)
+                    .publishOn(Schedulers.boundedElastic())
                     .doOnSuccess(unused -> {
                         // 清理系统主题订阅
                         if (enableSysTopic) {
                             subscriptionService.clearClientSysSub(clientId)
+                                    .publishOn(Schedulers.boundedElastic())
                                     .doOnSuccess(v -> offlineNotice(clientId).subscribe())
                                     .subscribe();
                         } else {
@@ -200,6 +203,7 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
                     .subscribe();
         } else {
             sessionService.save(session)
+                    .publishOn(Schedulers.boundedElastic())
                     .doOnSuccess(unused -> offlineNotice(clientId).subscribe())
                     .subscribe();
         }

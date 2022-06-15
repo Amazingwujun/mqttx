@@ -146,14 +146,14 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
                     mqttTopicSubscriptions.forEach(mqttTopicSubscription -> {
                         String topicFilter = mqttTopicSubscription.topicName();
                         retainMessageService.searchListByTopicFilter(topicFilter)
-                                .doOnNext(pubMsg -> {
+                                .flatMap(pubMsg -> {
                                     // When sending a PUBLISH Packet to a Client the Server MUST set the RETAIN flag to 1 if a
                                     // message is sent as a result of a new subscription being made by a Client [MQTT-3.3.1-8].
                                     pubMsg.setRetain(true);
 
                                     // 指定 clientId
                                     pubMsg.setAppointedClientId(clientId);
-                                    publishHandler.publish(pubMsg, ctx, false);
+                                    return publishHandler.publish(pubMsg, ctx, false);
                                 }).subscribe();
                     });
                 }).subscribe();
@@ -295,9 +295,10 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
                         .build();
                 ctx.writeAndFlush(uptimeResponse);
             }
-            default ->
-                    // 订阅功能主题
-                    subscriptionService.subscribeSys(clientSub);
+            default -> {
+                // 订阅功能主题
+                subscriptionService.subscribeSys(clientSub).subscribe();
+            }
         }
     }
 

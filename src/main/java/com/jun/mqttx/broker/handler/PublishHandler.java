@@ -222,9 +222,12 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                 if (isCleanSession(ctx)) {
                     Session session = getSession(ctx);
                     if (!session.isDupMsg(packetId)) {
-                        session.savePubRelInMsg(packetId);
                         publish(pubMsg, ctx, false)
                                 .doOnSuccess(unused -> {
+                                    // 保存 pub
+                                    session.savePubRelInMsg(packetId);
+
+                                    //
                                     var pubRec = MqttMessageFactory.newMessage(
                                             new MqttFixedHeader(MqttMessageType.PUBREC, false, MqttQoS.AT_MOST_ONCE, false, 0),
                                             MqttMessageIdVariableHeader.from(packetId),
@@ -403,12 +406,11 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         if (channel == null) {
             if ((qos == MqttQoS.EXACTLY_ONCE || qos == MqttQoS.AT_LEAST_ONCE) && !isClusterMessage) {
                 return sessionService.nextMessageId(clientId)
-                        .doOnNext(messageId -> {
+                        .flatMap(messageId -> {
                             pubMsg.setQoS(qos.value());
                             pubMsg.setMessageId(messageId);
-                            publishMessageService.save(clientId, pubMsg).subscribe();
-                        }).then();
-
+                            return publishMessageService.save(clientId, pubMsg);
+                        });
             }
             return Mono.empty();
         }

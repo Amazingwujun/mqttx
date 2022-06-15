@@ -56,7 +56,6 @@ public class UnsubscribeHandler extends AbstractMqttSessionHandler {
         if (enableSysTopic) {
             List<String> unSubSysTopics = collect.stream().filter(TopicUtils::isSys).collect(Collectors.toList());
             collect.removeAll(unSubSysTopics);
-            unsubscribeSysTopics(unSubSysTopics, ctx);
             Mono.when(unsubscribeSysTopics(unSubSysTopics, ctx), subscriptionService.unsubscribe(clientId(ctx), isCleanSession(ctx), collect))
                     .doOnSuccess(unused -> {
                         // response

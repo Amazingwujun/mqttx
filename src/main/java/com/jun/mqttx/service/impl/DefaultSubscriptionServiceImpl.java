@@ -250,16 +250,13 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
             if (CollectionUtils.isEmpty(keys)) {
                 return Mono.empty();
             }
-            unsubscribe(clientId, cleanSession, new ArrayList<>(keys));
-            return Mono.empty();
+            return unsubscribe(clientId, cleanSession, new ArrayList<>(keys));
         } else {
             return stringRedisTemplate.opsForSet().members(clientTopicsPrefix + clientId)
                     .collectList()
-                    .flatMap(e -> stringRedisTemplate.delete(clientTopicsPrefix + clientId).thenReturn(e))
-                    .doOnSuccess(e -> {
-                        unsubscribe(clientId, cleanSession, new ArrayList<>(e));
-                    })
-                    .then();
+                    .flatMap(e -> stringRedisTemplate.delete(clientTopicsPrefix + clientId)
+                            .flatMap(unused -> unsubscribe(clientId, cleanSession, new ArrayList<>(e)))
+                    );
         }
     }
 
