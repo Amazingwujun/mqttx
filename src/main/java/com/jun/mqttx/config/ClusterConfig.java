@@ -27,18 +27,16 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.redis.connection.MessageListener;
+import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.listener.ChannelTopic;
-import org.springframework.data.redis.listener.RedisMessageListenerContainer;
-import org.springframework.data.redis.listener.Topic;
-import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
+import org.springframework.data.redis.listener.ReactiveRedisMessageListenerContainer;
+import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.kafka.core.KafkaTemplate;
 
-import java.util.*;
-import java.util.concurrent.Executors;
+import java.util.List;
 
 import static com.jun.mqttx.constants.InternalMessageEnum.*;
 
@@ -77,7 +75,7 @@ public class ClusterConfig {
 
     @Bean
     @ConditionalOnProperty(name = "mqttx.cluster.type", havingValue = REDIS, matchIfMissing = true)
-    public IInternalMessagePublishService defaultInternalMessagePublishServiceImpl(RedisTemplate<String, byte[]> redisTemplate,
+    public IInternalMessagePublishService defaultInternalMessagePublishServiceImpl(ReactiveRedisTemplate<String, byte[]> redisTemplate,
                                                                                    Serializer serializer) {
         return new DefaultInternalMessagePublishServiceImpl(redisTemplate, serializer);
     }
@@ -89,47 +87,31 @@ public class ClusterConfig {
     }
 
     /**
-     * 消息适配器
-     *
-     * @param subscriber 消息订阅者
-     */
-    @Bean
-    @ConditionalOnProperty(name = "mqttx.cluster.type", havingValue = REDIS, matchIfMissing = true)
-    public MessageListener messageListenerAdapter(DefaultInternalMessageSubscriber subscriber) {
-        MessageListenerAdapter mla = new MessageListenerAdapter();
-        mla.setDelegate(subscriber);
-        mla.setSerializer(RedisSerializer.byteArray());
-        return mla;
-    }
-
-    /**
      * 消息监听者容器
      *
      * @param redisConnectionFactory {@link RedisConnectionFactory}
-     * @param messageListener        {@link MessageListener}
+     * @param subscriber             {@link DefaultInternalMessageSubscriber}
      */
     @Bean
     @ConditionalOnProperty(name = "mqttx.cluster.type", havingValue = REDIS, matchIfMissing = true)
-    public RedisMessageListenerContainer redisMessageListenerContainer(RedisConnectionFactory redisConnectionFactory,
-                                                                       MessageListener messageListener) {
-        RedisMessageListenerContainer redisMessageListenerContainer = new RedisMessageListenerContainer();
-        redisMessageListenerContainer.setConnectionFactory(redisConnectionFactory);
-        // 替换默认实现（默认实现未使用线程池）, 使用单线程执行任务
-        redisMessageListenerContainer.setTaskExecutor(Executors.newSingleThreadExecutor());
-
-        Map<MessageListener, Collection<? extends Topic>> listenerMap = new HashMap<>();
-        List<Topic> list = new ArrayList<>(8);
-        list.add(new ChannelTopic(PUB.getChannel()));
-        list.add(new ChannelTopic(PUB_ACK.getChannel()));
-        list.add(new ChannelTopic(PUB_REC.getChannel()));
-        list.add(new ChannelTopic(PUB_COM.getChannel()));
-        list.add(new ChannelTopic(PUB_REL.getChannel()));
-        list.add(new ChannelTopic(DISCONNECT.getChannel()));
-        list.add(new ChannelTopic(ALTER_USER_AUTHORIZED_TOPICS.getChannel()));
-        list.add(new ChannelTopic(SUB_UNSUB.getChannel()));
-        listenerMap.put(messageListener, list);
-
-        redisMessageListenerContainer.setMessageListeners(listenerMap);
+    public ReactiveRedisMessageListenerContainer redisMessageListenerContainer(ReactiveRedisConnectionFactory redisConnectionFactory,
+                                                                               DefaultInternalMessageSubscriber subscriber) {
+        var redisMessageListenerContainer = new ReactiveRedisMessageListenerContainer(redisConnectionFactory);
+        var channelTopics = List.of(
+                new ChannelTopic(PUB.getChannel()),
+                new ChannelTopic(PUB_ACK.getChannel()),
+                new ChannelTopic(PUB_REC.getChannel()),
+                new ChannelTopic(PUB_COM.getChannel()),
+                new ChannelTopic(PUB_REL.getChannel()),
+                new ChannelTopic(DISCONNECT.getChannel()),
+                new ChannelTopic(ALTER_USER_AUTHORIZED_TOPICS.getChannel()),
+                new ChannelTopic(SUB_UNSUB.getChannel())
+        );
+        redisMessageListenerContainer.receive(
+                channelTopics,
+                RedisSerializationContext.SerializationPair.fromSerializer(RedisSerializer.string()),
+                RedisSerializationContext.SerializationPair.byteArray()
+        ).subscribe(t -> subscriber.handleMessage(t.getMessage(), t.getChannel()));
 
         return redisMessageListenerContainer;
     }

@@ -4,6 +4,7 @@ import com.jun.mqttx.entity.InternalMessage;
 import com.jun.mqttx.service.IInternalMessagePublishService;
 import com.jun.mqttx.utils.Serializer;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.core.RedisTemplate;
 
 /**
@@ -15,16 +16,16 @@ import org.springframework.data.redis.core.RedisTemplate;
 @Slf4j
 public class DefaultInternalMessagePublishServiceImpl implements IInternalMessagePublishService {
 
-    private final RedisTemplate<String, byte[]> redisTemplate;
+    private final ReactiveRedisTemplate<String, byte[]> redisTemplate;
     private final Serializer serializer;
 
-    public DefaultInternalMessagePublishServiceImpl(RedisTemplate<String, byte[]> redisTemplate, Serializer serializer) {
+    public DefaultInternalMessagePublishServiceImpl(ReactiveRedisTemplate<String, byte[]> redisTemplate, Serializer serializer) {
         this.redisTemplate = redisTemplate;
         this.serializer = serializer;
     }
 
     @Override
     public <T> void publish(InternalMessage<T> internalMessage, String channel) {
-        redisTemplate.convertAndSend(channel, serializer.serialize(internalMessage));
+        redisTemplate.convertAndSend(channel, serializer.serialize(internalMessage)).subscribe();
     }
 }
