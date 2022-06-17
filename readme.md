@@ -487,37 +487,36 @@ Content-Length: 91
 
 ## 5 开发者说
 
-1. `v1.0` 版本分支将作为支持 **mqttv3.1.1** 协议版本持续迭代
+1. 感谢 **Jetbrains** 为开源项目提供的 License
 
-   一旦 [OpenJDK: Loom (java.net)](http://openjdk.java.net/projects/loom/) release，`v1.0` 版本将不再维护，替代版本为 `v1.2`
+    <img src="https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.png" alt="Jetbrains" height="150"/>    
 
-   > Loom 来的有点慢，这些时间有不少问题都归因至 redis 阻塞式 IO ，v1.2.1.ALPHA 尝试使用
-   >
-   > reactor 模式。
+2. 长期更新维护的分支
+   1. `v1.0`: 基于 `jdk8` 且 redis io 为 **blocking** 模式.
+   2. `v1.2`: 基于 `jdk17` 且 redis io 为 **non-blocking** 模式.
 
-2. 为使 ***mqttx*** 项目变得更好，请使用及学习该项目的同学主动反馈使用情况给我（提 issue 或加群反馈）
+3. 为使 ***mqttx*** 项目变得更好，请使用及学习该项目的同学主动反馈使用情况给我（提 issue 或加群反馈）
 
-3. 后续工作
-   - [ ] `v1.0.7.RELEASE` 版本 ***Benchmark***
+4. 后续工作
    - [ ] `v1.0.8.RELEASE` 版本开发
    - [ ] `v1.1.0.RELEASE` 版本开发  
    - [x] `v1.2` 版本开发
    - [ ] `v2.0` 版本开发
-- [x] bug 修复
+   - [x] bug 修复
    
-4. `v1.2` 版本由 **JDK8** 升级至 **JDK17**
+5. `v1.2` 版本由 **JDK8** 升级至 **JDK17**
 
-5. `v2.0` 版本分支将作为 **mqttv5** 协议版本开始迭代
+6. `v2.0` 版本分支将作为 **mqttv5** 协议版本开始迭代
 
-6. 这段时间工作任务繁重，功能迭代暂时停止，当然 **bug** 我还是会优先处理🙂
+7. 这段时间工作任务繁重，功能迭代暂时停止，当然 **bug** 我还是会优先处理🙂
 
-7. 请作者喝杯 **丝绒拿铁** 😊
+8. 请作者喝杯 **丝绒拿铁** 😊
 
    <img src="https://z3.ax1x.com/2021/07/15/Wm53vj.jpg" alt="coffee" height="300" />
+   
+9. 交流群
 
-8. 交流群
-
-<img src="https://s1.ax1x.com/2020/10/10/0ytoSx.jpg" alt="群二维码" height="300" />
+    <img src="https://s1.ax1x.com/2020/10/10/0ytoSx.jpg" alt="群二维码" height="300" />
 
 ## 6 附表
 
