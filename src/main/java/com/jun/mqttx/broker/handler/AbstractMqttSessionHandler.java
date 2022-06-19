@@ -110,10 +110,10 @@ public abstract class AbstractMqttSessionHandler implements MqttMessageHandler {
             return;
         }
         Channel channel = ctx.channel();
-        if (ObjectUtils.isEmpty(authentication.getAuthorizedPub())) {
+        if (!ObjectUtils.isEmpty(authentication.getAuthorizedPub())) {
             channel.attr(AttributeKey.valueOf(AUTHORIZED_PUB_TOPICS)).set(authentication.getAuthorizedPub());
         }
-        if (ObjectUtils.isEmpty(authentication.getAuthorizedSub())) {
+        if (!ObjectUtils.isEmpty(authentication.getAuthorizedSub())) {
             channel.attr(AttributeKey.valueOf(AUTHORIZED_SUB_TOPICS)).set(authentication.getAuthorizedSub());
         }
     }
