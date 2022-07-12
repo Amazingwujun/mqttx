@@ -16,7 +16,7 @@
 
 package com.jun.mqttx.broker;
 
-import com.alibaba.fastjson.TypeReference;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.jun.mqttx.broker.handler.AbstractMqttSessionHandler;
 import com.jun.mqttx.broker.handler.ConnectHandler;
 import com.jun.mqttx.broker.handler.MessageDelegatingHandler;

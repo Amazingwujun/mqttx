@@ -1,6 +1,6 @@
 package com.jun.mqttx.service.impl;
 
-import com.alibaba.fastjson.TypeReference;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.constants.InternalMessageEnum;
 import com.jun.mqttx.consumer.Watcher;

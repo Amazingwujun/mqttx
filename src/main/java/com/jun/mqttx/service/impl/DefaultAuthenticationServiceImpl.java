@@ -1,11 +1,11 @@
 package com.jun.mqttx.service.impl;
 
-import com.alibaba.fastjson.JSON;
 import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.entity.Authentication;
 import com.jun.mqttx.entity.ClientAuthDTO;
 import com.jun.mqttx.exception.AuthenticationException;
 import com.jun.mqttx.service.IAuthenticationService;
+import com.jun.mqttx.utils.JSON;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
 
@@ -73,7 +73,7 @@ public class DefaultAuthenticationServiceImpl implements IAuthenticationService 
                     .uri(uri)
                     .timeout(timeout)
                     .header("Content-type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(JSON.toJSONString(authDTO)))
+                    .POST(HttpRequest.BodyPublishers.ofString(JSON.writeValueAsString(authDTO)))
                     .build();
             return httpClient.sendAsync(httpRequest, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))
                     .thenApply(resp -> {
@@ -83,7 +83,7 @@ public class DefaultAuthenticationServiceImpl implements IAuthenticationService 
 
                         return resp.body();
                     })
-                    .thenApply(e -> JSON.parseObject(e, Authentication.class));
+                    .thenApply(e -> JSON.readValue(e, Authentication.class));
         }
     }
 }

@@ -16,11 +16,9 @@
 
 package com.jun.mqttx.entity;
 
-import com.alibaba.fastjson.JSON;
+import com.jun.mqttx.utils.JSON;
 import lombok.Builder;
 import lombok.Getter;
-
-import java.nio.charset.StandardCharsets;
 
 /**
  * 系统主题状态
@@ -58,6 +56,6 @@ public class BrokerStatus {
      * @return json 格式字节数组
      */
     public byte[] toJsonBytes() {
-        return JSON.toJSONString(this).getBytes(StandardCharsets.UTF_8);
+        return JSON.writeValueAsBytes(this);
     }
 }

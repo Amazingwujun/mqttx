@@ -16,13 +16,12 @@
 
 package com.jun.mqttx.broker;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.jun.mqttx.broker.codec.MqttWebsocketCodec;
 import com.jun.mqttx.broker.handler.ProbeHandler;
 import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.exception.GlobalException;
 import com.jun.mqttx.exception.SslException;
+import com.jun.mqttx.utils.JSON;
 import com.jun.mqttx.utils.SslUtils;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInitializer;
@@ -131,7 +130,7 @@ public class BrokerInitializer implements DisposableBean {
         }
 
         // 打印全部配置项
-        log.info(String.format("MQTTX Broker 配置:\n%s", JSON.toJSONString(mqttxConfig, SerializerFeature.PrettyFormat)));
+        log.info(String.format("MQTTX Broker 配置:\n%s", JSON.writeValueAsPrettyString(mqttxConfig)));
 
         if (Epoll.isAvailable()) {
             log.info("Epoll 可用，启用: {}", EpollEventLoopGroup.class.getName());
