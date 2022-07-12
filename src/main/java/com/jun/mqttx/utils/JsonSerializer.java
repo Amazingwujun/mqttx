@@ -16,8 +16,7 @@
 
 package com.jun.mqttx.utils;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.TypeReference;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 import java.nio.charset.StandardCharsets;
 
@@ -30,15 +29,15 @@ public class JsonSerializer implements Serializer {
 
     @Override
     public byte[] serialize(Object target) {
-        return JSON.toJSONBytes(target);
+        return JSON.writeValueAsBytes(target);
     }
 
     @Override
     public <T> T deserialize(byte[] bytes, Class<T> clazz) {
-        return JSON.parseObject(bytes, clazz);
+        return JSON.readValue(bytes, clazz);
     }
 
     public <T> T deserialize(byte[] bytes, TypeReference<T> typeReference) {
-        return JSON.parseObject(new String(bytes, StandardCharsets.UTF_8), typeReference);
+        return JSON.readValue(new String(bytes, StandardCharsets.UTF_8), typeReference);
     }
 }

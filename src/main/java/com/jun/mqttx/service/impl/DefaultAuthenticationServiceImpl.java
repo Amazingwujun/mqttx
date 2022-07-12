@@ -1,11 +1,11 @@
 package com.jun.mqttx.service.impl;
 
-import com.alibaba.fastjson.JSON;
 import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.entity.Authentication;
 import com.jun.mqttx.entity.ClientAuthDTO;
 import com.jun.mqttx.exception.AuthenticationException;
 import com.jun.mqttx.service.IAuthenticationService;
+import com.jun.mqttx.utils.JSON;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
 import org.springframework.stereotype.Service;
@@ -66,7 +66,7 @@ public class DefaultAuthenticationServiceImpl implements IAuthenticationService 
             CompletableFuture<Authentication> future = new CompletableFuture<>();
             Request req = new Request.Builder()
                     .url(url)
-                    .post(RequestBody.create(MediaType.get("application/json"), JSON.toJSONString(authDTO)))
+                    .post(RequestBody.create(MediaType.get("application/json"), JSON.writeValueAsString(authDTO)))
                     .build();
             okHttpClient.newCall(req)
                     .enqueue(new Callback() {
@@ -83,7 +83,7 @@ public class DefaultAuthenticationServiceImpl implements IAuthenticationService 
                                 if (body == null) {
                                     future.complete(null);
                                 } else {
-                                    Authentication authentication = JSON.parseObject(body.string(), Authentication.class);
+                                    Authentication authentication = JSON.readValue(body.string(), Authentication.class);
                                     future.complete(authentication);
                                 }
                             } else {
