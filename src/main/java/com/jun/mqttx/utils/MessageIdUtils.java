@@ -30,8 +30,10 @@ public class MessageIdUtils {
     private static final Map<String, Integer> map = new HashMap<>();
 
     public synchronized static int nextMessageId(String clientId) {
-        Integer id = map.computeIfAbsent(clientId, k -> 1);
+        int id = map.computeIfAbsent(clientId, k -> 1);
         if ((id & 0xffff) == 0) {
+            id = 1;
+        } else {
             id++;
         }
         map.put(clientId, id);
