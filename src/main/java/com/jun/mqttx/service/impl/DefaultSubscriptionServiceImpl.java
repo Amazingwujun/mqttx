@@ -188,7 +188,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
                     .map(e -> stringRedisTemplate.opsForHash().remove(topicPrefix + e, clientId))
                     .toList();
             return Mono.when(monos)
-                    .then(stringRedisTemplate.opsForSet().remove(clientTopicsPrefix + clientId, topics).then())
+                    .then(stringRedisTemplate.opsForSet().remove(clientTopicsPrefix + clientId, topics.toArray()).then())
                     .doOnSuccess(unused -> {
                         if (enableInnerCache) {
                             unsubscribeWithCache(clientId, topics);
