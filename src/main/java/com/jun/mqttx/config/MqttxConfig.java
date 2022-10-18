@@ -19,6 +19,7 @@ package com.jun.mqttx.config;
 import com.jun.mqttx.constants.SerializeStrategy;
 import com.jun.mqttx.constants.ShareStrategy;
 import com.jun.mqttx.entity.TopicRateLimit;
+import io.netty.handler.codec.mqtt.MqttConstant;
 import io.netty.handler.ssl.ClientAuth;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -85,6 +86,9 @@ public class MqttxConfig {
 
     /** {@link java.net.http.HttpClient} connectTimeout */
     private Duration httpClientConnectTimeout = Duration.ofSeconds(10);
+
+    /** mqttx 可接受的最大报文大小 */
+    private int maxBytesInMessage = MqttConstant.DEFAULT_MAX_BYTES_IN_MESSAGE;
 
     /*--------------------------------------------
     |                 模块配置项                   |

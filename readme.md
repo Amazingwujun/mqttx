@@ -532,48 +532,49 @@ Content-Length: 91
 
 配置项说明：
 
-| 配置                                     | 默认值                        | 说明                                                         |
-| ---------------------------------------- | ----------------------------- | ------------------------------------------------------------ |
-| `mqttx.version`                          | 取自 `pom.xml`               | 版本                                                         |
-| `mqttx.broker-id`                       | 取自 `pom.xml`                | 应用标志, 唯一                                               |
-| `mqttx.heartbeat`                        | `60s`                         | 初始心跳，会被 conn 消息中的 keepalive 重置                  |
-| `mqttx.host`                             | `0.0.0.0`                       | 监听地址                                                     |
-| `mqttx.so-backlog`                      | `512`                           | tcp 连接处理队列                                             |
-| `mqttx.enable-topic-sub-pub-secure`  | `false`                         | 客户订阅/发布主题安全功能，开启后将限制客户端发布/订阅的主题 |
-| `mqttx.enable-inner-cache` | `true`                          | 发布消息每次都需要查询 redis 来获取订阅的客户端列表。开启此功能后，将在内存中建立一个主题-客户端关系映射, 应用直接访问内存中的数据即可 |
-| `mqttx.ignore-client-self-pub` | `true` | 忽略 client 发送给自己的消息（当 client 发送消息给自己订阅的主题） |
-| `mqttx.serialize-strategy` | `json` | `broker` 采用的序列化策略，**集群策略*必须*一致**。 |
-| `mqttx.redis.cluster-session-hash-key` | `mqttx.session.key`             | redis map key；用于集群的会话存储                          |
-| `mqttx.redis.topic-prefix`              | `mqttx:topic:`                  | 主题前缀； topic <==> client 映射关系保存               |
-| `mqttx.redis.retain-message-prefix`    | `mqttx:retain:`                 | 保留消息前缀, 保存 retain 消息                            |
-| `mqttx.redis.pub-msg-set-prefix`      | `mqttx:client:pubmsg:`          | client pub消息 redis set 前缀； 保存 pubmsg，当收到 puback 获取 pubrec 后删除 |
-| `mqttx.redis.pub-rel-msg-set-prefix` | `mqttx:client:pubrelmsg:`       | client pubRel 消息 redis set 前缀；保存 pubrel 消息 flag，收到 pubcom 消息删除 |
-| `mqttx.redis.topic-set-key`            | `mqttx:alltopic`                | topic 集合，redis set key 值；保存全部主题               |
-| `mqttx.redis.message-id-prefix` | `mqttx:messageId:` | 非 `cleanSession` client 的 `messageId`, 使用 `redis INCR` 指令 |
-| `mqttx.redis.client-topic-set-prefix` | `mqttx:client:topicset:` | client 订阅的主题 redis set 前缀; 保存 client 订阅的全部主题 |
-| `mqttx.cluster.enable`                   | `false`                         | 集群开关                                                     |
-| `mqttx.cluster.inner-cache-consistancy-key` | `mqttx:cache_consistence`       | 应用启动后，先查询 redis 中无此 key 值，然后在检查一致性     |
-| `mqttx.cluster.type` | `redis` | 集群消息中间件类型 |
-| `mqttx.ssl.enable`                       | `false`                         | ssl 开关                                                     |
-| `mqttx.ssl.client-auth` | `NONE` | 客户端证书校验 |
-| `mqttx.ssl.key-store-location`         | `classpath: tls/mqttx.keystore` | keyStore 位置                                                |
-| `mqttx.ssl.key-store-password`         | `123456`             | keyStore 密码                                                |
-| `mqttx.ssl.key-store-type`             | `pkcs12`                        | keyStore 类别                                                |
-| `mqttx.socket.enable`                    | `true`                          | socket 开关                                                  |
-| `mqttx.socket.port`                      | `1883`                          | socket 监听端口                                              |
-| `mqttx.websocket.enable`                 | `false`                         | websocket 开关                                               |
-| `mqttx.websocket.port`                   | `8083`                          | websocket 监听端口                                           |
-| `mqttx.websocket.path`                   | `/mqtt`                         | websocket path                                            |
-| `mqttx.share-topic.enable`               | `true`                          | 共享主题功能开关                                             |
-| `mqttx.share-topic.share-sub-strategy`   | `round`                         | 负载均衡策略, 目前支持随机、轮询、哈希                       |
-| `mqttx.sys-topic.enable` | `false` | 系统主题功能开关 |
-| `mqttx.sys-topic.interval` | `60s` | 定时发布间隔 |
-| `mqttx.message-bridge.enable` | `false` | 消息桥接功能开关 |
-| `mqttx.message-bridge.topics` | `null` | 需要桥接消息的主题列表 |
-| `mqttx.rate-limiter.enable` | `false` | 主题限流开关 |
-| `mqttx.rate-limiter.token-rate-limit` |  | 参见 [主题限流支持](#410-主题限流支持) 配置举例说明 |
-| `mqttx.auth.url` | `null` | mqtt conn username/password 认证服务接口地址 |
-| `mqttx.auth.timeout` | `3s` | readTimeout |
+| 配置                                          | 默认值                             | 说明                                                                       |
+|---------------------------------------------|---------------------------------|--------------------------------------------------------------------------|
+| `mqttx.version`                             | 取自 `pom.xml`                    | 版本                                                                       |
+| `mqttx.broker-id`                           | 取自 `pom.xml`                    | 应用标志, 唯一                                                                 |
+| `mqttx.heartbeat`                           | `60s`                           | 初始心跳，会被 conn 消息中的 keepalive 重置                                           |
+| `mqttx.host`                                | `0.0.0.0`                       | 监听地址                                                                     |
+| `mqttx.so-backlog`                          | `512`                           | tcp 连接处理队列                                                               |
+| `mqttx.enable-topic-sub-pub-secure`         | `false`                         | 客户订阅/发布主题安全功能，开启后将限制客户端发布/订阅的主题                                          |
+| `mqttx.enable-inner-cache`                  | `true`                          | 发布消息每次都需要查询 redis 来获取订阅的客户端列表。开启此功能后，将在内存中建立一个主题-客户端关系映射, 应用直接访问内存中的数据即可 |
+| `mqttx.ignore-client-self-pub`              | `true`                          | 忽略 client 发送给自己的消息（当 client 发送消息给自己订阅的主题）                                |
+| `mqttx.max-bytes-in-message`                | `8092`                          | mqttx 允许接收的最大报文载荷，单位 `byte`.                                               |
+| `mqttx.serialize-strategy`                  | `json`                          | `broker` 采用的序列化策略，**集群策略*必须*一致**。                                        |
+| `mqttx.redis.cluster-session-hash-key`      | `mqttx.session.key`             | redis map key；用于集群的会话存储                                                  |
+| `mqttx.redis.topic-prefix`                  | `mqttx:topic:`                  | 主题前缀； topic <==> client 映射关系保存                                           |
+| `mqttx.redis.retain-message-prefix`         | `mqttx:retain:`                 | 保留消息前缀, 保存 retain 消息                                                     |
+| `mqttx.redis.pub-msg-set-prefix`            | `mqttx:client:pubmsg:`          | client pub消息 redis set 前缀； 保存 pubmsg，当收到 puback 获取 pubrec 后删除            |
+| `mqttx.redis.pub-rel-msg-set-prefix`        | `mqttx:client:pubrelmsg:`       | client pubRel 消息 redis set 前缀；保存 pubrel 消息 flag，收到 pubcom 消息删除           |
+| `mqttx.redis.topic-set-key`                 | `mqttx:alltopic`                | topic 集合，redis set key 值；保存全部主题                                          |
+| `mqttx.redis.message-id-prefix`             | `mqttx:messageId:`              | 非 `cleanSession` client 的 `messageId`, 使用 `redis INCR` 指令                |
+| `mqttx.redis.client-topic-set-prefix`       | `mqttx:client:topicset:`        | client 订阅的主题 redis set 前缀; 保存 client 订阅的全部主题                             |
+| `mqttx.cluster.enable`                      | `false`                         | 集群开关                                                                     |
+| `mqttx.cluster.inner-cache-consistancy-key` | `mqttx:cache_consistence`       | 应用启动后，先查询 redis 中无此 key 值，然后在检查一致性                                       |
+| `mqttx.cluster.type`                        | `redis`                         | 集群消息中间件类型                                                                |
+| `mqttx.ssl.enable`                          | `false`                         | ssl 开关                                                                   |
+| `mqttx.ssl.client-auth`                     | `NONE`                          | 客户端证书校验                                                                  |
+| `mqttx.ssl.key-store-location`              | `classpath: tls/mqttx.keystore` | keyStore 位置                                                              |
+| `mqttx.ssl.key-store-password`              | `123456`                        | keyStore 密码                                                              |
+| `mqttx.ssl.key-store-type`                  | `pkcs12`                        | keyStore 类别                                                              |
+| `mqttx.socket.enable`                       | `true`                          | socket 开关                                                                |
+| `mqttx.socket.port`                         | `1883`                          | socket 监听端口                                                              |
+| `mqttx.websocket.enable`                    | `false`                         | websocket 开关                                                             |
+| `mqttx.websocket.port`                      | `8083`                          | websocket 监听端口                                                           |
+| `mqttx.websocket.path`                      | `/mqtt`                         | websocket path                                                           |
+| `mqttx.share-topic.enable`                  | `true`                          | 共享主题功能开关                                                                 |
+| `mqttx.share-topic.share-sub-strategy`      | `round`                         | 负载均衡策略, 目前支持随机、轮询、哈希                                                     |
+| `mqttx.sys-topic.enable`                    | `false`                         | 系统主题功能开关                                                                 |
+| `mqttx.sys-topic.interval`                  | `60s`                           | 定时发布间隔                                                                   |
+| `mqttx.message-bridge.enable`               | `false`                         | 消息桥接功能开关                                                                 |
+| `mqttx.message-bridge.topics`               | `null`                          | 需要桥接消息的主题列表                                                              |
+| `mqttx.rate-limiter.enable`                 | `false`                         | 主题限流开关                                                                   |
+| `mqttx.rate-limiter.token-rate-limit`       |                                 | 参见 [主题限流支持](#410-主题限流支持) 配置举例说明                                          |
+| `mqttx.auth.url`                            | `null`                          | mqtt conn username/password 认证服务接口地址                                     |
+| `mqttx.auth.timeout`                        | `3s`                            | readTimeout                                                              |
 
 ### 6.2 版本说明
 
