@@ -7,7 +7,7 @@
 - [1 介绍](#1-介绍)
     - [1.1 快速开始](#11-快速开始)
     - [1.2 项目依赖](#12-项目依赖)
-    - [~~1.3  线上实例~~](#13-线上实例)
+    - [~~1.3 线上实例~~](#13-线上实例)
 - [2 架构](#2-架构)
     - [2.1 目录结构](#21-目录结构)
 - [3 docker 启动](#3-docker-启动)
@@ -20,8 +20,8 @@
     - [4.6 共享主题支持](#46-共享主题支持)
     - [4.7 websocket 支持](#47-websocket-支持)
     - [4.8 系统主题](#48-系统主题)
-      - [4.8.1 状态主题](#481-状态主题)
-      - [4.8.2 功能主题](#482-功能主题)
+        - [4.8.1 状态主题](#481-状态主题)
+        - [4.8.2 功能主题](#482-功能主题)
     - [4.9 消息桥接支持](#49-消息桥接支持)
     - [4.10 主题限流支持](#410-主题限流支持)
     - [4.11 消息持久化支持](#411-消息持久化支持)
@@ -41,7 +41,8 @@
 
 ## 1 介绍
 
-`Mqttx` 基于 [MQTT v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) 协议开发，旨在提供 ***易于使用*** 且 ***性能优越*** 的 **mqtt broker**。
+`Mqttx` 基于 [MQTT v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) 协议开发，旨在提供 ***
+易于使用*** 且 ***性能优越*** 的 **mqtt broker**。
 
 注意：分支 `v1.2` 要求 ***JDK17***, 其它分支要求 ***JDK8***
 
@@ -72,9 +73,12 @@
 - 开发模式
     1. 消息会持久化到 `redis`, 默认连接 `localhost:6376` 无密码
 
-所谓**测试模式**、**开发模式**只是方便同学们快速启动项目，方便测试功能测试。熟悉项目后，同学们可通过修改 ***[6.1 配置项](#61-配置项)*** 开启或关闭 `mqttx` 提供的各项功能。
+所谓**测试模式**、**开发模式**
+只是方便同学们快速启动项目，方便测试功能测试。熟悉项目后，同学们可通过修改 ***[6.1 配置项](#61-配置项)***
+开启或关闭 `mqttx` 提供的各项功能。
 
-> `mqttx` 默认依赖 `redis` 实现消息持久化、集群等功能，使用其它中间件（`mysql`, `mongodb`, `kafka` 等）同样能够实现，而 `springboot` 具备 `spring-boot-starter-***`  等各种可插拔组件，方便大家修改默认的实现
+> `mqttx` 默认依赖 `redis` 实现消息持久化、集群等功能，使用其它中间件（`mysql`, `mongodb`, `kafka`
+> 等）同样能够实现，而 `springboot` 具备 `spring-boot-starter-***`  等各种可插拔组件，方便大家修改默认的实现
 
 ### 1.2 项目依赖
 
@@ -87,7 +91,8 @@
 
 > 开发工具建议使用 [Intellij IDEA](https://www.jetbrains.com/idea/) :blush:
 >
-> 举例：`idea` 需要安装插件 `Lombok`, `settings > Build,Execution,Deployment > Compiler > Annotation Processor` 开启 `Enable annotation processing`
+> 举例：`idea` 需要安装插件 `Lombok`, `settings > Build,Execution,Deployment > Compiler > Annotation Processor`
+> 开启 `Enable annotation processing`
 
 ### ~~1.3 线上实例~~
 
@@ -101,8 +106,6 @@
 > 4. 部署版本 `v1.0.6.RELEASE`
 >
 > ![websocket](https://s1.ax1x.com/2020/09/05/wV578J.png)
-
-
 
 ## 2 架构
 
@@ -167,8 +170,6 @@ services:
       - 8083:8083
 ```
 
-
-
 ## 4 功能说明
 
 #### 4.1 qos 支持
@@ -183,10 +184,12 @@ services:
 
 1. 支持多级通配符 `#`与单级通配符 `+`
 2. 不支持以 `/`结尾的topic，比如 `a/b/`，请改为 `a/b`。
-3. 其它规则见 ***[mqtt v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) 4.7 Topic Names and Topic
+3. 其它规则见 ***[mqtt v3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) 4.7 Topic Names and
+   Topic
    Filters***
 
-> **mqttx** 仅对订阅 topicFilter 进行校验，publish 的 topic 是没有做合法性检查的，可通过开启 [4.5 topic 安全支持](#45-topic-安全支持) 限制客户端可发布的 topic。
+> **mqttx** 仅对订阅 topicFilter 进行校验，publish 的 topic
+> 是没有做合法性检查的，可通过开启 [4.5 topic 安全支持](#45-topic-安全支持) 限制客户端可发布的 topic。
 
 举例：
 
@@ -217,7 +220,8 @@ services:
 
 1. `v1.0.5.RELEASE` 之前的版本集群功能存在 bug，无法使用。
 
-2. 如需使用 `kafka` 实现集群消息，需要手动修改配置 `application-*.yml`, 可参考 `application-dev.yml` 中的配置示例 ***3. kafka 集群***。
+2. 如需使用 `kafka` 实现集群消息，需要手动修改配置 `application-*.yml`, 可参考 `application-dev.yml` 中的配置示例 ***3.
+   kafka 集群***。
 3. 测试模式开启后，集群功能 **强制** 关闭
 
 #### 4.4 ssl 支持
@@ -240,9 +244,10 @@ services:
 
 1. `mqttx.enable-topic-sub-pub-secure`: 功能开关，默认 `false`
 
-2. broker 收到 conn 报文后，会抓取 `{clientId, username, password}` 发起请求给 `mqttx.auth.url` , 该接口返回对象中含有 `authorizedSub,authorizedPub` 存储 **client** 被授权订阅及发布的 `topic` 列表。
+2. broker 收到 conn 报文后，会抓取 `{clientId, username, password}` 发起请求给 `mqttx.auth.url` ,
+   该接口返回对象中含有 `authorizedSub,authorizedPub` 存储 **client** 被授权订阅及发布的 `topic` 列表。
 
-   详见 [4.12 基础认证支持](#412-基础认证支持) 
+   详见 [4.12 基础认证支持](#412-基础认证支持)
 
 3. broker 在消息订阅及发布都会校验客户端权限
 
@@ -272,11 +277,14 @@ services:
 
 可以配合 `cleanSession = 1` 的会话，共享主题的客户端断开连接后会被服务端移除订阅，这样共享主题的消息只会分发给在线的客户端。
 
-***CleanSession*** 介绍：`mqtt3.1.1` 协议规定当 `cleanSession = 1` 时，连接断开后与会话相关联的所有状态（不含 `retained` 消息）都会被删除（`mqtt5`
+***CleanSession*** 介绍：`mqtt3.1.1` 协议规定当 `cleanSession = 1` 时，连接断开后与会话相关联的所有状态（不含 `retained`
+消息）都会被删除（`mqtt5`
 增加了会话超时设置，感兴趣的同学可以了解一下）。
 `mqttx v1.0.5.BETA` 版本后(含)，`cleanSession = 1` 的会话消息保存在内存中，具备极高的性能.
 
-> If CleanSession is set to 1, the Client and Server **MUST** discard any previous Session and start a new one. This Session lasts as long as the Network Connection. State data associated with this Session **MUST NOT** be reused in any subsequent Session [MQTT-3.1.2-6].
+> If CleanSession is set to 1, the Client and Server **MUST** discard any previous Session and start a new one. This
+> Session lasts as long as the Network Connection. State data associated with this Session **MUST NOT** be reused in any
+> subsequent Session [MQTT-3.1.2-6].
 >
 > The Session state in the Client consists of:
 >
@@ -319,7 +327,8 @@ services:
 
 | 主题                                | 描述                                                         |
 | ----------------------------------- | ------------------------------------------------------------ |
-| `$SYS/broker/{brokerId}/status`     | 触发方式：订阅此主题的客户端会定期（`mqttx.sys-topic.interval`）收到 broker 的状态，该状态涵盖下面所有主题的状态值. <br/> **注意：客户端连接断开后，订阅取消** |
+| `$SYS/broker/{brokerId}/status`     | 触发方式：订阅此主题的客户端会定期（`mqttx.sys-topic.interval`）收到 broker 的状态，该状态涵盖下面所有主题的状态值. <br/> **
+注意：客户端连接断开后，订阅取消** |
 | `$SYS/broker/activeConnectCount`    | 立即返回当前的活动连接数量<br/>触发：订阅一次触发一次        |
 | `$SYS/broker/time`                  | 立即返回当前时间戳<br/>触发：订阅一次触发一次                |
 | `$SYS/broker/version`               | 立即返回 `broker` 版本<br/>触发：订阅一次触发一次            |
@@ -328,19 +337,20 @@ services:
 | `$SYS/broker/uptime`                | 立即返回 `broker` 运行时长，单位***秒***<br/>触发：订阅一次触发一次 |
 | `$SYS/broker/maxActiveConnectCount` | 立即返回 `broker` 运行至今的最大 `tcp` 连接数<br/>触发：订阅一次触发一次 |
 
-系统主题 `$SYS/broker/{brokerId}/status` 中的 **brokerId** 为配置项参数（见 ***[6.1 配置项](#61-配置项)***），可通过携带通配符的主题 `$SYS/broker/+/status` 订阅。
+系统主题 `$SYS/broker/{brokerId}/status` 中的 **brokerId** 为配置项参数（见 ***[6.1 配置项](#61-配置项)***
+），可通过携带通配符的主题 `$SYS/broker/+/status` 订阅。
 
 响应对象格式为 `json` 字符串：
 
 ```json
 {
-    "activeConnectCount": 1,
-    "maxActiveConnectCount": 2,
-    "receivedMsg": 6,
-    "sendMsg": 77,
-    "timestamp": "2021-03-23T23:05:37.035",
-    "uptime": 149,
-    "version": "1.0.7.RELEASE"
+  "activeConnectCount": 1,
+  "maxActiveConnectCount": 2,
+  "receivedMsg": 6,
+  "sendMsg": 77,
+  "timestamp": "2021-03-23T23:05:37.035",
+  "uptime": 149,
+  "version": "1.0.7.RELEASE"
 }
 ```
 
@@ -356,12 +366,15 @@ services:
 
 ##### 4.8.2 功能主题
 
-此功能需求源自 issue: [监听MQTT客户端状态（在线、离线） · Issue #8 · Amazingwujun/mqttx (github.com)](https://github.com/Amazingwujun/mqttx/issues/8)
+此功能需求源自
+issue: [监听MQTT客户端状态（在线、离线） · Issue #8 · Amazingwujun/mqttx (github.com)](https://github.com/Amazingwujun/mqttx/issues/8)
 
 | 主题                                                   | 描述                                                         |
 | ------------------------------------------------------ | ------------------------------------------------------------ |
-| `$SYS/broker/{borkerId}/clients/{clientId}/connected`    | 客户端上线通知主题 <br/>触发：当某个客户端上线后，**broker** 会发送消息给该主题 |
-| `$SYS/broker/{borkerId}/clients/{clientId}/disconnected` | 客户端下线通知主题<br/>触发：当某个客户端掉线后，**broker** 会发送消息给该主题 |
+| `$SYS/broker/{borkerId}/clients/{clientId}/connected`    | 客户端上线通知主题 <br/>触发：当某个客户端上线后，**
+broker** 会发送消息给该主题 |
+| `$SYS/broker/{borkerId}/clients/{clientId}/disconnected` | 客户端下线通知主题<br/>触发：当某个客户端掉线后，**
+broker** 会发送消息给该主题 |
 
 这两个系统主题支持通配符，举例：
 
@@ -380,7 +393,8 @@ services:
 1. `mqttx.message-bridge.enable`：开启消息桥接功能
 2. `mqttx.bridge-topics`：需要桥接消息的主题，主题必须符合 **kafka** 对 **topic** 的要求
 
-`mqttx` 收到客户端 ***发布*** 的消息后，先判断桥接功能是否开启，然后再判断主题是否是需要桥接消息的主题，最后发布消息到 ***MQ***。
+`mqttx` 收到客户端 ***发布*** 的消息后，先判断桥接功能是否开启，然后再判断主题是否是需要桥接消息的主题，最后发布消息到 ***
+MQ***。
 
 **仅支持单向桥接：device(client) => mqttx => MQ**
 
@@ -390,7 +404,8 @@ services:
 
 > 令牌桶算法参见：https://stripe.com/blog/rate-limiters
 >
-> 简单解释一下令牌桶概念：有一个最大容量为 `capacity` 的令牌桶，该桶以一定的速率补充令牌（`replenish-rate`），每次调用接口时消耗一定量（`token-consumed-per-acquire`）的令牌，令牌数目足够则请求通过。
+> 简单解释一下令牌桶概念：有一个最大容量为 `capacity` 的令牌桶，该桶以一定的速率补充令牌（`replenish-rate`
+> ），每次调用接口时消耗一定量（`token-consumed-per-acquire`）的令牌，令牌数目足够则请求通过。
 
 **主题限流仅适用于 `qos` 等于 *0*  的消息**。
 
@@ -428,7 +443,8 @@ mqttx:
 
 #### 4.11 消息持久化支持
 
-`mqttx` 的持久化依赖 `redis` , `mqttx` 会持久化 `cleanSession = false & qos > 0` 的消息, 消息被 `Serializer` 序列化为字节数组后存储在 `redis`。
+`mqttx` 的持久化依赖 `redis` , `mqttx` 会持久化 `cleanSession = false & qos > 0` 的消息, 消息被 `Serializer`
+序列化为字节数组后存储在 `redis`。
 
 目前 `mqttx` 提供了两种序列化实现：
 
@@ -449,7 +465,8 @@ mqttx:
 2. `mqttx.auth.readTimeout`: `OkHttpClient` readTimeout
 3. `mqttx.auth.connectTimeout`: `OkHttpClient` connectTimeout
 
-用户在配置文件中声明 `mqtt.auth.url` 后，对象 `com.jun.mqttx.service.impl.DefaultAuthenticationServiceImpl` 使用 `OkHttpClient` 发出 `POST` 请求给 `mqttx.auth.url`。 
+用户在配置文件中声明 `mqtt.auth.url` 后，对象 `com.jun.mqttx.service.impl.DefaultAuthenticationServiceImpl`
+使用 `OkHttpClient` 发出 `POST` 请求给 `mqttx.auth.url`。
 
 请求内容为 `mqtt conn` 报文中的 `username, password`.
 
@@ -470,14 +487,14 @@ Content-Length: 91
 
 ```json
 {
-    "authorizedSub": [
-        "subTopic1",
-        "subTopic2"
-    ],
-    "authorizedPub": [
-        "pubTopic1",
-        "pubTopic2"
-    ]
+  "authorizedSub": [
+    "subTopic1",
+    "subTopic2"
+  ],
+  "authorizedPub": [
+    "pubTopic1",
+    "pubTopic2"
+  ]
 }
 ```
 
@@ -487,23 +504,22 @@ Content-Length: 91
 
 - 接口返回 `http status = 200` 即表明**认证成功**, 其它状态值一律为**认证失败**
 
-
-
 ## 5 开发者说
 
 1. `v1.0` 版本分支将作为支持 **mqttv3.1.1** 协议版本持续迭代
 
-   一旦 [OpenJDK: Loom (java.net)](http://openjdk.java.net/projects/loom/) release，`v1.0` 版本将不再维护，替代版本为 `v1.2`
+   一旦 [OpenJDK: Loom (java.net)](http://openjdk.java.net/projects/loom/) release，`v1.0`
+   版本将不再维护，替代版本为 `v1.2`
 
 2. 为使 ***mqttx*** 项目变得更好，请使用及学习该项目的同学主动反馈使用情况给我（提 issue 或加群反馈）
 
 3. 后续工作
-   - [ ] `v1.0.7.RELEASE` 版本 ***Benchmark***
-   - [ ] `v1.0.8.RELEASE` 版本开发
-   - [ ] `v1.1.0.RELEASE` 版本开发  
-   - [x] `v1.2.0.RELEASE` 版本开发
-   - [ ] `v2.0.0.RELEASE` 版本开发
-   - [x] bug 修复
+    - [ ] `v1.0.7.RELEASE` 版本 ***Benchmark***
+    - [ ] `v1.0.8.RELEASE` 版本开发
+    - [ ] `v1.1.0.RELEASE` 版本开发
+    - [x] `v1.2.0.RELEASE` 版本开发
+    - [ ] `v2.0.0.RELEASE` 版本开发
+    - [x] bug 修复
 
 4. `v1.2` 版本由 **JDK8** 升级至 **JDK17**
 
@@ -544,6 +560,7 @@ Content-Length: 91
 | `mqttx.enable-inner-cache` | `true`                          | 发布消息每次都需要查询 redis 来获取订阅的客户端列表。开启此功能后，将在内存中建立一个主题-客户端关系映射, 应用直接访问内存中的数据即可 |
 | `mqttx.enable-test-mode` | `false` | 测试模式开关，开启后系统进入测试模式; <br/>**注意：测试模式会禁用集群功能** |
 | `mqttx.ignore-client-self-pub` | `true` | 忽略 client 发送给自己的消息（当 client 发送消息给自己订阅的主题） |
+| `mqttx.max-bytes-in-message`                | `8092`                          | mqttx 允许接收的最大报文载荷，单位 `byte`.                                               |
 | `mqttx.serialize-strategy` | `json` | `broker` 采用的序列化策略，**集群策略*必须*一致**。 |
 | `mqttx.redis.cluster-session-hash-key` | `mqttx.session.key`             | redis map key；用于集群的会话存储                          |
 | `mqttx.redis.topic-prefix`              | `mqttx:topic:`                  | 主题前缀； topic <==> client 映射关系保存               |
@@ -585,7 +602,8 @@ Content-Length: 91
 #### 6.2.1 v1.0
 
 - **v1.0.8.RELEASE**
-    - [ ] 消息集中持久化到 `redis hmap` 数据结构中，`PubMsg` 仅保存 `hmap` 中的 `payloadId`, 该优化目的在于防止消息膨胀导致的 redis 内存耗用过大。（之前版本消息都是持久化到客户端各自的 `PubMsg`）
+    - [ ] 消息集中持久化到 `redis hmap` 数据结构中，`PubMsg` 仅保存 `hmap` 中的 `payloadId`, 该优化目的在于防止消息膨胀导致的
+      redis 内存耗用过大。（之前版本消息都是持久化到客户端各自的 `PubMsg`）
 - **v1.0.7.RELEASE**
     - [x] 增加序列化框架 ***Kryo*** 的支持
     - [x] 系统主题新增客户端上下线通知主题
@@ -622,17 +640,17 @@ Content-Length: 91
 #### 6.2.2 v1.1
 
 - **v1.1.0.RELEASE（开发中）**
-  - [ ] `redis` 同步转异步实现，提升性能
+    - [ ] `redis` 同步转异步实现，提升性能
 
 #### 6.2.3 v2.0
 
 - **v2.0.0.RELEASE（开发中）**
-  - [ ] [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html) 支持
+    - [ ] [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html) 支持
 
 #### 6.2.4 v1.2
 
 - **v1.2.0.RELEASE (开发中)**
-  - [x] 项目依赖 JDK 升级，当前版本：***JDK8*** 目标版本：***JDK17***
+    - [x] 项目依赖 JDK 升级，当前版本：***JDK8*** 目标版本：***JDK17***
 
 ### 6.3 Benchmark
 

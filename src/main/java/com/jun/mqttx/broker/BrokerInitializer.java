@@ -83,6 +83,8 @@ public class BrokerInitializer implements DisposableBean {
     private final Integer soBacklog;
     /** ssl开关 */
     private final Boolean sslEnable;
+    /** broker 允许报文最大字节数 */
+    private final Integer maxBytesInMessage;
     /** 客户端证书校验 */
     private final ClientAuth clientAuth;
     /** 证书工具 */
@@ -108,6 +110,7 @@ public class BrokerInitializer implements DisposableBean {
         MqttxConfig.WebSocket webSocket = mqttxConfig.getWebSocket();
         MqttxConfig.SysTopic sysTopic = mqttxConfig.getSysTopic();
 
+        this.maxBytesInMessage = mqttxConfig.getMaxBytesInMessage();
         this.probeHandler = probeHandler;
         this.sslUtils = sslUtils;
         this.brokerHandler = brokerHandler;
@@ -220,7 +223,7 @@ public class BrokerInitializer implements DisposableBean {
                         pipeline.addLast(new IdleStateHandler(0, 0,
                                 (int) heartbeat.getSeconds()));
                         pipeline.addLast(MqttEncoder.INSTANCE);
-                        pipeline.addLast(new MqttDecoder());
+                        pipeline.addLast(new MqttDecoder(maxBytesInMessage));
                         if (enableSysTopic) {
                             pipeline.addLast(probeHandler);
                         }
@@ -275,7 +278,7 @@ public class BrokerInitializer implements DisposableBean {
                         pipeline.addLast(new WebSocketServerProtocolHandler(websocketPath, "mqtt", true));
                         pipeline.addLast(new MqttWebsocketCodec());
                         pipeline.addLast(MqttEncoder.INSTANCE);
-                        pipeline.addLast(new MqttDecoder());
+                        pipeline.addLast(new MqttDecoder(maxBytesInMessage));
                         if (enableSysTopic) {
                             pipeline.addLast(probeHandler);
                         }
