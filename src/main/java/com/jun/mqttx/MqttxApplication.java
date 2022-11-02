@@ -45,7 +45,7 @@ import java.util.Objects;
 public class MqttxApplication {
 
     public static void main(String[] args) throws InterruptedException {
-        ConfigurableApplicationContext ctx = SpringApplication.run(MqttxApplication.class, args);
+        var ctx = SpringApplication.run(MqttxApplication.class, args);
 
         // preCheck
         preCheck(ctx);
@@ -63,7 +63,6 @@ public class MqttxApplication {
      * @param ctx {@link ConfigurableApplicationContext}
      */
     private static void preCheck(ApplicationContext ctx) {
-        MqttxConfig mqttxConfig = ctx.getBean(MqttxConfig.class);
         log.info("开始自检...");
 
         innerCacheConsistencyCheck(ctx);
@@ -77,25 +76,25 @@ public class MqttxApplication {
      * @param ctx {@link ApplicationContext}
      */
     private static void innerCacheConsistencyCheck(ApplicationContext ctx) {
-        MqttxConfig mqttxConfig = ctx.getBean(MqttxConfig.class);
-        MqttxConfig.Cluster cluster = mqttxConfig.getCluster();
+        var mqttxConfig = ctx.getBean(MqttxConfig.class);
+        var cluster = mqttxConfig.getCluster();
 
-        Boolean enableCluster = cluster.getEnable();
-        Integer brokerId = mqttxConfig.getBrokerId();
+        var enableCluster = cluster.getEnable();
+        var brokerId = mqttxConfig.getBrokerId();
         if (Boolean.TRUE.equals(enableCluster)) {
-            Boolean enableInnerCache = mqttxConfig.getEnableInnerCache();
-            String innerCacheConsistencyKey = cluster.getInnerCacheConsistencyKey();
+            var enableInnerCache = mqttxConfig.getEnableInnerCache();
+            var innerCacheConsistencyKey = cluster.getInnerCacheConsistencyKey();
             if (Boolean.TRUE.equals(enableInnerCache) && ObjectUtils.isEmpty(innerCacheConsistencyKey)) {
                 throw new IllegalArgumentException("mqttx.cluster.innerCacheConsistencyKey 值不能为空");
             }
-            StringRedisTemplate redisTemplate = ctx.getBean(StringRedisTemplate.class);
-            String clusterCacheStatus = redisTemplate.opsForValue().get(innerCacheConsistencyKey);
+            var redisTemplate = ctx.getBean(StringRedisTemplate.class);
+            var clusterCacheStatus = redisTemplate.opsForValue().get(innerCacheConsistencyKey);
             if (clusterCacheStatus == null) {
                 if (brokerId == null) {
                     throw new GlobalException("集群必须配置 brokerId");
                 }
 
-                log.info("内部缓存状态不存在，mqttx broker:{} 为集群第一个应用，内部缓存状态为:{}，后续加入的 mqttx 状态必须一致。",
+                log.info("内部缓存状态不存在，mqttx broker: [{}] 为集群第一个应用，内部缓存状态为: [{}]，后续加入的 mqttx 状态必须一致。",
                         brokerId, enableInnerCache ? "开" : "关");
                 redisTemplate.opsForValue().set(innerCacheConsistencyKey, String.valueOf(enableInnerCache));
             } else {

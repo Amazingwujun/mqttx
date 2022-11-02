@@ -85,7 +85,7 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
     private final PublishHandler publishHandler;
     private final Serializer serializer;
     private final boolean enableSysTopic;
-    private final int brokerId;
+    private final String brokerId;
     //@formatter:on
 
     public BrokerHandler(MqttxConfig config, MessageDelegatingHandler messageDelegatingHandler,

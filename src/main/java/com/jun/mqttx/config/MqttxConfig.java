@@ -27,6 +27,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * 业务配置.
@@ -49,8 +50,12 @@ public class MqttxConfig {
     /** mqttx 版本 */
     private String version = "unknown";
 
-    /** broker id。区分集群内不同的 broker（如果集群功能开启） */
-    private Integer brokerId = 1;
+    /**
+     * broker id, 必须唯一, 默认 uuid.
+     * <p>
+     * 用于区分集群内不同的 broker（如果集群功能开启）
+     */
+    private String brokerId = UUID.randomUUID().toString().replaceAll("-",  "");
 
     /** 心跳, 默认 60S;如果 客户端通过 conn 设置了心跳周期，则对应的 channel 心跳为指定周期 */
     private Duration heartbeat = Duration.ofMinutes(1);
@@ -116,7 +121,7 @@ public class MqttxConfig {
 
     /**
      * redis 配置
-     *
+     * <p>
      * 目前 mqttx 的储存、集群功能的默认实现都依赖 redis，耦合过重不利于其他实现（如 mysql/kafka），先抽出配置项.
      * ps: 实际上集群功能的实现也是基于 redis
      */
@@ -223,7 +228,7 @@ public class MqttxConfig {
 
     /**
      * 共享 topic 配置
-     *
+     * <p>
      * 共享 topic 支持, 实现参考 MQTT v5, 默认关。目前仅支持根据发送端 clientId 进行 hash 后的共享策略，
      * 实现见 {@link com.jun.mqttx.broker.handler.PublishHandler} <code>chooseClient(List,String)</code> 方法.
      */

@@ -9,7 +9,5 @@ spring:
 
 mqttx:
   version: @version@
-  # broker-id 用于区分集群内部机器，不同的 broker 必须分配不同的 id
-  broker-id: @broker.id@
   # kryo 比 json 更具优势
   serialize-strategy: kryo

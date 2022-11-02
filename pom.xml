@@ -16,8 +16,6 @@
     <url>https://github.com/Amazingwujun/mqttx</url>
 
     <properties>
-        <!--  broker 的 id 必须唯一  -->
-        <broker.id>1000</broker.id>
         <broker.name>mqttx</broker.name>
         <java.version>17</java.version>
         <kryo.version>5.3.0</kryo.version>

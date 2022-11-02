@@ -49,7 +49,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
     /** client订阅主题, 订阅主题前缀, 主题集合 */
     private final String clientTopicsPrefix, topicSetKey, topicPrefix;
     private final boolean enableInnerCache, enableCluster;
-    private final int brokerId;
+    private final String brokerId;
 
 
     /*                                              cleanSession = 1                                                   */

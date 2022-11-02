@@ -58,7 +58,7 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
     public final static ConcurrentHashMap<String, ChannelId> CLIENT_MAP = new ConcurrentHashMap<>(100000);
     private static final String NONE_ID_PREFIX = "NONE_ID_";
     final private boolean enableTopicSubPubSecure, enableSysTopic;
-    private final int brokerId;
+    private final String brokerId;
     /** 认证服务 */
     private final IAuthenticationService authenticationService;
     /** 会话服务 */

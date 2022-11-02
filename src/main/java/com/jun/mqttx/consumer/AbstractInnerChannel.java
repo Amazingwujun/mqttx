@@ -30,7 +30,7 @@ import java.util.List;
  */
 public abstract class AbstractInnerChannel {
 
-    private final int brokerId;
+    private final String brokerId;
     private final Serializer serializer;
     private final List<Watcher> watchers;
 
@@ -61,11 +61,10 @@ public abstract class AbstractInnerChannel {
      * @param message 消息内容
      * @param channel 订阅频道
      */
-    @SuppressWarnings("rawtypes")
     public void dispatch(byte[] message, String channel) {
         // 同 broker 消息屏蔽
-        InternalMessage internalMessage = serializer.deserialize(message, InternalMessage.class);
-        if (brokerId == internalMessage.getBrokerId()) {
+        var internalMessage = serializer.deserialize(message, InternalMessage.class);
+        if (brokerId.equals(internalMessage.getBrokerId())) {
             return;
         }
 

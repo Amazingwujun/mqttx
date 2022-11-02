@@ -68,7 +68,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
     private final ISubscriptionService subscriptionService;
     private final IPublishMessageService publishMessageService;
     private final IPubRelMessageService pubRelMessageService;
-    private final int brokerId;
+    private final String brokerId;
     private final boolean enableTopicSubPubSecure, enableShareTopic, enableRateLimiter, ignoreClientSelfPub;
     /** 共享主题轮询策略 */
     private final ShareStrategy shareStrategy;
@@ -374,8 +374,8 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
      */
     private Mono<Void> publish0(ClientSub clientSub, PubMsg pubMsg, boolean isClusterMessage) {
         // clientId, channel, topic
-        final String clientId = clientSub.getClientId();
-        final boolean isCleanSession = clientSub.isCleanSession();
+        final var clientId = clientSub.getClientId();
+        final var isCleanSession = clientSub.isCleanSession();
         final var channel = Optional.of(clientId)
                 .map(ConnectHandler.CLIENT_MAP::get)
                 .map(BrokerHandler.CHANNELS::find)

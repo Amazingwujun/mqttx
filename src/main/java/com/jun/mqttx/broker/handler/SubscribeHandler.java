@@ -53,7 +53,7 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
     private final PublishHandler publishHandler;
     private final boolean enableSysTopic;
     private final String version;
-    private final int brokerId;
+    private final String brokerId;
     private long interval;
     /** 定时任务执行器 */
     private ScheduledExecutorService fixRateExecutor;

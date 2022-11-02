@@ -41,7 +41,7 @@ public class TopicUtils {
     private static final String SYS_TOPIC_BROKER = SYS_TOPIC + "/broker/";
 
     /** broker 全部状态值 */
-    public static final String BROKER_STATUS = SYS_TOPIC_BROKER + "%d/status";
+    public static final String BROKER_STATUS = SYS_TOPIC_BROKER + "%s/status";
     /** 当前连接的客户端数 */
     public static final String BROKER_CLIENTS_ACTIVE_CONNECTED_COUNT = SYS_TOPIC_BROKER + "activeConnectCount";
     /** 服务器时间 */

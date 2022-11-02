@@ -39,7 +39,7 @@ public class InternalMessage<T> {
     private long timestamp;
 
     /** broker id */
-    private int brokerId;
+    private String brokerId;
 
     //@formatter:on
 }
