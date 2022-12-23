@@ -358,6 +358,7 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
      * </ol>
      *
      * @param msg 集群消息
+     * @deprecated 此逻辑
      */
     @Override
     public void action(byte[] msg) {
@@ -369,12 +370,13 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
             //noinspection unchecked
             im = serializer.deserialize(msg, InternalMessage.class);
         }
-        Authentication data = im.getData();
+        var data = im.getData();
         // 目的是为了兼容 v1.0.2(含) 之前的版本
-        String clientId = data.getClientId();
-        List<String> authorizedPub = data.getAuthorizedPub();
-        List<String> authorizedSub = data.getAuthorizedSub();
-        if (ObjectUtils.isEmpty(clientId) || (CollectionUtils.isEmpty(authorizedPub) && CollectionUtils.isEmpty(authorizedSub))) {
+        var clientId = data.getClientId();
+        var authorizedPub = data.getAuthorizedPub();
+        var authorizedSub = data.getAuthorizedSub();
+        if (ObjectUtils.isEmpty(clientId) ||
+                (CollectionUtils.isEmpty(authorizedPub) && CollectionUtils.isEmpty(authorizedSub))) {
             log.warn("权限修改参数非法:{}", im);
             return;
         }

@@ -1,11 +1,11 @@
 package com.jun.mqttx.utils;
 
-import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -194,29 +194,6 @@ public class JSON {
             return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(value);
         } catch (JsonProcessingException e) {
             throw new JsonException(e.getMessage(), e);
-        }
-    }
-
-    /**
-     * json 中可能存在嵌套对象，比如
-     * <pre>
-     * {
-     *     ”user": {
-     *         "name":"lewin",
-     *         "age":2
-     *     }
-     * }
-     * </pre>
-     * <p>
-     * 但我们仅仅只是想将 user 字段反序列化为 {@link String} 类型
-     */
-    public static class JsonNode2StringDeserializer extends JsonDeserializer<String> {
-
-        @Override
-        public String deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
-            ObjectCodec codec = p.getCodec();
-            TreeNode treeNode = codec.readTree(p);
-            return treeNode.toString();
         }
     }
 }

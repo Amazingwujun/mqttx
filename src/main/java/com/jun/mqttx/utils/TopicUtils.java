@@ -295,4 +295,14 @@ public class TopicUtils {
 
         return result;
     }
+
+    /**
+     * 判断主题是包含通配符
+     *
+     * @param topic 主题
+     * @return true, if topic contain wildcard
+     */
+    public static boolean isTopicContainWildcard(String topic) {
+        return topic != null && (topic.contains("#") || topic.contains("+"));
+    }
 }

@@ -18,6 +18,10 @@ package com.jun.mqttx.utils;
 
 import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.exception.SslException;
+import io.netty.util.HashedWheelTimer;
+import io.netty.util.Timeout;
+import io.netty.util.TimerTask;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Component;
@@ -30,6 +34,7 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 用于加载生成 {@link KeyManagerFactory} 及 {@link TrustManagerFactory}
@@ -38,6 +43,7 @@ import java.security.cert.CertificateException;
  * @since 1.0.4
  */
 @Component
+@Slf4j
 public class SslUtils {
 
     private KeyStore keyStore;
