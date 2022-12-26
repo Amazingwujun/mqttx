@@ -175,10 +175,11 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
                     // 解决遗嘱消息无法 retain 的 bug
                     if (msg.isRetain()) {
                         publishHandler.handleRetainMsg(msg)
-                                .flatMap(unused -> publishHandler.publish(msg, ctx, false))
+                                .then(publishHandler.publish(msg, ctx, false))
                                 .subscribe();
+                    } else {
+                        publishHandler.publish(msg, ctx, false).subscribe();
                     }
-                    publishHandler.publish(msg, ctx, false).subscribe();
                 });
 
         // session 处理
