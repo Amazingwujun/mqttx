@@ -182,6 +182,14 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
                 var clientSubs = inMemTopicClientsMap.get(topic);
                 if (!CollectionUtils.isEmpty(clientSubs)) {
                     clientSubs.remove(ClientSub.of(clientId, 0, topic, false));
+                    if (clientSubs.isEmpty()) {
+                        // 移除关联的 inMemTopic
+                        if (TopicUtils.isTopicContainWildcard(topic)) {
+                            inMemWildcardTopics.remove(topic);
+                        } else {
+                            inMemNoneWildcardTopics.remove(topic);
+                        }
+                    }
                 }
             });
             Optional.ofNullable(inMemClientTopicsMap.get(clientId)).ifPresent(t -> t.removeAll(topics));
@@ -195,7 +203,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
             return Mono.empty();
         } else {
             var monos = topics.stream()
-                    .map(e -> stringRedisTemplate.opsForHash().remove(topicPrefix + e, clientId))
+                    .map(topic -> stringRedisTemplate.opsForHash().remove(topicPrefix + topic, clientId))
                     .toList();
             return Mono.when(monos)
                     .then(stringRedisTemplate.opsForSet().remove(clientTopicsPrefix + clientId, topics.toArray()))
@@ -326,7 +334,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
                             .add(clientSub);
                     if (TopicUtils.isTopicContainWildcard(topic)) {
                         inMemWildcardTopics.add(topic);
-                    }else {
+                    } else {
                         inMemNoneWildcardTopics.add(topic);
                     }
                     inMemClientTopicsMap
