@@ -207,7 +207,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
                     .toList();
             return Mono.when(monos)
                     .then(stringRedisTemplate.opsForSet().remove(clientTopicsPrefix + clientId, topics.toArray()))
-                    .flatMap(t -> unsubscribeWithCache(clientId, topics))
+                    .flatMap(t -> unsubscribeWithCache(clientId, topics, false))
                     .doOnSuccess(unused -> {
                         // 集群广播
                         if (enableCluster) {
@@ -356,7 +356,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
                     });
                     Optional.ofNullable(inMemClientTopicsMap.get(clientId)).ifPresent(t -> t.removeAll(data.getTopics()));
                 } else {
-                    unsubscribeWithCache(clientId, data.getTopics())
+                    unsubscribeWithCache(clientId, data.getTopics(), true)
                             .doOnError(throwable -> log.error(throwable.getMessage(), throwable))
                             .subscribe();
                 }
@@ -454,10 +454,11 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
     /**
      * 移除缓存中的订阅
      *
-     * @param clientId 客户端ID
-     * @param topics   主题列表
+     * @param clientId  客户端ID
+     * @param topics    主题列表
+     * @param isCluster true: 表明此方法由集群消息触发; false: 表明方法由当前实例调用处理
      */
-    private Mono<Void> unsubscribeWithCache(String clientId, List<String> topics) {
+    private Mono<Void> unsubscribeWithCache(String clientId, List<String> topics, boolean isCluster) {
         if (!enableInnerCache) {
             return Mono.empty();
         }
@@ -475,7 +476,23 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
                 }
             }
         }
-        if (!waitToDel.isEmpty()) {
+        if (waitToDel.isEmpty()) {
+            return Mono.empty();
+        }
+
+        // 缓存中 topic 删除逻辑，需要注意方法触发来源为当前实例还是集群消息
+        if (isCluster) {
+            // 缓存移除
+            // 注意，不要移除 inMemWildcardTopics, inMemNoneWildcardTopics 中的数据
+            for (var topic : waitToDel) {
+                if (TopicUtils.isTopicContainWildcard(topic)) {
+                    inDiskWildcardTopics.remove(topic);
+                } else {
+                    inDiskNoneWildcardTopics.remove(topic);
+                }
+            }
+            return Mono.empty();
+        } else {
             return stringRedisTemplate.opsForSet().remove(topicSetKey, waitToDel.toArray())
                     .doOnSuccess(t -> {
                         // 缓存移除
@@ -490,8 +507,6 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
                     })
                     .then();
         }
-
-        return Mono.empty();
     }
 
     /**
