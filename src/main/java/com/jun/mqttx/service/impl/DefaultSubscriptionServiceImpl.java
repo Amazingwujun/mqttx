@@ -397,6 +397,10 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
      * @param clientSub 客户端端订阅
      */
     private void subscribeWithCache(ClientSub clientSub) {
+        if (!enableInnerCache) {
+            return;
+        }
+
         String topic = clientSub.getTopic();
         String clientId = clientSub.getClientId();
 
