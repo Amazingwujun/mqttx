@@ -270,9 +270,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         final var clientId = data.getClientId();
         switch (type) {
             case SUB -> subscribeWithCache(ClientSub.of(clientId, data.getQos(), data.getTopic(), data.isCleanSession()));
-            case UN_SUB -> unsubscribeWithCache(clientId, data.getTopics())
-                    .doOnError(throwable -> log.error(throwable.getMessage(), throwable))
-                    .subscribe();
+            case UN_SUB -> unsubscribeWithCache(clientId, data.getTopics());
             default -> log.error("非法的 ClientSubOrUnsubMsg: [{}] ", data);
         }
     }
@@ -337,9 +335,9 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         }
 
         /*
-         * HACK 可以加定制化功能提升性能，如：在定义业务 topic 的时候，以 up / down 开头，以下代码判断是 up 字符开头，则进入循环。
+         * HACK 可以加定制化功能提升性能，如：在定义业务 topic 的时候，以 up / down 开头，以下代码增加判断是 up 字符开头，则进入循环。
          *  实际业务场景中，下行的消息是平台下发到设备，设备需要订阅完整 topic，上行的消息是设备发送到平台，平台需要订阅通配符的 topic。
-         *  结合 ACL 访问控制策略使用，可以将订阅含通配符的 topic 数量控制到极少，业务上正确使用的话，以下 for 循环的执行效率会非常高。
+         *  结合 ACL 访问控制策略使用，可以将订阅含通配符的 topic 数量控制到极少，业务上恰当使用的话，以下 for 循环的执行效率会非常高。
          */
         // 2 含通配符主题集合
         for (String t : incWildcardTopics) {
@@ -360,9 +358,9 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
      * @param clientId 客户端ID
      * @param topics   主题列表
      */
-    private Mono<Void> unsubscribeWithCache(String clientId, List<String> topics) {
+    private void unsubscribeWithCache(String clientId, List<String> topics) {
         if (!enableInnerCache) {
-            return Mono.empty();
+            return;
         }
 
         // 待删除的主题(当主题没有客户端订阅后)
@@ -387,10 +385,10 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         });
 
         if (!waitToDel.isEmpty()) {
-            return stringRedisTemplate.opsForSet().remove(topicSetKey, waitToDel.toArray()).then();
+            stringRedisTemplate.opsForSet().remove(topicSetKey, waitToDel.toArray()).then()
+                    .doOnError(throwable -> log.error(throwable.getMessage(), throwable))
+                    .subscribe();
         }
-
-        return Mono.empty();
     }
 
     /**
