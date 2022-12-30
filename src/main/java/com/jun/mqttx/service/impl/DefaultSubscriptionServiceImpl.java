@@ -150,7 +150,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         }
 
         // 将订阅关系从本地缓存移除
-        unsubscribeWithCache(clientId, topics);
+        unsubscribeWithCache(clientId, topics, false);
 
         // 集群广播
         if (enableCluster) {
@@ -270,7 +270,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         final var clientId = data.getClientId();
         switch (type) {
             case SUB -> subscribeWithCache(ClientSub.of(clientId, data.getQos(), data.getTopic(), data.isCleanSession()));
-            case UN_SUB -> unsubscribeWithCache(clientId, data.getTopics());
+            case UN_SUB -> unsubscribeWithCache(clientId, data.getTopics(), true);
             default -> log.error("非法的 ClientSubOrUnsubMsg: [{}] ", data);
         }
     }
@@ -357,8 +357,9 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
      *
      * @param clientId 客户端ID
      * @param topics   主题列表
+     * @param isCluster true: 表明此方法由集群消息触发; false: 表明方法由当前实例调用处理
      */
-    private void unsubscribeWithCache(String clientId, List<String> topics) {
+    private void unsubscribeWithCache(String clientId, List<String> topics,  boolean isCluster) {
         if (!enableInnerCache) {
             return;
         }
@@ -384,7 +385,8 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
             }
         });
 
-        if (!waitToDel.isEmpty()) {
+        // 缓存中 topic 删除逻辑，需要注意方法触发来源为当前实例还是集群消息
+        if (isCluster && !waitToDel.isEmpty()) {
             stringRedisTemplate.opsForSet().remove(topicSetKey, waitToDel.toArray()).then()
                     .doOnError(throwable -> log.error(throwable.getMessage(), throwable))
                     .subscribe();
