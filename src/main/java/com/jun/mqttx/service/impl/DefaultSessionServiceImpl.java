@@ -3,6 +3,7 @@ package com.jun.mqttx.service.impl;
 import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.entity.Session;
 import com.jun.mqttx.service.ISessionService;
+import com.jun.mqttx.utils.MessageIdUtils;
 import com.jun.mqttx.utils.Serializer;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -68,11 +69,11 @@ public class DefaultSessionServiceImpl implements ISessionService {
     public Mono<Integer> nextMessageId(String clientId) {
         return redisTemplate.opsForValue().increment(messageIdPrefix + clientId)
                 .flatMap(e -> {
-                    if (Objects.equals(e, 0L)) {
+                    if ((e & 0xffff) == 0) {
                         return redisTemplate.opsForValue().increment(messageIdPrefix + clientId);
                     }
                     return Mono.just(e);
                 })
-                .map(Math::toIntExact);
+                .map(t -> MessageIdUtils.trimMessageId(Math.toIntExact(t)));
     }
 }

@@ -16,6 +16,7 @@
 
 package com.jun.mqttx.entity;
 
+import com.jun.mqttx.utils.MessageIdUtils;
 import io.netty.handler.codec.mqtt.MqttVersion;
 import lombok.Data;
 
@@ -109,10 +110,10 @@ public class Session {
         // SUBSCRIBE, UNSUBSCRIBE, and PUBLISH (in cases where QoS > 0) Control Packets MUST contain a
         // non-zero 16-bit Packet Identifier [MQTT-2.3.1-1].
         if ((++messageId & 0xffff) != 0) {
-            return messageId;
+            return MessageIdUtils.trimMessageId(messageId);
         }
 
-        return ++messageId;
+        return MessageIdUtils.trimMessageId(++messageId);
     }
 
     /**
