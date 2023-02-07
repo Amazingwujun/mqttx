@@ -74,7 +74,7 @@ public class DefaultPubRelMessageServiceImpl implements IPubRelMessageService {
 
     @Override
     public Mono<Void> clear(String clientId) {
-        return redisTemplate.delete(inKey(clientId), outKey(clientId)).then();
+        return Mono.when(redisTemplate.delete(inKey(clientId)), redisTemplate.delete(outKey(clientId)));
     }
 
     private String inKey(String clientId) {
