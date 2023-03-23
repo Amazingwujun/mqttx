@@ -5,7 +5,9 @@ services:
     image: redis
   mqttx:
     container_name: mqttx
-    image: fantasywujun/mqttx:1.2.0
+    image: fantasywujun/mqttx:1.2.1
+    environment:
+      mqttx.max-bytes-in-message: 10485760
+      mqttx.web-socket.enable: false
     ports:
       - 1883:1883
-      - 8083:8083
