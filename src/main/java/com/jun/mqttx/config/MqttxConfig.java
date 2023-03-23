@@ -299,6 +299,9 @@ public class MqttxConfig {
     @Data
     public static class Auth {
 
+        /** 是否强制要求密码认证 */
+        private Boolean isMandatory = false;
+
         /** 认证服务接口地址 */
         private String url;
 

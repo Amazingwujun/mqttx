@@ -57,7 +57,7 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
 
     public final static ConcurrentHashMap<String, ChannelId> CLIENT_MAP = new ConcurrentHashMap<>(100000);
     private static final String NONE_ID_PREFIX = "NONE_ID_";
-    final private boolean enableTopicSubPubSecure, enableSysTopic;
+    final private boolean enableTopicSubPubSecure, enableSysTopic, isMandatoryAuthentication;
     private final String brokerId;
     /** 认证服务 */
     private final IAuthenticationService authenticationService;
@@ -94,6 +94,7 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         this.pubRelMessageService = pubRelMessageService;
         this.enableTopicSubPubSecure = config.getEnableTopicSubPubSecure();
         this.enableSysTopic = sysTopic.getEnable();
+        this.isMandatoryAuthentication = config.getAuth().getIsMandatory();
 
         if (isClusterMode()) {
             this.internalMessagePublishService = internalMessagePublishService;
@@ -134,42 +135,45 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         }
         final var clientId = clientIdentifier; // for lambda
 
-        // 用户名及密码校验
-        if (variableHeader.hasPassword() && variableHeader.hasUserName()) {
-            authenticationService.asyncAuthenticate(ClientAuthDTO.of(clientId, username, password))
-                    .thenAccept(authentication -> {
-                        if (authentication == null) {
-                            // authentication 是有可能为 null 的
-                            // 比如 认证服务 response http status = 200, 但是响应内容为空
-                            authentication = Authentication.of(clientId);
-                        } else {
-                            authentication.setClientId(clientId); // 置入 clientId
-                        }
-                        process0(ctx, msg, authentication);
-                    })
-                    .exceptionally(throwable -> {
-                        MqttConnAckMessage mqttConnAckMessage;
-                        if (throwable.getCause() instanceof AuthenticationException) {
-                            mqttConnAckMessage = MqttMessageBuilders.connAck()
-                                    .sessionPresent(false)
-                                    .returnCode(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD)
-                                    .build();
-                        } else {
-                            mqttConnAckMessage = MqttMessageBuilders.connAck()
-                                    .sessionPresent(false)
-                                    .returnCode(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE)
-                                    .build();
-                        }
-                        log.error(String.format("client[id: %s, username: %s]登入失败", clientId, username), throwable);
-
-                        // 告知客户端并关闭连接
-                        ctx.writeAndFlush(mqttConnAckMessage);
-                        ctx.close();
-                        return null;
-                    });
-        } else {
+        // Authentication
+        if (!isMandatoryAuthentication) {
+            // 强制认证未开启
             process0(ctx, msg, Authentication.of(clientId));
+            return;
         }
+
+        // 用户名及密码校验
+        authenticationService.asyncAuthenticate(ClientAuthDTO.of(clientId, username, password))
+                .thenAccept(authentication -> {
+                    if (authentication == null) {
+                        // authentication 是有可能为 null 的
+                        // 比如 认证服务 response http status = 200, 但是响应内容为空
+                        authentication = Authentication.of(clientId);
+                    } else {
+                        authentication.setClientId(clientId); // 置入 clientId
+                    }
+                    process0(ctx, msg, authentication);
+                })
+                .exceptionally(throwable -> {
+                    MqttConnAckMessage mqttConnAckMessage;
+                    if (throwable.getCause() instanceof AuthenticationException) {
+                        mqttConnAckMessage = MqttMessageBuilders.connAck()
+                                .sessionPresent(false)
+                                .returnCode(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD)
+                                .build();
+                    } else {
+                        mqttConnAckMessage = MqttMessageBuilders.connAck()
+                                .sessionPresent(false)
+                                .returnCode(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE)
+                                .build();
+                    }
+                    log.error(String.format("client[id: %s, username: %s]登入失败", clientId, username), throwable);
+
+                    // 告知客户端并关闭连接
+                    ctx.writeAndFlush(mqttConnAckMessage);
+                    ctx.close();
+                    return null;
+                });
     }
 
     /**
@@ -326,9 +330,9 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
                         // to the Client as if the network had failed
                         var heartbeat = variableHeader.keepAliveTimeSeconds() * 1.5;
                         if (heartbeat > 0) {
-                                // 替换掉 NioChannelSocket 初始化时加入的 idleHandler
-                                ctx.pipeline().replace(IdleStateHandler.class, "idleHandler", new IdleStateHandler(
-                                        0, 0, (int) heartbeat));
+                            // 替换掉 NioChannelSocket 初始化时加入的 idleHandler
+                            ctx.pipeline().replace(IdleStateHandler.class, "idleHandler", new IdleStateHandler(
+                                    0, 0, (int) heartbeat));
                         }
 
                         // 根据协议补发 qos1,与 qos2 的消息
