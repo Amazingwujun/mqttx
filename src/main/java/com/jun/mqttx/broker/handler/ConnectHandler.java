@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2020-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,9 +74,13 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
 
     //@formatter:on
 
-    public ConnectHandler(IAuthenticationService authenticationService, ISessionService sessionService,
-                          ISubscriptionService subscriptionService, IPublishMessageService publishMessageService,
-                          IPubRelMessageService pubRelMessageService, MqttxConfig config, @Nullable IInternalMessagePublishService internalMessagePublishService) {
+    public ConnectHandler(IAuthenticationService authenticationService,
+                          ISessionService sessionService,
+                          ISubscriptionService subscriptionService,
+                          IPublishMessageService publishMessageService,
+                          IPubRelMessageService pubRelMessageService,
+                          MqttxConfig config,
+                          @Nullable IInternalMessagePublishService internalMessagePublishService) {
         super(config.getCluster().getEnable());
         Assert.notNull(authenticationService, "authentication can't be null");
         Assert.notNull(sessionService, "sessionService can't be null");
