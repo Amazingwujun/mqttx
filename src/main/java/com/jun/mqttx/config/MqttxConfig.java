@@ -235,14 +235,10 @@ public class MqttxConfig {
     @Data
     public static class ShareTopic {
 
-        /** 开关 */
-        private Boolean enable = true;
-
         /**
          * 共享订阅消息分发策略, 默认轮询
          * <ul>
          *     <li>{@link ShareStrategy#random} 随机</li>
-         *     <li>{@link ShareStrategy#hash}  哈希</li>
          *     <li>{@link ShareStrategy#round} 轮询</li>
          * </ul>
          * @see ShareStrategy

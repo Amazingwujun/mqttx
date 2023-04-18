@@ -20,6 +20,7 @@ import com.jun.mqttx.broker.BrokerHandler;
 import com.jun.mqttx.config.MqttxConfig;
 import com.jun.mqttx.entity.BrokerStatus;
 import com.jun.mqttx.entity.ClientSub;
+import com.jun.mqttx.entity.ShareTopic;
 import com.jun.mqttx.service.IRetainMessageService;
 import com.jun.mqttx.service.ISubscriptionService;
 import com.jun.mqttx.utils.TopicUtils;
@@ -100,8 +101,15 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
         List<Integer> grantedQosLevels = new ArrayList<>(mqttTopicSubscriptions.size());
         var needSave = new ArrayList<ClientSub>();
         mqttTopicSubscriptions.forEach(mqttTopicSubscription -> {
-            final String topic = mqttTopicSubscription.topicName();
+            String topic = mqttTopicSubscription.topicName();
             int qos = mqttTopicSubscription.qualityOfService().value();
+            final var isShareTopic = TopicUtils.isShare(topic);
+            String shareName = null;
+            if (isShareTopic) {
+                ShareTopic shareTopic = TopicUtils.parseFrom(topic);
+                topic = shareTopic.filter();
+                shareName = shareTopic.name();
+            }
 
             if (!TopicUtils.isValid(topic)) {
                 // Failure
@@ -120,7 +128,7 @@ public class SubscribeHandler extends AbstractMqttTopicSecureHandler {
                         if (TopicUtils.isSys(topic)) {
                             qos = 0x80;
                         } else {
-                            ClientSub clientSub = ClientSub.of(clientId, qos, topic, isCleanSession(ctx));
+                            ClientSub clientSub = ClientSub.of(clientId, qos, topic, isCleanSession(ctx), shareName);
                             needSave.add(clientSub);
                         }
                     }

@@ -17,15 +17,19 @@
 package com.jun.mqttx.broker.handler;
 
 import com.jun.mqttx.config.MqttxConfig;
+import com.jun.mqttx.entity.ShareTopic;
+import com.jun.mqttx.entity.Tuple2;
 import com.jun.mqttx.service.ISubscriptionService;
 import com.jun.mqttx.utils.TopicUtils;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.ObjectUtils;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * {@link MqttMessageType#UNSUBSCRIBE} 消息处理器
@@ -33,47 +37,36 @@ import java.util.stream.Collectors;
  * @author Jun
  * @since 1.0.4
  */
+@Slf4j
 @Handler(type = MqttMessageType.UNSUBSCRIBE)
 public class UnsubscribeHandler extends AbstractMqttSessionHandler {
 
-    private final Boolean enableSysTopic;
     private final ISubscriptionService subscriptionService;
 
     public UnsubscribeHandler(MqttxConfig config, ISubscriptionService subscriptionService) {
         super(config.getCluster().getEnable());
-        this.enableSysTopic = config.getSysTopic().getEnable();
         this.subscriptionService = subscriptionService;
     }
 
     @Override
     public void process(ChannelHandlerContext ctx, MqttMessage msg) {
-        MqttUnsubscribeMessage mqttUnsubscribeMessage = (MqttUnsubscribeMessage) msg;
-        int messageId = mqttUnsubscribeMessage.variableHeader().messageId();
-        MqttUnsubscribePayload payload = mqttUnsubscribeMessage.payload();
+        final var mqttUnsubscribeMessage = (MqttUnsubscribeMessage) msg;
+        final var messageId = mqttUnsubscribeMessage.variableHeader().messageId();
+        final var payload = mqttUnsubscribeMessage.payload();
 
         // 系统主题
-        List<String> collect = new ArrayList<>(payload.topics());
-        if (enableSysTopic) {
-            List<String> unSubSysTopics = collect.stream().filter(TopicUtils::isSys).collect(Collectors.toList());
-            collect.removeAll(unSubSysTopics);
-            Mono.when(unsubscribeSysTopics(unSubSysTopics, ctx), subscriptionService.unsubscribe(clientId(ctx), isCleanSession(ctx), collect))
-                    .doOnSuccess(unused -> {
-                        // response
-                        MqttMessage mqttMessage = MqttMessageFactory.newMessage(
-                                new MqttFixedHeader(MqttMessageType.UNSUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
-                                MqttMessageIdVariableHeader.from(messageId),
-                                null
-                        );
-                        ctx.writeAndFlush(mqttMessage);
-                    }).subscribe();
-            return;
-        }
+        var generalTopics = new ArrayList<>(payload.topics());
+        var unSubSysTopics = generalTopics.stream().filter(TopicUtils::isSys).toList();
 
-        // 非系统主题
-        subscriptionService.unsubscribe(clientId(ctx), isCleanSession(ctx), collect)
+        // 移除系统主题
+        generalTopics.removeAll(unSubSysTopics);
+
+        // 删除订阅
+        Mono.when(unsubscribeSysTopics(unSubSysTopics, ctx), subscriptionService.unsubscribe(clientId(ctx), isCleanSession(ctx), generalTopics))
+                .doOnError(throwable -> log.error(String.format("主题订阅[%s]删除失败", generalTopics), throwable))
                 .doOnSuccess(unused -> {
                     // response
-                    MqttMessage mqttMessage = MqttMessageFactory.newMessage(
+                    var mqttMessage = MqttMessageFactory.newMessage(
                             new MqttFixedHeader(MqttMessageType.UNSUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
                             MqttMessageIdVariableHeader.from(messageId),
                             null
@@ -89,6 +82,9 @@ public class UnsubscribeHandler extends AbstractMqttSessionHandler {
      * @param ctx            {@link ChannelHandlerContext}
      */
     private Mono<Void> unsubscribeSysTopics(List<String> unSubSysTopics, ChannelHandlerContext ctx) {
+        if (ObjectUtils.isEmpty(unSubSysTopics)) {
+            return Mono.empty();
+        }
         return subscriptionService.unsubscribeSys(clientId(ctx), unSubSysTopics);
     }
 }

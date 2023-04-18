@@ -103,9 +103,10 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         this.stringRedisTemplate = stringRedisTemplate;
         this.serializer = serializer;
         this.internalMessagePublishService = internalMessagePublishService;
-        this.clientTopicsPrefix = mqttxConfig.getRedis().getClientTopicSetPrefix();
-        this.topicPrefix = mqttxConfig.getRedis().getTopicPrefix();
-        this.topicSetKey = mqttxConfig.getRedis().getTopicSetKey();
+        var redisKey = mqttxConfig.getRedis();
+        this.clientTopicsPrefix = redisKey.getClientTopicSetPrefix();
+        this.topicPrefix = redisKey.getTopicPrefix();
+        this.topicSetKey = redisKey.getTopicSetKey();
 
         var cluster = mqttxConfig.getCluster();
         this.enableCluster = cluster.getEnable();

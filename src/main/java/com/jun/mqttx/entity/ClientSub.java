@@ -16,7 +16,9 @@
 
 package com.jun.mqttx.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
+import org.springframework.util.StringUtils;
 
 import java.util.Objects;
 
@@ -30,7 +32,8 @@ import java.util.Objects;
  * Any existing retained messages matching the Topic Filter MUST be re-sent, but the flow of
  * publications MUST NOT be interrupted [MQTT-3.8.4-3].
  * </pre>
- * 根据上述协议，client 订阅对象判定相等只需 topic 与 client 两个参数即可。
+ * 根据上述协议，client 订阅对象判定相等只需 topic 与 client 两个参数即可。但由于共享订阅的支持，判断 ClientSub 是否相等需要增加
+ * {@link #shareName} 字段的判断
  *
  * @author Jun
  * @since 1.0.4
@@ -42,15 +45,30 @@ public class ClientSub implements Comparable<ClientSub> {
     private String clientId;
     private int qos;
     private String topic;
+    private String shareName;
 
     public static ClientSub of(String clientId, int qos, String topic, boolean cleanSession) {
+        return of(clientId, qos, topic, cleanSession, null);
+    }
+
+    public static ClientSub of(String clientId, int qos, String topic, boolean cleanSession, String shareName) {
         ClientSub clientSub = new ClientSub();
         clientSub.setClientId(clientId);
         clientSub.setQos(qos);
         clientSub.setTopic(topic);
         clientSub.setCleanSession(cleanSession);
+        clientSub.setShareName(shareName);
 
         return clientSub;
+    }
+
+    @JsonIgnore
+    public boolean isShareSub() {
+        return StringUtils.hasText(shareName);
+    }
+
+    public Boolean notShareSub() {
+        return !isShareSub();
     }
 
     /**
@@ -72,11 +90,13 @@ public class ClientSub implements Comparable<ClientSub> {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         ClientSub clientSub = (ClientSub) o;
-        return clientId.equals(clientSub.clientId) && topic.equals(clientSub.topic);
+        return Objects.equals(clientId, clientSub.clientId) &&
+                Objects.equals(topic, clientSub.topic) &&
+                Objects.equals(shareName, clientSub.shareName);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(clientId, topic);
+        return Objects.hash(clientId, topic, shareName);
     }
 }

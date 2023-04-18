@@ -17,6 +17,7 @@
 package com.jun.mqttx.utils;
 
 import com.jun.mqttx.broker.handler.AbstractMqttSessionHandler;
+import com.jun.mqttx.entity.ShareTopic;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.AttributeKey;
@@ -160,6 +161,17 @@ public class TopicUtils {
     }
 
     /**
+     * 由共享主题中解析出 filter 和 shareName
+     *
+     * @param topic 共享主题
+     * @return 共享主题 filter 和 shareName
+     */
+    public static ShareTopic parseFrom(String topic) {
+        String[] split = topic.split("/");
+        return new ShareTopic(split[1], split[2]);
+    }
+
+    /**
      * 用于判定客户端订阅的 topic 是否合法，参考 mqtt-v3.1.1 4.7章进行逻辑实现，以下为定制化通配符处理策略：
      * <ul>
      *     <li>最后一个字符不可为'/'</li>
@@ -218,6 +230,11 @@ public class TopicUtils {
             if (isStartWithShare && i == 1 && (fragment.contains("+") || fragment.contains("#"))) {
                 return false;
             }
+        }
+
+        // 如果是共享主题，不允许少于三个 fragment
+        if (isStartWithShare && split.length < 3) {
+            return false;
         }
 
         return true;
