@@ -14,16 +14,15 @@
  * limitations under the License.
  */
 
-package com.jun.mqttx.constants;
+package com.jun.mqttx.entity;
 
 /**
- * 共享订阅策略, 分别支持随机、轮询机制.
+ * 共享主题对象
  *
+ * @param filter 过滤器
+ * @param name   share name
  * @author Jun
- * @since 1.0.4
+ * @since 1.0.0
  */
-public enum ShareStrategy {
-
-    random,
-    round;
+public record ShareTopic(String name, String filter) {
 }

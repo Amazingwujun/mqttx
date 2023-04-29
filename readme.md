@@ -254,15 +254,14 @@ services:
 
 #### 4.6 共享主题支持
 
-共享订阅是 `mqtt5` 协议规定的内容，很多 mq(例如 `kafka`) 都有实现。
+共享订阅是协议 `mqtt5` 规定的内容，**`MQTTX`** 参考协议标准实现。
 
-1. `mqttx.share-topic.enable`: 功能开关，默认 `true`
+1. 格式: `$share/{ShareName}/{filter}`, `$share` 为前缀, `ShareName` 为共享订阅名, `filter` 就是非共享订阅主题过滤器。
 
-2. 格式: `$share/{ShareName}/{filter}`, `$share` 为前缀, `ShareName` 为共享订阅名, `filter` 就是非共享订阅主题过滤器。
-
-3. 目前支持 `hash`, `random`, `round` 三种规则
-
-   > `hash` 选出的 **client** 会随着**订阅客户端数量**及**发送消息客户端 `clientId`** 变化而变化
+2. 支持如下两种消息分发规则
+   1. `round`: 轮询
+   2. `random`: 随机
+3. 详细内容请参考协议 [MQTT Version 5.0 (oasis-open.org)](https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901250) 
 
 下图展示了共享主题与常规主题之间的差异:
 
@@ -569,8 +568,7 @@ Content-Length: 91
 | `mqttx.websocket.enable`                    | `false`                         | websocket 开关                                               |
 | `mqttx.websocket.port`                      | `8083`                          | websocket 监听端口                                           |
 | `mqttx.websocket.path`                      | `/mqtt`                         | websocket path                                               |
-| `mqttx.share-topic.enable`                  | `true`                          | 共享主题功能开关                                             |
-| `mqttx.share-topic.share-sub-strategy`      | `round`                         | 负载均衡策略, 目前支持随机、轮询、哈希                       |
+| `mqttx.share-topic.share-sub-strategy`      | `round`                         | 负载均衡策略, 目前支持随机、轮询                             |
 | `mqttx.sys-topic.enable`                    | `false`                         | 系统主题功能开关                                             |
 | `mqttx.sys-topic.interval`                  | `60s`                           | 定时发布间隔                                                 |
 | `mqttx.message-bridge.enable`               | `false`                         | 消息桥接功能开关                                             |

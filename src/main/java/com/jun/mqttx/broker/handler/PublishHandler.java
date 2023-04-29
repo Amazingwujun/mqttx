@@ -31,7 +31,6 @@ import com.jun.mqttx.service.*;
 import com.jun.mqttx.utils.JsonSerializer;
 import com.jun.mqttx.utils.RateLimiter;
 import com.jun.mqttx.utils.Serializer;
-import com.jun.mqttx.utils.TopicUtils;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
@@ -42,7 +41,9 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.GroupedFlux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.time.Instant;
 import java.util.*;
@@ -69,7 +70,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
     private final IPublishMessageService publishMessageService;
     private final IPubRelMessageService pubRelMessageService;
     private final String brokerId;
-    private final boolean enableTopicSubPubSecure, enableShareTopic, enableRateLimiter, ignoreClientSelfPub;
+    private final boolean enableTopicSubPubSecure, enableRateLimiter, ignoreClientSelfPub;
     /** 共享主题轮询策略 */
     private final ShareStrategy shareStrategy;
     /** 消息桥接开关 */
@@ -86,10 +87,15 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
 
     //@formatter:on
 
-    public PublishHandler(IPublishMessageService publishMessageService, IRetainMessageService retainMessageService,
-                          ISubscriptionService subscriptionService, IPubRelMessageService pubRelMessageService, ISessionService sessionService,
-                          @Nullable IInternalMessagePublishService internalMessagePublishService, MqttxConfig config,
-                          @Nullable KafkaTemplate<String, byte[]> kafkaTemplate, Serializer serializer) {
+    public PublishHandler(IPublishMessageService publishMessageService,
+                          IRetainMessageService retainMessageService,
+                          ISubscriptionService subscriptionService,
+                          IPubRelMessageService pubRelMessageService,
+                          ISessionService sessionService,
+                          @Nullable IInternalMessagePublishService internalMessagePublishService,
+                          MqttxConfig config,
+                          @Nullable KafkaTemplate<String, byte[]> kafkaTemplate,
+                          Serializer serializer) {
         super(config.getCluster().getEnable());
         Assert.notNull(publishMessageService, "publishMessageService can't be null");
         Assert.notNull(retainMessageService, "retainMessageService can't be null");
@@ -97,9 +103,9 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         Assert.notNull(pubRelMessageService, "publishMessageService can't be null");
         Assert.notNull(config, "mqttxConfig can't be null");
 
-        MqttxConfig.ShareTopic shareTopic = config.getShareTopic();
-        MqttxConfig.MessageBridge messageBridge = config.getMessageBridge();
-        MqttxConfig.RateLimiter rateLimiter = config.getRateLimiter();
+        var shareTopic = config.getShareTopic();
+        var messageBridge = config.getMessageBridge();
+        var rateLimiter = config.getRateLimiter();
         this.sessionService = sessionService;
         this.serializer = serializer;
         this.publishMessageService = publishMessageService;
@@ -109,7 +115,6 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         this.brokerId = config.getBrokerId();
         this.enableTopicSubPubSecure = config.getEnableTopicSubPubSecure();
         this.ignoreClientSelfPub = config.getIgnoreClientSelfPub();
-        this.enableShareTopic = shareTopic.getEnable();
         if (!CollectionUtils.isEmpty(rateLimiter.getTopicRateLimits()) && rateLimiter.getEnable()) {
             enableRateLimiter = true;
             rateLimiter.getTopicRateLimits()
@@ -196,13 +201,16 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
 
         // 响应
         switch (qos) {
-            case AT_MOST_ONCE -> publish(pubMsg, ctx, false).doOnSuccess(unused -> {
-                if (retain) {
-                    handleRetainMsg(pubMsg).subscribe();
-                }
-            }).subscribe();
+            case AT_MOST_ONCE -> publish(pubMsg, ctx, false)
+                    .publishOn(Schedulers.boundedElastic())
+                    .doOnSuccess(unused -> {
+                        if (retain) {
+                            handleRetainMsg(pubMsg).subscribe();
+                        }
+                    }).subscribe();
             case AT_LEAST_ONCE -> {
                 publish(pubMsg, ctx, false)
+                        .publishOn(Schedulers.boundedElastic())
                         .doOnSuccess(unused -> {
                             MqttMessage pubAck = MqttMessageFactory.newMessage(
                                     new MqttFixedHeader(MqttMessageType.PUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
@@ -223,6 +231,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                     Session session = getSession(ctx);
                     if (!session.isDupMsg(packetId)) {
                         publish(pubMsg, ctx, false)
+                                .publishOn(Schedulers.boundedElastic())
                                 .doOnSuccess(unused -> {
                                     // 保存 pub
                                     session.savePubRelInMsg(packetId);
@@ -261,9 +270,11 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                                     return Mono.empty();
                                 } else {
                                     return publish(pubMsg, ctx, false)
+                                            .publishOn(Schedulers.boundedElastic())
                                             .doOnSuccess(unused -> pubRelMessageService.saveIn(clientId(ctx), packetId).subscribe());
                                 }
                             })
+                            .publishOn(Schedulers.boundedElastic())
                             .doOnSuccess(unused -> {
                                 var pubRec = MqttMessageFactory.newMessage(
                                         new MqttFixedHeader(MqttMessageType.PUBREC, false, MqttQoS.AT_MOST_ONCE, false, 0),
@@ -313,7 +324,7 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         }
 
         // 获取 topic 订阅者 id 列表
-        String topic = pubMsg.getTopic();
+        final var topic = pubMsg.getTopic();
         Flux<ClientSub> clientSubFlux = subscriptionService.searchSubscribeClientList(topic)
                 .filter(clientSub -> {
                     if (ignoreClientSelfPub) {
@@ -325,27 +336,28 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                 });
 
         // 共享订阅
-        if (enableShareTopic && TopicUtils.isShare(topic)) {
-            return clientSubFlux.collectList()
-                    .map(e -> chooseClient(e, topic))
-                    .flatMap(clientSub -> {
-                        pubMsg.setAppointedClientId(clientSub.getClientId());
-                        return publish0(clientSub, pubMsg, isClusterMessage).doOnSuccess(unused -> {
-                            // 满足如下条件，则发送消息给集群
-                            // 1 集群模式开启
-                            // 2 订阅的客户端连接在其它实例上
-                            if (isClusterMode() && !ConnectHandler.CLIENT_MAP.containsKey(clientSub.getClientId())) {
-                                internalMessagePublish(pubMsg);
-                            }
-                        });
-                    })
-                    .then();
-        }
+        var f1 = clientSubFlux.filter(ClientSub::isShareSub)
+                .groupBy(ClientSub::getShareName)
+                .flatMap(GroupedFlux::collectList)
+                .map(t -> chooseClient(t, topic))
+                .flatMap(clientSub -> {
+                    pubMsg.setAppointedClientId(clientSub.getClientId());
+                    return publish0(clientSub, pubMsg, isClusterMessage).doOnSuccess(unused -> {
+                        // 满足如下条件，则发送消息给集群
+                        // 1 集群模式开启
+                        // 2 订阅的客户端连接在其它实例上
+                        if (isClusterMode() && !ConnectHandler.CLIENT_MAP.containsKey(clientSub.getClientId())) {
+                            internalMessagePublish(pubMsg);
+                        }
+                    });
+                });
 
-        return clientSubFlux
+        // 普通订阅
+        var f2 = clientSubFlux
+                .filter(ClientSub::notShareSub)
                 .collectList()
                 .doOnSuccess(lst -> {
-                    // 将消息推送给集群中的broker
+                    // 将消息推送给集群中的 broker
                     if (isClusterMode() && !isClusterMessage) {
                         // 判断是否需要进行集群消息分发
                         boolean flag = false;
@@ -361,8 +373,9 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                     }
                 })
                 .flatMapIterable(Function.identity())
-                .flatMap(clientSub -> publish0(clientSub, pubMsg, isClusterMessage))
-                .then();
+                .flatMap(clientSub -> publish0(clientSub, pubMsg, isClusterMessage));
+
+        return Mono.when(f1, f2);
     }
 
     /**
@@ -544,7 +557,6 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
      * 共享订阅选择客户端, 支持的策略如下：
      * <ol>
      *     <li>随机: {@link ShareStrategy#random}</li>
-     *     <li>哈希: {@link ShareStrategy#hash}</li>
      *     <li>轮询: {@link ShareStrategy#round}</li>
      * </ol>
      *
@@ -554,15 +566,14 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
     private ClientSub chooseClient(List<ClientSub> clientSubList, String topic) {
         // 集合排序
         clientSubList.sort(ClientSub::compareTo);
+        final var size = clientSubList.size();
 
-        if (hash == shareStrategy) {
-            return clientSubList.get(topic.hashCode() % clientSubList.size());
-        } else if (random == shareStrategy) {
-            int key = ThreadLocalRandom.current().nextInt(0, clientSubList.size());
-            return clientSubList.get(key % clientSubList.size());
+        if (random == shareStrategy) {
+            int key = ThreadLocalRandom.current().nextInt(0, size);
+            return clientSubList.get(key % size);
         } else if (round == shareStrategy) {
             int i = roundMap.computeIfAbsent(topic, s -> new AtomicInteger(0)).getAndIncrement();
-            return clientSubList.get(i % clientSubList.size());
+            return clientSubList.get(i % size);
         }
 
         throw new IllegalArgumentException("不可能到达的代码, strategy:" + shareStrategy);
