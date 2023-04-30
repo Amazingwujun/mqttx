@@ -79,7 +79,7 @@ public class ClientSub implements Comparable<ClientSub> {
     @Override
     public int compareTo(ClientSub o) {
         if (o != null) {
-            return clientId.hashCode() - o.hashCode();
+            return this.clientId.compareTo(o.getClientId());
         } else {
             throw new IllegalArgumentException("非法的比较对象:" + o);
         }

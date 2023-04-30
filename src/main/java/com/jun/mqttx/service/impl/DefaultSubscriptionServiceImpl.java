@@ -126,32 +126,48 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
      */
     @Override
     public Mono<Void> subscribe(ClientSub clientSub) {
+        return subscribe(clientSub, false);
+    }
+
+    /**
+     * 客户端订阅主题
+     *
+     * @param clientSub        客户端订阅信息
+     * @param isClusterMessage 调用消息是否源自集群
+     */
+    private Mono<Void> subscribe(ClientSub clientSub, boolean isClusterMessage) {
         final var topic = clientSub.getTopic();
         final var clientId = clientSub.getClientId();
         final var qos = clientSub.getQos();
         final var cleanSession = clientSub.isCleanSession();
         final var shareName = clientSub.getShareName();
+        var filter = topic;
+        if (StringUtils.hasText(shareName)) {
+            filter = String.format("%s/%s/%s", TopicUtils.SHARE_TOPIC, shareName, topic);
+        }
+        final var topicFilter = filter;
 
         // 保存订阅关系
         // 1. 保存 topic -> client 映射
         // 2. 将 topic 保存到 redis set 集合中
         // 3. 保存 client -> topics
         if (cleanSession) {
-            inMemTopicClientsMap
-                    .computeIfAbsent(topic, s -> ConcurrentHashMap.newKeySet())
-                    .add(clientSub);
+            inMemTopicClientsMap.computeIfAbsent(topic, s -> ConcurrentHashMap.newKeySet()).add(clientSub);
             if (TopicUtils.isTopicContainWildcard(topic)) {
                 inMemWildcardTopics.add(topic);
             } else {
                 inMemNoneWildcardTopics.add(topic);
             }
-            inMemClientTopicsMap
-                    .computeIfAbsent(clientId, s -> ConcurrentHashMap.newKeySet())
-                    .add(topic);
 
-            if (enableCluster) {
+            // 两种可能
+            // topicFilter 是普通主题，没问题.
+            // topicFilter 是共享主题，那我们清理客户订阅主题时，就必须知道该主题的全名，不能只有 filter
+            inMemClientTopicsMap.computeIfAbsent(clientId, s -> ConcurrentHashMap.newKeySet()).add(topicFilter);
+
+            // 订阅消息广播
+            if (enableCluster && !isClusterMessage) {
                 var im = new InternalMessage<>(
-                        new ClientSubOrUnsubMsg(clientId, qos, topic, true, null, SUB),
+                        new ClientSubOrUnsubMsg(clientId, qos, topicFilter, true, null, SUB),
                         System.currentTimeMillis(),
                         brokerId
                 );
@@ -159,21 +175,23 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
             }
             return Mono.empty();
         } else {
+            if (isClusterMessage) {
+                if (enableInnerCache) {
+                    subscribeWithCache(clientSub);
+                }
+                return Mono.empty();
+            }
             return Mono.when(
                     stringRedisTemplate.opsForHash().put(topicPrefix + topic, topicClientSubKey(clientId, shareName), String.valueOf(qos)),
-                    stringRedisTemplate.opsForSet().add(topicSetKey, topic),
-                    stringRedisTemplate.opsForSet().add(clientTopicsPrefix + clientId, topic)
+                    stringRedisTemplate.opsForSet().add(topicSetKey, topicFilter),
+                    // 类似 inMemClientTopicsMap#key, 这里也必须存 topicFilter
+                    stringRedisTemplate.opsForSet().add(clientTopicsPrefix + clientId, topicFilter)
             ).then(Mono.fromRunnable(() -> {
                 if (enableInnerCache) {
                     subscribeWithCache(clientSub);
                 }
 
                 if (enableCluster) {
-                    // 广播出去的主题如果是共享主题，我们需要使它符合格式
-                    var topicFilter = topic;
-                    if (StringUtils.hasText(shareName)) {
-                        topicFilter = String.format("%s/%s/%s", TopicUtils.SHARE_TOPIC, shareName, topic);
-                    }
                     var im = new InternalMessage<>(
                             new ClientSubOrUnsubMsg(clientId, qos, topicFilter, false, null, SUB),
                             System.currentTimeMillis(),
@@ -210,7 +228,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
                 // 移除主题关联关系
                 var clientSubs = inMemTopicClientsMap.get(topic);
                 if (!CollectionUtils.isEmpty(clientSubs)) {
-                    clientSubs.remove(ClientSub.of(clientId, 0, topic, false, shareName));
+                    clientSubs.remove(ClientSub.of(clientId, 0, topic, true, shareName));
                     if (clientSubs.isEmpty()) {
                         // 移除关联的 inMemTopic
                         if (TopicUtils.isTopicContainWildcard(topic)) {
@@ -223,13 +241,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
             });
 
             // 移除 client 关联的主题
-            var topicFilters = topics.stream().map(topic -> {
-                if (TopicUtils.isShare(topic)) {
-                    return TopicUtils.parseFrom(topic).filter();
-                }
-                return topic;
-            }).toList();
-            Optional.ofNullable(inMemClientTopicsMap.get(clientId)).ifPresent(t -> t.removeAll(topicFilters));
+            Optional.ofNullable(inMemClientTopicsMap.get(clientId)).ifPresent(t -> t.removeAll(topics));
 
             // 集群广播
             if (enableCluster && !isClusterMessage) {
@@ -239,8 +251,6 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
             }
             return Mono.empty();
         }
-
-        // cleanSession == false
 
         // 集群消息判断
         // 1. 是集群消息：仅移除缓存
@@ -321,6 +331,14 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
             }
         }
         return stringRedisTemplate.opsForSet().members(topicSetKey)
+                .map(t -> {
+                    if (TopicUtils.isShare(t)) {
+                        return TopicUtils.parseFrom(t).filter();
+                    }
+                    return t;
+                })
+                // 共享主题可能导致主题过滤器重复
+                .distinct()
                 .filter(t -> TopicUtils.match(topic, t))
                 .flatMap(t -> stringRedisTemplate.opsForHash().entries(topicPrefix + t)
                         .map(entry -> {
@@ -339,8 +357,6 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
 
     @Override
     public Mono<Void> clearClientSubscriptions(String clientId, boolean cleanSession) {
-        // todo 共享订阅无法清理，待处理
-
         Set<String> keys;
         if (cleanSession) {
             keys = inMemClientTopicsMap.remove(clientId);
@@ -414,23 +430,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         switch (type) {
             case SUB -> {
                 var clientSub = ClientSub.of(clientId, data.getQos(), filter, cleanSession, shareName);
-                if (cleanSession) {
-                    inMemTopicClientsMap
-                            .computeIfAbsent(filter, s -> ConcurrentHashMap.newKeySet())
-                            .add(clientSub);
-                    if (TopicUtils.isTopicContainWildcard(filter)) {
-                        inMemWildcardTopics.add(filter);
-                    } else {
-                        inMemNoneWildcardTopics.add(filter);
-                    }
-                    inMemClientTopicsMap
-                            .computeIfAbsent(clientId, s -> ConcurrentHashMap.newKeySet())
-                            .add(filter);
-                } else {
-                    if (enableInnerCache) {
-                        subscribeWithCache(ClientSub.of(clientId, data.getQos(), filter, false, shareName));
-                    }
-                }
+                subscribe(clientSub, true).subscribe();
             }
             case UN_SUB -> {
                 var topics = data.getTopics();
@@ -452,6 +452,13 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         log.info("enableInnerCache=true, 开始加载缓存...");
 
         redisTemplate.opsForSet().members(topicSetKey)
+                .map(topic -> {
+                    if (TopicUtils.isShare(topic)) {
+                        topic = TopicUtils.parseFrom(topic).filter();
+                    }
+                    return topic;
+                })
+                .distinct()
                 .collectList()
                 .doOnSuccess(topics -> {
                     for (var topic : topics) {
@@ -492,7 +499,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
      */
     private List<ClientSub> searchSubscribeClientListByCache(String topic) {
         // result
-        List<ClientSub> clientSubList = new ArrayList<>();
+        Set<ClientSub> clientSubSet = new HashSet<>();
 
         // 这里需要注意的几点
         // 1 通配符集合必须都遍历一遍，因为你不确定哪个通配符主题匹配当前主题
@@ -503,7 +510,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
             if (TopicUtils.match(topic, t)) {
                 var clientSubs = inDiskTopicClientsMap.get(t);
                 if (!CollectionUtils.isEmpty(clientSubs)) {
-                    clientSubList.addAll(clientSubs);
+                    clientSubSet.addAll(clientSubs);
                 }
             }
         }
@@ -511,7 +518,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
             if (TopicUtils.match(topic, t)) {
                 var clientSubs = inMemTopicClientsMap.get(t);
                 if (!CollectionUtils.isEmpty(clientSubs)) {
-                    clientSubList.addAll(clientSubs);
+                    clientSubSet.addAll(clientSubs);
                 }
             }
         }
@@ -520,27 +527,27 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         if (inDiskNoneWildcardTopics.contains(topic)) {
             var clientSubs = inDiskTopicClientsMap.get(topic);
             if (!CollectionUtils.isEmpty(clientSubs)) {
-                clientSubList.addAll(clientSubs);
+                clientSubSet.addAll(clientSubs);
             }
         }
         if (inMemNoneWildcardTopics.contains(topic)) {
             var clientSubs = inMemTopicClientsMap.get(topic);
             if (!CollectionUtils.isEmpty(clientSubs)) {
-                clientSubList.addAll(clientSubs);
+                clientSubSet.addAll(clientSubs);
             }
         }
 
-        return clientSubList;
+        return new ArrayList<>(clientSubSet);
     }
 
     /**
      * 移除缓存中的订阅
      *
-     * @param clientId  客户端ID
-     * @param topics    主题列表, 可能包含共享主题
-     * @param isCluster true: 表明此方法由集群消息触发; false: 表明方法由当前实例调用处理
+     * @param clientId         客户端ID
+     * @param topics           主题列表, 可能包含共享主题
+     * @param isClusterMessage true: 表明此方法由集群消息触发; false: 表明方法由当前实例调用处理
      */
-    private Mono<Void> unsubscribeWithCache(String clientId, List<String> topics, boolean isCluster) {
+    private Mono<Void> unsubscribeWithCache(String clientId, List<String> topics, boolean isClusterMessage) {
         if (!enableInnerCache) {
             return Mono.empty();
         }
@@ -549,14 +556,15 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         var waitToDel = new ArrayList<String>();
         for (var topic : topics) {
             String shareName = null;
+            var topicFilter = topic;
             if (TopicUtils.isShare(topic)) {
                 ShareTopic shareTopic = TopicUtils.parseFrom(topic);
                 shareName = shareTopic.name();
-                topic = shareTopic.filter();
+                topicFilter = shareTopic.filter();
             }
-            var clientSubs = inDiskTopicClientsMap.get(topic);
+            var clientSubs = inDiskTopicClientsMap.get(topicFilter);
             if (clientSubs != null) {
-                clientSubs.remove(ClientSub.of(clientId, 0, topic, false, shareName));
+                clientSubs.remove(ClientSub.of(clientId, 0, topicFilter, false, shareName));
 
                 // 判断是否需要移除该主题
                 if (clientSubs.isEmpty()) {
@@ -569,10 +577,13 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         }
 
         // 缓存中 topic 删除逻辑，需要注意方法触发来源为当前实例还是集群消息
-        if (isCluster) {
+        if (isClusterMessage) {
             // 缓存移除
             // 注意，不要移除 inMemWildcardTopics, inMemNoneWildcardTopics 中的数据
             for (var topic : waitToDel) {
+                if (TopicUtils.isShare(topic)) {
+                    topic = TopicUtils.parseFrom(topic).filter();
+                }
                 if (TopicUtils.isTopicContainWildcard(topic)) {
                     inDiskWildcardTopics.remove(topic);
                 } else {
@@ -586,6 +597,9 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
                         // 缓存移除
                         // 注意，不要移除 inMemWildcardTopics, inMemNoneWildcardTopics 中的数据
                         for (var topic : waitToDel) {
+                            if (TopicUtils.isShare(topic)) {
+                                topic = TopicUtils.parseFrom(topic).filter();
+                            }
                             if (TopicUtils.isTopicContainWildcard(topic)) {
                                 inDiskWildcardTopics.remove(topic);
                             } else {
@@ -612,9 +626,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         }
 
         // 保存客户端订阅内容
-        inDiskTopicClientsMap
-                .computeIfAbsent(topic, k -> ConcurrentHashMap.newKeySet())
-                .add(clientSub);
+        inDiskTopicClientsMap.computeIfAbsent(topic, k -> ConcurrentHashMap.newKeySet()).add(clientSub);
     }
 
     @Override

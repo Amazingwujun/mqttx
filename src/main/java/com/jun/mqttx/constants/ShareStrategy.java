@@ -23,7 +23,6 @@ package com.jun.mqttx.constants;
  * @since 1.0.4
  */
 public enum ShareStrategy {
-
     random,
     round;
 }
