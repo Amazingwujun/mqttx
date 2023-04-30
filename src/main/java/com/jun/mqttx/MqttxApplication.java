@@ -47,63 +47,8 @@ public class MqttxApplication {
     public static void main(String[] args) throws InterruptedException {
         var ctx = SpringApplication.run(MqttxApplication.class, args);
 
-        // preCheck
-        preCheck(ctx);
-
-        // 启动mqtt
+        // 启动 mqtt
         ctx.getBean(BrokerInitializer.class).start();
     }
 
-    /**
-     * 服务启动前一些状态检查，包括：
-     * <ol>
-     *     <li>集群内部缓存一致性</li>
-     * </ol>
-     *
-     * @param ctx {@link ConfigurableApplicationContext}
-     */
-    private static void preCheck(ApplicationContext ctx) {
-        log.info("开始自检...");
-
-        innerCacheConsistencyCheck(ctx);
-
-        log.info("自检完成...");
-    }
-
-    /**
-     * 检查集群内部缓存开启状态是否一致
-     *
-     * @param ctx {@link ApplicationContext}
-     */
-    private static void innerCacheConsistencyCheck(ApplicationContext ctx) {
-        var mqttxConfig = ctx.getBean(MqttxConfig.class);
-        var cluster = mqttxConfig.getCluster();
-
-        var enableCluster = cluster.getEnable();
-        var brokerId = mqttxConfig.getBrokerId();
-        if (Boolean.TRUE.equals(enableCluster)) {
-            var enableInnerCache = mqttxConfig.getEnableInnerCache();
-            var innerCacheConsistencyKey = cluster.getInnerCacheConsistencyKey();
-            if (Boolean.TRUE.equals(enableInnerCache) && ObjectUtils.isEmpty(innerCacheConsistencyKey)) {
-                throw new IllegalArgumentException("mqttx.cluster.innerCacheConsistencyKey 值不能为空");
-            }
-            var redisTemplate = ctx.getBean(StringRedisTemplate.class);
-            var clusterCacheStatus = redisTemplate.opsForValue().get(innerCacheConsistencyKey);
-            if (clusterCacheStatus == null) {
-                if (brokerId == null) {
-                    throw new GlobalException("集群必须配置 brokerId");
-                }
-
-                log.info("内部缓存状态不存在，mqttx broker: [{}] 为集群第一个应用，内部缓存状态为: [{}]，后续加入的 mqttx 状态必须一致。",
-                        brokerId, enableInnerCache ? "开" : "关");
-                redisTemplate.opsForValue().set(innerCacheConsistencyKey, String.valueOf(enableInnerCache));
-            } else {
-                if (Objects.equals(clusterCacheStatus, String.valueOf(enableInnerCache))) {
-                    log.info("自检->集群缓存状态：{}", enableInnerCache ? "开" : "关");
-                } else {
-                    throw new IllegalArgumentException("mqttx 集群状态 mqttx.enableInnerCache 不一致, 这会导致集群整体消息不一致!");
-                }
-            }
-        }
-    }
 }

@@ -543,7 +543,6 @@ Content-Length: 91
 | `mqttx.host`                                | `0.0.0.0`                       | 监听地址                                                     |
 | `mqttx.so-backlog`                          | `512`                           | tcp 连接处理队列                                             |
 | `mqttx.enable-topic-sub-pub-secure`         | `false`                         | 客户订阅/发布主题安全功能，开启后将限制客户端发布/订阅的主题 |
-| `mqttx.enable-inner-cache`                  | `true`                          | 发布消息每次都需要查询 redis 来获取订阅的客户端列表。开启此功能后，将在内存中建立一个主题-客户端关系映射, 应用直接访问内存中的数据即可 |
 | `mqttx.ignore-client-self-pub`              | `true`                          | 忽略 client 发送给自己的消息（当 client 发送消息给自己订阅的主题） |
 | `mqttx.max-bytes-in-message`                | `8092`                          | mqttx 允许接收的最大报文载荷，单位 `byte`.                   |
 | `mqttx.serialize-strategy`                  | `json`                          | `broker` 采用的序列化策略，**集群策略*必须*一致**。          |

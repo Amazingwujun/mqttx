@@ -51,11 +51,11 @@ import java.util.function.Function;
 @Slf4j
 @Service
 public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Watcher {
-
     //@formatter:off
 
     /** 用于分割字符，可以设计成这样，防止与 clientId 中的字符重合 */
-    private static final String SEPARATOR = "<!>";
+    private static final String COMPLEX_SEPARATOR = "<!>";
+    private static final String COMMA_SEPARATOR = ",";
     private static final int ASSUME_COUNT = 100_000;
     /** 按顺序 -> 订阅、解除订阅 */
     private static final int SUB = 1, UN_SUB = 2;
@@ -64,31 +64,16 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
     private final IInternalMessagePublishService internalMessagePublishService;
     /** client订阅主题, 订阅主题前缀, 主题集合 */
     private final String clientTopicsPrefix, topicSetKey, topicPrefix;
-    private final boolean enableInnerCache, enableCluster;
+    private final boolean enableCluster;
     private final String brokerId;
-
-
-    /*                                              cleanSession = 1                                                   */
-
-    /** cleanSession = 1 无通配符主题集合，存储于内存中 */
-    private final Set<String> inMemNoneWildcardTopics = ConcurrentHashMap.newKeySet(ASSUME_COUNT);
-    /** cleanSession = 1 含通配符主题集合，存储于内存中 */
-    private final Set<String> inMemWildcardTopics = ConcurrentHashMap.newKeySet(ASSUME_COUNT);
-    /** cleanSession = 0 的主 topic -> clients 关系集合 */
-    private final Map<String, ConcurrentHashMap.KeySetView<ClientSub,Boolean>> inMemTopicClientsMap = new ConcurrentHashMap<>(ASSUME_COUNT);
-    /** cleanSession = 0 的主 client -> topics 关系集合 */
+    /** cleanSession == true 的主 client -> topics 关系集合 */
     private final Map<String, ConcurrentHashMap.KeySetView<String,Boolean>> inMemClientTopicsMap = new ConcurrentHashMap<>(ASSUME_COUNT);
-
-    /*                                              cleanSession = 0                                                   */
-
-    /** cleanSession = 0 无通配符主题集合。内部缓存，{@link this#enableInnerCache} == true 时使用 */
-    private final Set<String> inDiskNoneWildcardTopics = ConcurrentHashMap.newKeySet(ASSUME_COUNT);
-    /** cleanSession = 0 含通配符主题集合。内部缓存，{@link this#enableInnerCache} == true 时使用 */
-    private final Set<String> inDiskWildcardTopics = ConcurrentHashMap.newKeySet(ASSUME_COUNT);
-    /** cleanSession = 0 的主 topic -> clients 关系集合 */
-    private final Map<String, ConcurrentHashMap.KeySetView<ClientSub, Boolean>> inDiskTopicClientsMap = new ConcurrentHashMap<>(ASSUME_COUNT);
-
-    /*                                               系统主题                                                                  */
+    /** 不含通配符的全部主题 */
+    private final Set<String> noneWildcardTopics = ConcurrentHashMap.newKeySet(ASSUME_COUNT);
+    /** 包含通配符的全部主题 */
+    private final Set<String> hasWildcardTopics = ConcurrentHashMap.newKeySet(ASSUME_COUNT);
+    /** topic -> clients 映射关系集合. */
+    private final Map<String, ConcurrentHashMap.KeySetView<ClientSub, Boolean>> topicClientsMap = new ConcurrentHashMap<>(ASSUME_COUNT);
     /** 系统主题 -> clients map */
     private final Map<String, ConcurrentHashMap.KeySetView<ClientSub, Boolean>> sysTopicClientsMap = new ConcurrentHashMap<>();
 
@@ -108,15 +93,13 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
 
         var cluster = mqttxConfig.getCluster();
         this.enableCluster = cluster.getEnable();
-        this.enableInnerCache = mqttxConfig.getEnableInnerCache();
-        if (enableInnerCache) {
-            // 非测试模式，初始化缓存
-            initInnerCache(stringRedisTemplate);
-        }
         this.brokerId = mqttxConfig.getBrokerId();
 
         Assert.hasText(this.topicPrefix, "topicPrefix can't be null");
         Assert.hasText(this.topicSetKey, "topicSetKey can't be null");
+
+        // 内部缓存初始化
+        initInnerCache(stringRedisTemplate);
     }
 
     /**
@@ -127,161 +110,6 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
     @Override
     public Mono<Void> subscribe(ClientSub clientSub) {
         return subscribe(clientSub, false);
-    }
-
-    /**
-     * 客户端订阅主题
-     *
-     * @param clientSub        客户端订阅信息
-     * @param isClusterMessage 调用消息是否源自集群
-     */
-    private Mono<Void> subscribe(ClientSub clientSub, boolean isClusterMessage) {
-        final var topic = clientSub.getTopic();
-        final var clientId = clientSub.getClientId();
-        final var qos = clientSub.getQos();
-        final var cleanSession = clientSub.isCleanSession();
-        final var shareName = clientSub.getShareName();
-        var filter = topic;
-        if (StringUtils.hasText(shareName)) {
-            filter = String.format("%s/%s/%s", TopicUtils.SHARE_TOPIC, shareName, topic);
-        }
-        final var topicFilter = filter;
-
-        // 保存订阅关系
-        // 1. 保存 topic -> client 映射
-        // 2. 将 topic 保存到 redis set 集合中
-        // 3. 保存 client -> topics
-        if (cleanSession) {
-            inMemTopicClientsMap.computeIfAbsent(topic, s -> ConcurrentHashMap.newKeySet()).add(clientSub);
-            if (TopicUtils.isTopicContainWildcard(topic)) {
-                inMemWildcardTopics.add(topic);
-            } else {
-                inMemNoneWildcardTopics.add(topic);
-            }
-
-            // 两种可能
-            // topicFilter 是普通主题，没问题.
-            // topicFilter 是共享主题，那我们清理客户订阅主题时，就必须知道该主题的全名，不能只有 filter
-            inMemClientTopicsMap.computeIfAbsent(clientId, s -> ConcurrentHashMap.newKeySet()).add(topicFilter);
-
-            // 订阅消息广播
-            if (enableCluster && !isClusterMessage) {
-                var im = new InternalMessage<>(
-                        new ClientSubOrUnsubMsg(clientId, qos, topicFilter, true, null, SUB),
-                        System.currentTimeMillis(),
-                        brokerId
-                );
-                internalMessagePublishService.publish(im, InternalMessageEnum.SUB_UNSUB.getChannel());
-            }
-            return Mono.empty();
-        } else {
-            if (isClusterMessage) {
-                if (enableInnerCache) {
-                    subscribeWithCache(clientSub);
-                }
-                return Mono.empty();
-            }
-            return Mono.when(
-                    stringRedisTemplate.opsForHash().put(topicPrefix + topic, topicClientSubKey(clientId, shareName), String.valueOf(qos)),
-                    stringRedisTemplate.opsForSet().add(topicSetKey, topicFilter),
-                    // 类似 inMemClientTopicsMap#key, 这里也必须存 topicFilter
-                    stringRedisTemplate.opsForSet().add(clientTopicsPrefix + clientId, topicFilter)
-            ).then(Mono.fromRunnable(() -> {
-                if (enableInnerCache) {
-                    subscribeWithCache(clientSub);
-                }
-
-                if (enableCluster) {
-                    var im = new InternalMessage<>(
-                            new ClientSubOrUnsubMsg(clientId, qos, topicFilter, false, null, SUB),
-                            System.currentTimeMillis(),
-                            brokerId
-                    );
-                    internalMessagePublishService.publish(im, InternalMessageEnum.SUB_UNSUB.getChannel());
-                }
-            }));
-        }
-    }
-
-    /**
-     * 解除订阅
-     *
-     * @param clientId     客户 id
-     * @param cleanSession clientId 关联会话 cleanSession 状态
-     * @param topics       主题列表，可能包含共享主题
-     */
-    private Mono<Void> unsubscribe(String clientId, boolean cleanSession, List<String> topics, boolean isClusterMessage) {
-        if (CollectionUtils.isEmpty(topics)) {
-            return Mono.empty();
-        }
-
-        if (cleanSession) {
-            topics.forEach(topic -> {
-                // 共享主题判断
-                String shareName = null;
-                if (TopicUtils.isShare(topic)) {
-                    ShareTopic shareTopic = TopicUtils.parseFrom(topic);
-                    topic = shareTopic.filter();
-                    shareName = shareTopic.name();
-                }
-
-                // 移除主题关联关系
-                var clientSubs = inMemTopicClientsMap.get(topic);
-                if (!CollectionUtils.isEmpty(clientSubs)) {
-                    clientSubs.remove(ClientSub.of(clientId, 0, topic, true, shareName));
-                    if (clientSubs.isEmpty()) {
-                        // 移除关联的 inMemTopic
-                        if (TopicUtils.isTopicContainWildcard(topic)) {
-                            inMemWildcardTopics.remove(topic);
-                        } else {
-                            inMemNoneWildcardTopics.remove(topic);
-                        }
-                    }
-                }
-            });
-
-            // 移除 client 关联的主题
-            Optional.ofNullable(inMemClientTopicsMap.get(clientId)).ifPresent(t -> t.removeAll(topics));
-
-            // 集群广播
-            if (enableCluster && !isClusterMessage) {
-                var clientSubOrUnsubMsg = new ClientSubOrUnsubMsg(clientId, 0, null, true, topics, UN_SUB);
-                var im = new InternalMessage<>(clientSubOrUnsubMsg, System.currentTimeMillis(), brokerId);
-                internalMessagePublishService.publish(im, InternalMessageEnum.SUB_UNSUB.getChannel());
-            }
-            return Mono.empty();
-        }
-
-        // 集群消息判断
-        // 1. 是集群消息：仅移除缓存
-        // 2. 不是集群消息：移除 redis 中的数据，最后移除缓存
-        if (isClusterMessage) {
-            return unsubscribeWithCache(clientId, topics, true);
-        }
-
-        var monos = topics.stream()
-                .map(topic -> {
-                    if (TopicUtils.isShare(topic)) {
-                        ShareTopic shareTopic = TopicUtils.parseFrom(topic);
-                        var shareName = shareTopic.name();
-                        topic = shareTopic.filter();
-                        return stringRedisTemplate.opsForHash().remove(topicPrefix + topic, topicClientSubKey(clientId, shareName));
-                    }
-                    return stringRedisTemplate.opsForHash().remove(topicPrefix + topic, clientId);
-                })
-                .toList();
-        return Mono.when(monos)
-                .then(stringRedisTemplate.opsForSet().remove(clientTopicsPrefix + clientId, topics.toArray()))
-                .flatMap(t -> unsubscribeWithCache(clientId, topics, false))
-                .doOnSuccess(unused -> {
-                    // 集群广播
-                    if (enableCluster) {
-                        var clientSubOrUnsubMsg = new ClientSubOrUnsubMsg(clientId, 0, null, false, topics, UN_SUB);
-                        var im = new InternalMessage<>(clientSubOrUnsubMsg, System.currentTimeMillis(), brokerId);
-                        internalMessagePublishService.publish(im, InternalMessageEnum.SUB_UNSUB.getChannel());
-                    }
-                });
-
     }
 
     /**
@@ -305,60 +133,38 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
      */
     @Override
     public Flux<ClientSub> searchSubscribeClientList(String topic) {
-        // 启用内部缓存机制
-        if (enableInnerCache) {
-            return Flux.fromIterable(searchSubscribeClientListByCache(topic));
+        // result
+        var clientSubList = new ArrayList<ClientSub>();
+
+        // 这里需要注意的几点
+        // 1 通配符集合必须都遍历一遍，因为你不确定哪个通配符主题匹配当前主题
+        // 2 非通配符集合，先判断是否存在
+
+        // 1 含通配符主题集合
+        for (var t : hasWildcardTopics) {
+            if (TopicUtils.match(topic, t)) {
+                var clientSubs = topicClientsMap.get(t);
+                if (!CollectionUtils.isEmpty(clientSubs)) {
+                    clientSubList.addAll(clientSubs);
+                }
+            }
         }
 
-        // 未启用内部缓存机制，直接通过 redis 抓取
-        List<ClientSub> clientSubList = new ArrayList<>();
-
-        // 分两部分
-        // 一部分是 cleanSession(true) 主题
-        // 另外一部分是 cleanSession(false) 主题
-        inMemWildcardTopics.stream()
-                .filter(t -> TopicUtils.match(topic, t))
-                .forEach(t -> {
-                    var clientSubs = inMemTopicClientsMap.get(t);
-                    if (!CollectionUtils.isEmpty(clientSubs)) {
-                        clientSubList.addAll(clientSubs);
-                    }
-                });
-        if (inMemNoneWildcardTopics.contains(topic)) {
-            var clientSubs = inMemTopicClientsMap.get(topic);
+        // 2 不含通配符主题集合
+        if (noneWildcardTopics.contains(topic)) {
+            var clientSubs = topicClientsMap.get(topic);
             if (!CollectionUtils.isEmpty(clientSubs)) {
                 clientSubList.addAll(clientSubs);
             }
         }
-        return stringRedisTemplate.opsForSet().members(topicSetKey)
-                .map(t -> {
-                    if (TopicUtils.isShare(t)) {
-                        return TopicUtils.parseFrom(t).filter();
-                    }
-                    return t;
-                })
-                // 共享主题可能导致主题过滤器重复
-                .distinct()
-                .filter(t -> TopicUtils.match(topic, t))
-                .flatMap(t -> stringRedisTemplate.opsForHash().entries(topicPrefix + t)
-                        .map(entry -> {
-                            var k = (String) entry.getKey();
-                            var qosStr = (String) entry.getValue();
-                            String[] split = k.split(SEPARATOR);
-                            if (split.length == 1) {
-                                return ClientSub.of(k, Integer.parseInt(qosStr), t, false);
-                            } else {
-                                // 存在 shareName
-                                return ClientSub.of(split[0], Integer.parseInt(qosStr), t, false, split[1]);
-                            }
-                        })
-                ).concatWith(Flux.fromIterable(clientSubList));
+
+        return Flux.fromIterable(clientSubList);
     }
 
     @Override
     public Mono<Void> clearClientSubscriptions(String clientId, boolean cleanSession) {
         Set<String> keys;
-        if (cleanSession) {
+        if (cleanSession && enableCluster) {
             keys = inMemClientTopicsMap.remove(clientId);
             if (CollectionUtils.isEmpty(keys)) {
                 return Mono.empty();
@@ -376,22 +182,12 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
     @Override
     public Mono<Void> clearUnAuthorizedClientSub(String clientId, List<String> authorizedSub) {
         var collect = new ArrayList<String>();
-        for (var topic : inDiskNoneWildcardTopics) {
+        for (var topic : noneWildcardTopics) {
             if (!authorizedSub.contains(topic)) {
                 collect.add(topic);
             }
         }
-        for (var topic : inDiskWildcardTopics) {
-            if (!authorizedSub.contains(topic)) {
-                collect.add(topic);
-            }
-        }
-        for (var topic : inMemNoneWildcardTopics) {
-            if (!authorizedSub.contains(topic)) {
-                collect.add(topic);
-            }
-        }
-        for (var topic : inMemWildcardTopics) {
+        for (var topic : hasWildcardTopics) {
             if (!authorizedSub.contains(topic)) {
                 collect.add(topic);
             }
@@ -446,11 +242,12 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
     }
 
     /**
-     * 初始化内部缓存。目前的策略是全部加载，其实可以按需加载，按业务需求来吧。
+     * 缓存初始化.
      */
     private void initInnerCache(final ReactiveStringRedisTemplate redisTemplate) {
-        log.info("enableInnerCache=true, 开始加载缓存...");
+        log.info("开始加载缓存...");
 
+        // inDisk 订阅关系加载
         redisTemplate.opsForSet().members(topicSetKey)
                 .map(topic -> {
                     if (TopicUtils.isShare(topic)) {
@@ -463,9 +260,9 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
                 .doOnSuccess(topics -> {
                     for (var topic : topics) {
                         if (TopicUtils.isTopicContainWildcard(topic)) {
-                            inDiskWildcardTopics.add(topic);
+                            hasWildcardTopics.add(topic);
                         } else {
-                            inDiskNoneWildcardTopics.add(topic);
+                            noneWildcardTopics.add(topic);
                         }
                     }
                 })
@@ -473,160 +270,187 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
                 .flatMap(topic -> redisTemplate.opsForHash().entries(topicPrefix + topic).map(e -> new Tuple2<>(topic, e)))
                 .doOnNext(e -> {
                     var topic = e.t0();
+                    // k
                     var k = (String) e.t1().getKey();
+                    var k_s = k.split(COMPLEX_SEPARATOR);
+
+                    // v
                     var v = (String) e.t1().getValue();
-                    String[] split = k.split(SEPARATOR);
-                    if (split.length == 1) {
-                        inDiskTopicClientsMap.computeIfAbsent(topic, s -> ConcurrentHashMap.newKeySet())
-                                .add(ClientSub.of(k, Integer.parseInt(v), topic, false));
+                    var v_s = v.split(COMMA_SEPARATOR);
+                    var qosStr = v_s[0];
+                    var cs = "0";
+                    if (v_s.length > 1) {
+                        cs = v_s[1];
+                    }
+                    var cleanSession = "1".equals(cs);
+
+                    if (k_s.length == 1) {
+                        topicClientsMap.computeIfAbsent(topic, s -> ConcurrentHashMap.newKeySet())
+                                .add(ClientSub.of(k, Integer.parseInt(qosStr), topic, cleanSession));
                     } else {
-                        var shareName = split[1];
-                        inDiskTopicClientsMap.computeIfAbsent(topic, s -> ConcurrentHashMap.newKeySet())
-                                .add(ClientSub.of(split[0], Integer.parseInt(v), topic, false, shareName));
+                        var shareName = k_s[1];
+                        topicClientsMap.computeIfAbsent(topic, s -> ConcurrentHashMap.newKeySet())
+                                .add(ClientSub.of(k_s[0], Integer.parseInt(qosStr), topic, cleanSession, shareName));
                     }
                 })
                 .then()
                 .doOnError(t -> log.error(t.getMessage(), t))
                 // 这里我们应该阻塞
                 .block();
+
+        log.info("缓存加载完成.");
     }
 
     /**
-     * 通过缓存获取客户端订阅列表
+     * 客户端订阅主题
      *
-     * @param topic 待匹配主题
-     * @return 客户端订阅列表
+     * @param clientSub        客户端订阅信息
+     * @param isClusterMessage 调用消息是否源自集群
      */
-    private List<ClientSub> searchSubscribeClientListByCache(String topic) {
-        // result
-        Set<ClientSub> clientSubSet = new HashSet<>();
-
-        // 这里需要注意的几点
-        // 1 通配符集合必须都遍历一遍，因为你不确定哪个通配符主题匹配当前主题
-        // 2 非通配符集合，先判断是否存在
-
-        // 1 含通配符主题集合
-        for (var t : inDiskWildcardTopics) {
-            if (TopicUtils.match(topic, t)) {
-                var clientSubs = inDiskTopicClientsMap.get(t);
-                if (!CollectionUtils.isEmpty(clientSubs)) {
-                    clientSubSet.addAll(clientSubs);
-                }
-            }
+    private Mono<Void> subscribe(ClientSub clientSub, boolean isClusterMessage) {
+        final var topic = clientSub.getTopic();
+        final var clientId = clientSub.getClientId();
+        final var qos = clientSub.getQos();
+        final var cleanSession = clientSub.isCleanSession();
+        final var shareName = clientSub.getShareName();
+        var filter = topic;
+        if (StringUtils.hasText(shareName)) {
+            filter = String.format("%s/%s/%s", TopicUtils.SHARE_TOPIC, shareName, topic);
         }
-        for (var t : inMemWildcardTopics) {
-            if (TopicUtils.match(topic, t)) {
-                var clientSubs = inMemTopicClientsMap.get(t);
-                if (!CollectionUtils.isEmpty(clientSubs)) {
-                    clientSubSet.addAll(clientSubs);
-                }
-            }
+        final var topicFilter = filter;
+
+        // 保存订阅关系到应用缓存
+        topicClientsMap.computeIfAbsent(topic, s -> ConcurrentHashMap.newKeySet()).add(clientSub);
+        if (TopicUtils.isTopicContainWildcard(topic)) {
+            hasWildcardTopics.add(topic);
+        } else {
+            noneWildcardTopics.add(topic);
         }
 
-        // 2 不含通配符主题集合
-        if (inDiskNoneWildcardTopics.contains(topic)) {
-            var clientSubs = inDiskTopicClientsMap.get(topic);
-            if (!CollectionUtils.isEmpty(clientSubs)) {
-                clientSubSet.addAll(clientSubs);
-            }
-        }
-        if (inMemNoneWildcardTopics.contains(topic)) {
-            var clientSubs = inMemTopicClientsMap.get(topic);
-            if (!CollectionUtils.isEmpty(clientSubs)) {
-                clientSubSet.addAll(clientSubs);
-            }
+        // 针对如下场景进行处理优化
+        // 1. enableCluster == false && cleanSession == true
+        //   单机模式，客户端(cleanSession == 1)的订阅信息均保存到内存.
+        // 2. 其它(enableCluster == true || cleanSession == false)
+        //   所有客户端的订阅信息都需要保存到 redis
+
+        // 1. enableCluster == false && cleanSession == true
+        if (!enableCluster && cleanSession) {
+            inMemClientTopicsMap.computeIfAbsent(clientId, s -> ConcurrentHashMap.newKeySet()).add(topicFilter);
+            return Mono.empty();
         }
 
-        return new ArrayList<>(clientSubSet);
+        // 进行 redis 操作之前，判断消息来源是否为广播
+        if (isClusterMessage) {
+            return Mono.empty();
+        }
+
+        // 2. 其它
+        // enableCluster == true
+        // enableCluster == false && cleanSession == false
+        return Mono.when(
+                stringRedisTemplate.opsForHash().put(topicPrefix + topic, topicClientSubKey(clientId, shareName), topicClientSubValue(qos, cleanSession)),
+                stringRedisTemplate.opsForSet().add(topicSetKey, topicFilter),
+                // 类似 inMemClientTopicsMap#key, 这里也必须存 topicFilter
+                stringRedisTemplate.opsForSet().add(clientTopicsPrefix + clientId, topicFilter)
+        ).then(Mono.fromRunnable(() -> {
+            if (enableCluster) {
+                var im = new InternalMessage<>(
+                        new ClientSubOrUnsubMsg(clientId, qos, topicFilter, false, null, SUB),
+                        System.currentTimeMillis(),
+                        brokerId
+                );
+                internalMessagePublishService.publish(im, InternalMessageEnum.SUB_UNSUB.getChannel());
+            }
+        }));
     }
 
     /**
-     * 移除缓存中的订阅
+     * 解除订阅
      *
-     * @param clientId         客户端ID
-     * @param topics           主题列表, 可能包含共享主题
-     * @param isClusterMessage true: 表明此方法由集群消息触发; false: 表明方法由当前实例调用处理
+     * @param clientId     客户 id
+     * @param cleanSession clientId 关联会话 cleanSession 状态
+     * @param topics       主题列表，可能包含共享主题
      */
-    private Mono<Void> unsubscribeWithCache(String clientId, List<String> topics, boolean isClusterMessage) {
-        if (!enableInnerCache) {
+    private Mono<Void> unsubscribe(String clientId, boolean cleanSession, List<String> topics, boolean isClusterMessage) {
+        if (CollectionUtils.isEmpty(topics)) {
             return Mono.empty();
         }
 
         // 待删除的主题(当主题没有客户端订阅后)
+        // 减少 redis 中无效的 key
         var waitToDel = new ArrayList<String>();
-        for (var topic : topics) {
+
+        // 先移除缓存
+        topics.forEach(topic -> {
+            // 共享主题判断
             String shareName = null;
-            var topicFilter = topic;
             if (TopicUtils.isShare(topic)) {
                 ShareTopic shareTopic = TopicUtils.parseFrom(topic);
+                topic = shareTopic.filter();
                 shareName = shareTopic.name();
-                topicFilter = shareTopic.filter();
             }
-            var clientSubs = inDiskTopicClientsMap.get(topicFilter);
-            if (clientSubs != null) {
-                clientSubs.remove(ClientSub.of(clientId, 0, topicFilter, false, shareName));
 
-                // 判断是否需要移除该主题
+            // 移除主题关联关系
+            var clientSubs = topicClientsMap.get(topic);
+            if (!CollectionUtils.isEmpty(clientSubs)) {
+                clientSubs.remove(ClientSub.of(clientId, 0, topic, true, shareName));
                 if (clientSubs.isEmpty()) {
                     waitToDel.add(topic);
+
+                    // 移除关联的 inMemTopic
+                    if (TopicUtils.isTopicContainWildcard(topic)) {
+                        hasWildcardTopics.remove(topic);
+                    } else {
+                        noneWildcardTopics.remove(topic);
+                    }
                 }
             }
-        }
-        if (waitToDel.isEmpty()) {
+        });
+
+        // 与 this#subscribe 对应
+        // 特殊处理单机且 cleanSession == true 的情况
+        if (!enableCluster && cleanSession) {
+            // 移除 client 关联的主题
+            Optional.ofNullable(inMemClientTopicsMap.get(clientId)).ifPresent(t -> t.removeAll(topics));
             return Mono.empty();
         }
 
-        // 缓存中 topic 删除逻辑，需要注意方法触发来源为当前实例还是集群消息
+        // 集群消息判断
+        // 1. 是集群消息
         if (isClusterMessage) {
-            // 缓存移除
-            // 注意，不要移除 inMemWildcardTopics, inMemNoneWildcardTopics 中的数据
-            for (var topic : waitToDel) {
-                if (TopicUtils.isShare(topic)) {
-                    topic = TopicUtils.parseFrom(topic).filter();
-                }
-                if (TopicUtils.isTopicContainWildcard(topic)) {
-                    inDiskWildcardTopics.remove(topic);
-                } else {
-                    inDiskNoneWildcardTopics.remove(topic);
-                }
-            }
             return Mono.empty();
-        } else {
-            return stringRedisTemplate.opsForSet().remove(topicSetKey, waitToDel.toArray())
-                    .doOnSuccess(t -> {
-                        // 缓存移除
-                        // 注意，不要移除 inMemWildcardTopics, inMemNoneWildcardTopics 中的数据
-                        for (var topic : waitToDel) {
-                            if (TopicUtils.isShare(topic)) {
-                                topic = TopicUtils.parseFrom(topic).filter();
-                            }
-                            if (TopicUtils.isTopicContainWildcard(topic)) {
-                                inDiskWildcardTopics.remove(topic);
-                            } else {
-                                inDiskNoneWildcardTopics.remove(topic);
-                            }
-                        }
-                    })
-                    .then();
-        }
-    }
-
-    /**
-     * 将客户端订阅存储到缓存
-     *
-     * @param clientSub 客户端端订阅
-     */
-    private void subscribeWithCache(ClientSub clientSub) {
-        String topic = clientSub.getTopic();
-
-        if (TopicUtils.isTopicContainWildcard(topic)) {
-            inDiskWildcardTopics.add(topic);
-        } else {
-            inDiskNoneWildcardTopics.add(topic);
         }
 
-        // 保存客户端订阅内容
-        inDiskTopicClientsMap.computeIfAbsent(topic, k -> ConcurrentHashMap.newKeySet()).add(clientSub);
+        // 2. 不是集群消息：移除 redis 中的数据，最后移除缓存
+        var monos = topics.stream()
+                .map(topic -> {
+                    if (TopicUtils.isShare(topic)) {
+                        ShareTopic shareTopic = TopicUtils.parseFrom(topic);
+                        var shareName = shareTopic.name();
+                        topic = shareTopic.filter();
+                        return stringRedisTemplate.opsForHash().remove(topicPrefix + topic, topicClientSubKey(clientId, shareName));
+                    }
+                    return stringRedisTemplate.opsForHash().remove(topicPrefix + topic, clientId);
+                })
+                .toList();
+        return Mono.when(monos)
+                .then(stringRedisTemplate.opsForSet().remove(clientTopicsPrefix + clientId, topics.toArray()))
+                .flatMap(t -> {
+                    if (waitToDel.isEmpty()) {
+                        return Mono.empty();
+                    }
+
+                    return stringRedisTemplate.opsForSet().remove(topicSetKey, waitToDel.toArray()).then();
+                })
+                .doOnSuccess(unused -> {
+                    // 集群广播
+                    if (enableCluster) {
+                        var clientSubOrUnsubMsg = new ClientSubOrUnsubMsg(clientId, 0, null, false, topics, UN_SUB);
+                        var im = new InternalMessage<>(clientSubOrUnsubMsg, System.currentTimeMillis(), brokerId);
+                        internalMessagePublishService.publish(im, InternalMessageEnum.SUB_UNSUB.getChannel());
+                    }
+                });
+
     }
 
     @Override
@@ -675,8 +499,18 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
      */
     private String topicClientSubKey(String clientId, String shareName) {
         if (StringUtils.hasText(shareName)) {
-            return String.format("%s%s%s", clientId, SEPARATOR, shareName);
+            return String.format("%s%s%s", clientId, COMPLEX_SEPARATOR, shareName);
         }
         return clientId;
+    }
+
+    /**
+     * 主题关联的用户订阅信息 redis hashmap value
+     *
+     * @param qos          {@link io.netty.handler.codec.mqtt.MqttQoS}
+     * @param cleanSession cleanSession 状态值
+     */
+    private String topicClientSubValue(int qos, boolean cleanSession) {
+        return String.format("%d%s%d", qos, COMMA_SEPARATOR, cleanSession ? 1 : 0);
     }
 }

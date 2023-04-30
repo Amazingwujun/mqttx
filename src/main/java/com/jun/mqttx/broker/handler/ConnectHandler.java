@@ -225,6 +225,7 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         final var isCleanSession = variableHeader.isCleanSession();
         if (isCleanSession) {
             actionOnCleanSession(clientId)
+                    .publishOn(Schedulers.boundedElastic())
                     .doOnSuccess(unused -> {
                         // 新建会话并保存会话，同时判断sessionPresent
                         final var session = Session.of(clientId, true);

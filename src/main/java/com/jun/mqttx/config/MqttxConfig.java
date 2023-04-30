@@ -70,12 +70,6 @@ public class MqttxConfig {
     private Boolean enableTopicSubPubSecure = false;
 
     /**
-     * 内部缓存机制，用于性能提升. 这个参数值必须集群一致，也就是说如果存在多个 mqttx 服务，
-     * 那么这些服务的 enableInnerCache 值必须相同，否则会出现预期外的行为。
-     */
-    private Boolean enableInnerCache = true;
-
-    /**
      * 序列化策略选择:
      * <ol>
      *     <li>{@link SerializeStrategy#JSON}: 默认项(兼容早期版本)</li>
