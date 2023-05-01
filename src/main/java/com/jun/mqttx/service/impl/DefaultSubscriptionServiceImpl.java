@@ -53,7 +53,7 @@ import java.util.function.Function;
 public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Watcher {
     //@formatter:off
 
-    /** 用于分割字符，可以设计成这样，防止与 clientId 中的字符重合 */
+    /** 用于分割字符，刻意设计成这样，防止与 clientId 中的字符重合 */
     private static final String COMPLEX_SEPARATOR = "<!>";
     private static final String COMMA_SEPARATOR = ",";
     private static final int ASSUME_COUNT = 100_000;
@@ -66,8 +66,12 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
     private final String clientTopicsPrefix, topicSetKey, topicPrefix;
     private final boolean enableCluster;
     private final String brokerId;
-    /** cleanSession == true 的主 client -> topics 关系集合 */
-    private final Map<String, ConcurrentHashMap.KeySetView<String,Boolean>> inMemClientTopicsMap = new ConcurrentHashMap<>(ASSUME_COUNT);
+    /**
+     * cleanSession == true 的主 client -> topics 关系集合.
+     * <p>
+     * 此集合仅用于保存与当前 mqttx 实例存在 tcp 链接的客户端
+     */
+    private final Map<String, HashSet<String>> inMemClientTopicsMap = new ConcurrentHashMap<>(ASSUME_COUNT);
     /** 不含通配符的全部主题 */
     private final Set<String> noneWildcardTopics = ConcurrentHashMap.newKeySet(ASSUME_COUNT);
     /** 包含通配符的全部主题 */
@@ -164,7 +168,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
     @Override
     public Mono<Void> clearClientSubscriptions(String clientId, boolean cleanSession) {
         Set<String> keys;
-        if (cleanSession && enableCluster) {
+        if (cleanSession) {
             keys = inMemClientTopicsMap.remove(clientId);
             if (CollectionUtils.isEmpty(keys)) {
                 return Mono.empty();
@@ -327,26 +331,26 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
             noneWildcardTopics.add(topic);
         }
 
-        // 针对如下场景进行处理优化
-        // 1. enableCluster == false && cleanSession == true
-        //   单机模式，客户端(cleanSession == 1)的订阅信息均保存到内存.
-        // 2. 其它(enableCluster == true || cleanSession == false)
-        //   所有客户端的订阅信息都需要保存到 redis
-
-        // 1. enableCluster == false && cleanSession == true
-        if (!enableCluster && cleanSession) {
-            inMemClientTopicsMap.computeIfAbsent(clientId, s -> ConcurrentHashMap.newKeySet()).add(topicFilter);
-            return Mono.empty();
-        }
-
-        // 进行 redis 操作之前，判断消息来源是否为广播
+        // 集群消息，直接返回
         if (isClusterMessage) {
             return Mono.empty();
         }
 
-        // 2. 其它
-        // enableCluster == true
-        // enableCluster == false && cleanSession == false
+        // 针对客户端 cleanSession == true 的会话，如果 mqttx 是单机模式，那么订阅数据仅保存到缓存中.
+        if (cleanSession) {
+            inMemClientTopicsMap.compute(clientId, (k, v) -> {
+                if (v == null) {
+                    v = new HashSet<>();
+                }
+                v.add(topicFilter);
+                return v;
+            });
+            if (!enableCluster) {
+                return Mono.empty();
+            }
+        }
+
+        // 订阅关系保存到 redis
         return Mono.when(
                 stringRedisTemplate.opsForHash().put(topicPrefix + topic, topicClientSubKey(clientId, shareName), topicClientSubValue(qos, cleanSession)),
                 stringRedisTemplate.opsForSet().add(topicSetKey, topicFilter),
@@ -355,7 +359,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         ).then(Mono.fromRunnable(() -> {
             if (enableCluster) {
                 var im = new InternalMessage<>(
-                        new ClientSubOrUnsubMsg(clientId, qos, topicFilter, false, null, SUB),
+                        new ClientSubOrUnsubMsg(clientId, qos, topicFilter, cleanSession, null, SUB),
                         System.currentTimeMillis(),
                         brokerId
                 );
@@ -393,7 +397,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
             // 移除主题关联关系
             var clientSubs = topicClientsMap.get(topic);
             if (!CollectionUtils.isEmpty(clientSubs)) {
-                clientSubs.remove(ClientSub.of(clientId, 0, topic, true, shareName));
+                clientSubs.remove(ClientSub.of(clientId, 0, topic, cleanSession, shareName));
                 if (clientSubs.isEmpty()) {
                     waitToDel.add(topic);
 
@@ -407,21 +411,24 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
             }
         });
 
-        // 与 this#subscribe 对应
-        // 特殊处理单机且 cleanSession == true 的情况
-        if (!enableCluster && cleanSession) {
-            // 移除 client 关联的主题
-            Optional.ofNullable(inMemClientTopicsMap.get(clientId)).ifPresent(t -> t.removeAll(topics));
-            return Mono.empty();
-        }
-
-        // 集群消息判断
-        // 1. 是集群消息
+        // 集群消息，直接返回
         if (isClusterMessage) {
             return Mono.empty();
         }
 
-        // 2. 不是集群消息：移除 redis 中的数据，最后移除缓存
+        // 与 this#subscribe 对应
+        if (cleanSession) {
+            inMemClientTopicsMap.computeIfPresent(clientId, (k, v) -> {
+                topics.forEach(v::remove);
+                return v;
+            });
+            if (!enableCluster) {
+                return Mono.empty();
+            }
+        }
+
+
+        // 移除 redis 中的数据.
         var monos = topics.stream()
                 .map(topic -> {
                     if (TopicUtils.isShare(topic)) {
@@ -445,7 +452,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
                 .doOnSuccess(unused -> {
                     // 集群广播
                     if (enableCluster) {
-                        var clientSubOrUnsubMsg = new ClientSubOrUnsubMsg(clientId, 0, null, false, topics, UN_SUB);
+                        var clientSubOrUnsubMsg = new ClientSubOrUnsubMsg(clientId, 0, null, cleanSession, topics, UN_SUB);
                         var im = new InternalMessage<>(clientSubOrUnsubMsg, System.currentTimeMillis(), brokerId);
                         internalMessagePublishService.publish(im, InternalMessageEnum.SUB_UNSUB.getChannel());
                     }
