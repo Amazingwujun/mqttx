@@ -90,13 +90,12 @@ public class ClientSub implements Comparable<ClientSub> {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         ClientSub clientSub = (ClientSub) o;
-        return Objects.equals(clientId, clientSub.clientId) &&
-                Objects.equals(topic, clientSub.topic) &&
-                Objects.equals(shareName, clientSub.shareName);
+        return qos == clientSub.qos && Objects.equals(clientId, clientSub.clientId) &&
+                Objects.equals(topic, clientSub.topic) && Objects.equals(shareName, clientSub.shareName);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(clientId, topic, shareName);
+        return Objects.hash(clientId, qos, topic, shareName);
     }
 }
