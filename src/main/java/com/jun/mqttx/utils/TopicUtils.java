@@ -171,11 +171,11 @@ public class TopicUtils {
 
         // 抓取第二个 / 后全部字符
         var idx = 0;
-        var filterStartIndex  = 0;
+        var filterStartIndex = 0;
         char[] charArray = topic.toCharArray();
         for (int i = 0; i < charArray.length; i++) {
             if (charArray[i] == '/') {
-                idx ++ ;
+                idx++;
             }
 
             if (idx == 2) {

@@ -252,7 +252,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         log.info("开始加载缓存...");
 
         // inDisk 订阅关系加载
-        redisTemplate.opsForSet().members(topicSetKey)
+        redisTemplate.opsForSet().scan(topicSetKey)
                 .map(topic -> {
                     if (TopicUtils.isShare(topic)) {
                         topic = TopicUtils.parseFrom(topic).filter();

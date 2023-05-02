@@ -26,6 +26,7 @@ import org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoCo
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.util.ObjectUtils;
 
 import java.util.Objects;
@@ -41,6 +42,7 @@ import java.util.Objects;
  * @author Jun
  */
 @Slf4j
+@EnableScheduling
 @SpringBootApplication(exclude = RedisRepositoriesAutoConfiguration.class)
 public class MqttxApplication {
 

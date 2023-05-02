@@ -50,9 +50,9 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
 
-import static com.jun.mqttx.constants.ShareStrategy.*;
+import static com.jun.mqttx.constants.ShareStrategy.random;
+import static com.jun.mqttx.constants.ShareStrategy.round;
 
 /**
  * {@link MqttMessageType#PUBLISH} 处理器
@@ -311,16 +311,17 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         // 指定了客户端的消息
         if (StringUtils.hasText(pubMsg.getAppointedClientId())) {
             final String clientId = pubMsg.getAppointedClientId();
-            return Mono.just(isClusterMessage)
-                    .flatMap(b -> {
-                        if (b) {
-                            return isCleanSession(clientId);
-                        } else {
-                            return Mono.just(isCleanSession(ctx));
-                        }
-                    })
-                    .flatMap(b -> publish0(ClientSub.of(clientId, pubMsg.getQoS(), pubMsg.getTopic(), b), pubMsg, isClusterMessage))
-                    .then();
+            if (isClusterMessage) {
+                // 消息自集群而来，ctx 不能用，会 NPE
+                return isCleanSession(clientId)
+                        .flatMap(cs -> publish0(ClientSub.of(clientId, pubMsg.getQoS(), pubMsg.getTopic(), cs), pubMsg,
+                                true))
+                        .then();
+            } else {
+                boolean cleanSession = isCleanSession(ctx);
+                return publish0(ClientSub.of(clientId, pubMsg.getQoS(), pubMsg.getTopic(), cleanSession), pubMsg, false)
+                        .then();
+            }
         }
 
         // 获取 topic 订阅者 id 列表
@@ -336,18 +337,20 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                 });
 
         // 共享订阅
-        var f1 = clientSubFlux.filter(ClientSub::isShareSub)
+        var f1 = clientSubFlux
+                .filter(ClientSub::isShareSub)
                 .groupBy(ClientSub::getShareName)
                 .flatMap(GroupedFlux::collectList)
                 .map(t -> chooseClient(t, topic))
                 .flatMap(clientSub -> {
-                    pubMsg.setAppointedClientId(clientSub.getClientId());
-                    return publish0(clientSub, pubMsg, isClusterMessage).doOnSuccess(unused -> {
+                    var copied = pubMsg.copied();
+                    copied.setAppointedClientId(clientSub.getClientId());
+                    return publish0(clientSub, copied, isClusterMessage).doOnSuccess(unused -> {
                         // 满足如下条件，则发送消息给集群
                         // 1 集群模式开启
                         // 2 订阅的客户端连接在其它实例上
                         if (isClusterMode() && !ConnectHandler.CLIENT_MAP.containsKey(clientSub.getClientId())) {
-                            internalMessagePublish(pubMsg);
+                            internalMessagePublish(copied);
                         }
                     });
                 });
@@ -356,24 +359,31 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
         var f2 = clientSubFlux
                 .filter(ClientSub::notShareSub)
                 .collectList()
-                .doOnSuccess(lst -> {
+                .flatMap(lst -> {
+                    // 如果只有一个客户端订阅，那么消息可以指定客户端
+                    var copied = pubMsg.copied();
+                    if (lst.size() == 1) {
+                        ClientSub clientSub = lst.get(0);
+                        copied.setAppointedClientId(clientSub.getClientId());
+                    }
+
                     // 将消息推送给集群中的 broker
                     if (isClusterMode() && !isClusterMessage) {
                         // 判断是否需要进行集群消息分发
-                        boolean flag = false;
-                        for (ClientSub clientSub : lst) {
+                        var flag = false;
+                        for (var clientSub : lst) {
                             if (!ConnectHandler.CLIENT_MAP.containsKey(clientSub.getClientId())) {
                                 flag = true;
                                 break;
                             }
                         }
                         if (flag) {
-                            internalMessagePublish(pubMsg);
+                            internalMessagePublish(copied);
                         }
                     }
-                })
-                .flatMapIterable(Function.identity())
-                .flatMap(clientSub -> publish0(clientSub, pubMsg, isClusterMessage));
+
+                    return Flux.fromIterable(lst).flatMap(clientSub -> publish0(clientSub, copied, isClusterMessage)).then();
+                });
 
         return Mono.when(f1, f2);
     }

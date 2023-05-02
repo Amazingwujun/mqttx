@@ -27,7 +27,6 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.util.Set;
-import java.util.UUID;
 
 /**
  * 业务配置.
@@ -51,11 +50,9 @@ public class MqttxConfig {
     private String version = "unknown";
 
     /**
-     * broker id, 必须唯一, 默认 uuid.
-     * <p>
-     * 用于区分集群内不同的 broker（如果集群功能开启）
+     * broker id, 必须唯一.
      */
-    private String brokerId = UUID.randomUUID().toString().replaceAll("-",  "");
+    private String brokerId;
 
     /** 心跳, 默认 60S;如果 客户端通过 conn 设置了心跳周期，则对应的 channel 心跳为指定周期 */
     private Duration heartbeat = Duration.ofMinutes(1);
@@ -113,6 +110,9 @@ public class MqttxConfig {
 
     private Auth auth = new Auth();
 
+    /** 共享载荷 */
+    private SharablePayload sharablePayload = new SharablePayload();
+
     /**
      * redis 配置
      * <p>
@@ -149,7 +149,7 @@ public class MqttxConfig {
         /** pubMsg 消息集合，用于存储消息 */
         private String msgPayLoadKey = "mqttx:msg:payload";
 
-        /** 每个payload 关联的订阅用户 */
+        /** 每个 payload 关联的订阅用户 */
         private String msgPayLoadClientsSetKey = "mqttx:msg:payload:clients:";
     }
 
@@ -297,5 +297,21 @@ public class MqttxConfig {
 
         /** 类似 readTimeout, 见 {@link java.net.http.HttpRequest#timeout()} */
         private Duration timeout = Duration.ofSeconds(3);
+    }
+
+    @Data
+    public static class SharablePayload {
+
+        /** 独立载荷存储 key prefix */
+        private String payloadKeyPrefix = "mqttx:sharable-payload:";
+
+        /** 独立载荷关联的客户端 id 列表 */
+        private String uniqueIdClientIdsSetPrefix = "mqttx:unique-id:client-ids:";
+
+        /** 清理定时间隔 */
+        private Duration cleanWorkInterval = Duration.ofMinutes(1);
+
+        /** 当 pub msg 阈值大于指定值时，报文采用二级寻址方式处理 */
+        private int thresholdInMessage = 128;
     }
 }

@@ -16,9 +16,9 @@
 
 package com.jun.mqttx.entity;
 
-import lombok.AllArgsConstructor;
+import com.jun.mqttx.utils.Uuids;
 import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.experimental.Accessors;
 
 /**
  * 发布的消息
@@ -27,8 +27,7 @@ import lombok.NoArgsConstructor;
  * @since 1.0.4
  */
 @Data
-@AllArgsConstructor
-@NoArgsConstructor
+@Accessors(chain = true)
 public class PubMsg {
     //@formatter:off
 
@@ -63,9 +62,61 @@ public class PubMsg {
 
     private byte[] payload;
 
+    /** 基于时间戳的 uuid str, 用于标记消息 */
+    private String uuid;
+
+    /** 判断 payload 是否是共享数据，采用二级寻址方式获取 */
+    private boolean payloadSharable = false;
+
     //@formatter:on
 
     public static PubMsg of(int qos, String topic, boolean retain, byte[] payload) {
-        return new PubMsg(null, qos, 0, topic, retain, false, false, payload);
+        var uuid = Uuids.timeBased();
+
+        return new PubMsg()
+                .setAppointedClientId(null)
+                .setQoS(qos)
+                .setMessageId(0)
+                .setTopic(topic)
+                .setRetain(retain)
+                .setWillFlag(false)
+                .setDup(false)
+                .setPayload(payload)
+                .setUuid(uuid);
+    }
+
+    /**
+     * 消息唯一 id.
+     */
+    public String uniqueId() {
+        return uuid;
+    }
+
+    /**
+     * 检查 payload 是否超过
+     *
+     * @param threshold 阈值
+     * @return true 如果载荷大小超过阈值
+     */
+    public boolean isPayloadSizeOverThreshold(int threshold) {
+        return payload.length > threshold;
+    }
+
+    /**
+     * 一个新的拷贝
+     *
+     * @return copy of this instance
+     */
+    public PubMsg copied() {
+        return new PubMsg()
+                .setAppointedClientId(appointedClientId)
+                .setQoS(qoS)
+                .setMessageId(messageId)
+                .setTopic(topic)
+                .setRetain(retain)
+                .setWillFlag(willFlag)
+                .setDup(dup)
+                .setPayload(payload)
+                .setUuid(uuid);
     }
 }

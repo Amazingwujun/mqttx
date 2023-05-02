@@ -88,14 +88,12 @@ public class BrokerHandler extends SimpleChannelInboundHandler<MqttMessage> impl
     private final String brokerId;
     //@formatter:on
 
-    public BrokerHandler(MqttxConfig config, MessageDelegatingHandler messageDelegatingHandler,
-                         ISessionService sessionService, ISubscriptionService subscriptionService,
-                         PublishHandler publishHandler, Serializer serializer) {
-        Assert.notNull(messageDelegatingHandler, "messageDelegatingHandler can't be null");
-        Assert.notNull(sessionService, "sessionService can't be null");
-        Assert.notNull(subscriptionService, "subscriptionService can't be null");
-        Assert.notNull(serializer, "serializer can't be null");
-
+    public BrokerHandler(MqttxConfig config,
+                         MessageDelegatingHandler messageDelegatingHandler,
+                         ISessionService sessionService,
+                         ISubscriptionService subscriptionService,
+                         PublishHandler publishHandler,
+                         Serializer serializer) {
         MqttxConfig.SysTopic sysTopic = config.getSysTopic();
         this.messageDelegatingHandler = messageDelegatingHandler;
         this.sessionService = sessionService;
