@@ -19,6 +19,7 @@ package com.jun.mqttx.entity;
 import com.jun.mqttx.utils.Uuids;
 import lombok.Data;
 import lombok.experimental.Accessors;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 发布的消息
@@ -93,12 +94,15 @@ public class PubMsg {
     }
 
     /**
-     * 检查 payload 是否超过
+     * 检查 payload 是否超过指定阈值
      *
      * @param threshold 阈值
      * @return true 如果载荷大小超过阈值
      */
     public boolean isPayloadSizeOverThreshold(int threshold) {
+        if (payload == null) {
+
+        }
         return payload.length > threshold;
     }
 

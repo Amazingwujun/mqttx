@@ -361,10 +361,9 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                 .collectList()
                 .flatMap(lst -> {
                     // 如果只有一个客户端订阅，那么消息可以指定客户端
-                    var copied = pubMsg.copied();
                     if (lst.size() == 1) {
                         ClientSub clientSub = lst.get(0);
-                        copied.setAppointedClientId(clientSub.getClientId());
+                        pubMsg.setAppointedClientId(clientSub.getClientId());
                     }
 
                     // 将消息推送给集群中的 broker
@@ -378,11 +377,11 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                             }
                         }
                         if (flag) {
-                            internalMessagePublish(copied);
+                            internalMessagePublish(pubMsg);
                         }
                     }
 
-                    return Flux.fromIterable(lst).flatMap(clientSub -> publish0(clientSub, copied, isClusterMessage)).then();
+                    return Flux.fromIterable(lst).flatMap(clientSub -> publish0(clientSub, pubMsg.copied(), isClusterMessage)).then();
                 });
 
         return Mono.when(f1, f2);

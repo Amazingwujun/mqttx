@@ -247,8 +247,14 @@ public class DefaultPublishMessageServiceImpl implements IPublishMessageService,
             return false;
         }
 
+        byte[] payload = pubMsg.getPayload();
+        if (payload == null) {
+            log.error("PubMsg[{}:{}]载荷为空", pubMsg.hashCode(), pubMsg);
+            return false;
+        }
+
         //noinspection RedundantIfStatement
-        if (!pubMsg.isPayloadSizeOverThreshold(thresholdInMessage)) {
+        if (payload.length < thresholdInMessage) {
             return false;
         }
 
@@ -303,8 +309,9 @@ public class DefaultPublishMessageServiceImpl implements IPublishMessageService,
                             cdl.countDown();
                         })
                         .doOnSuccess(unused -> {
-                            latestProcessedTime.set(System.currentTimeMillis());
-                            log.debug("共享载荷清理完成");
+                            var end = System.currentTimeMillis();
+                            latestProcessedTime.set(end);
+                            log.debug("共享载荷清理完成, 耗时: {}ms.", end - now);
 
                             cdl.countDown();
                         })

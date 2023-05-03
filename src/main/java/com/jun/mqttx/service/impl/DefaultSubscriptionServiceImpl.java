@@ -77,7 +77,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
     /** 包含通配符的全部主题 */
     private final Set<String> hasWildcardTopics = ConcurrentHashMap.newKeySet(ASSUME_COUNT);
     /** topic -> clients 映射关系集合. */
-    private final Map<String, ConcurrentHashMap.KeySetView<ClientSub, Boolean>> topicClientsMap = new ConcurrentHashMap<>(ASSUME_COUNT);
+    private final Map<String, Set<ClientSub>> topicClientsMap = new ConcurrentHashMap<>(ASSUME_COUNT);
     /** 系统主题 -> clients map */
     private final Map<String, ConcurrentHashMap.KeySetView<ClientSub, Boolean>> sysTopicClientsMap = new ConcurrentHashMap<>();
 
@@ -147,19 +147,19 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         // 1 含通配符主题集合
         for (var t : hasWildcardTopics) {
             if (TopicUtils.match(topic, t)) {
-                var clientSubs = topicClientsMap.get(t);
-                if (!CollectionUtils.isEmpty(clientSubs)) {
-                    clientSubList.addAll(clientSubs);
-                }
+                topicClientsMap.computeIfPresent(t, (k, v) -> {
+                    clientSubList.addAll(v);
+                    return v;
+                });
             }
         }
 
         // 2 不含通配符主题集合
         if (noneWildcardTopics.contains(topic)) {
-            var clientSubs = topicClientsMap.get(topic);
-            if (!CollectionUtils.isEmpty(clientSubs)) {
-                clientSubList.addAll(clientSubs);
-            }
+            topicClientsMap.computeIfPresent(topic, (k, v) -> {
+                clientSubList.addAll(v);
+                return v;
+            });
         }
 
         return Flux.fromIterable(clientSubList);
@@ -289,12 +289,24 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
                     var cleanSession = "1".equals(cs);
 
                     if (k_s.length == 1) {
-                        topicClientsMap.computeIfAbsent(topic, s -> ConcurrentHashMap.newKeySet())
-                                .add(ClientSub.of(k, Integer.parseInt(qosStr), topic, cleanSession));
+                        topicClientsMap.compute(topic, (j, z) -> {
+                            if (z == null) {
+                                z = new HashSet<>();
+                            }
+
+                            z.add(ClientSub.of(k, Integer.parseInt(qosStr), topic, cleanSession));
+                            return z;
+                        });
                     } else {
                         var shareName = k_s[1];
-                        topicClientsMap.computeIfAbsent(topic, s -> ConcurrentHashMap.newKeySet())
-                                .add(ClientSub.of(k_s[0], Integer.parseInt(qosStr), topic, cleanSession, shareName));
+                        topicClientsMap.compute(topic, (j, z) -> {
+                            if (z == null) {
+                                z = new HashSet<>();
+                            }
+
+                            z.add(ClientSub.of(k_s[0], Integer.parseInt(qosStr), topic, cleanSession, shareName));
+                            return z;
+                        });
                     }
                 })
                 .then()
@@ -324,7 +336,16 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         final var topicFilter = filter;
 
         // 保存订阅关系到应用缓存
-        topicClientsMap.computeIfAbsent(topic, s -> ConcurrentHashMap.newKeySet()).add(clientSub);
+        topicClientsMap.compute(topic, (k, v) -> {
+            if (v == null) {
+                v = new HashSet<>();
+                v.add(clientSub);
+                return v;
+            }
+            v.remove(clientSub);
+            v.add(clientSub);
+            return v;
+        }).add(clientSub);
         if (TopicUtils.isTopicContainWildcard(topic)) {
             hasWildcardTopics.add(topic);
         } else {
@@ -393,22 +414,24 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
                 topic = shareTopic.filter();
                 shareName = shareTopic.name();
             }
+            final var fixTopic = topic;
+            final var fixShareName = shareName;
 
             // 移除主题关联关系
-            var clientSubs = topicClientsMap.get(topic);
-            if (!CollectionUtils.isEmpty(clientSubs)) {
-                clientSubs.remove(ClientSub.of(clientId, 0, topic, cleanSession, shareName));
-                if (clientSubs.isEmpty()) {
-                    waitToDel.add(topic);
+            topicClientsMap.computeIfPresent(fixTopic, (k, v) -> {
+                v.remove(ClientSub.of(clientId, 0, fixTopic, cleanSession, fixShareName));
+                if (v.isEmpty()) {
+                    waitToDel.add(fixTopic);
 
                     // 移除关联的 inMemTopic
-                    if (TopicUtils.isTopicContainWildcard(topic)) {
-                        hasWildcardTopics.remove(topic);
+                    if (TopicUtils.isTopicContainWildcard(fixTopic)) {
+                        hasWildcardTopics.remove(fixTopic);
                     } else {
-                        noneWildcardTopics.remove(topic);
+                        noneWildcardTopics.remove(fixTopic);
                     }
                 }
-            }
+                return v;
+            });
         });
 
         // 集群消息，直接返回
