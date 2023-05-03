@@ -8,6 +8,7 @@ spring:
     active: @profile@
 
 mqttx:
+  broker-id: "001"
   version: @version@
   # kryo 比 json 更具优势
   serialize-strategy: kryo

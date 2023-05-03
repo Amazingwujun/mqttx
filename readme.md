@@ -29,15 +29,6 @@
 - [5 开发者说](#5-开发者说)
 - [6 附表](#6-附表)
     - [6.1 配置项](#61-配置项)
-    - [6.2 版本说明](#62-版本说明)
-        - [6.2.1 v1.0](#621-v10)
-        - [6.2.2 v1.1](#622-v11)
-        - [6.2.3 v2.0](#623-v20)
-        - [6.2.4 v1.2](#624-v12)
-    - [6.3 Benchmark](#63-benchmark)
-        - [6.3.1 CleanSessionTrue](#631-cleansessiontrue)
-        - [6.3.2 CleanSessionFalse](#632-cleansessionfalse)
-    - [6.4 代码质量分析](#64-代码质量分析)
 
 ## 1 介绍
 
@@ -502,21 +493,21 @@ Content-Length: 91
 
 4. 后续工作
    - [ ] `v1.0.8.RELEASE` 版本开发
-   - [ ] `v1.1.0.RELEASE` 版本开发  
+   - [ ] `v1.1.0.RELEASE` 版本开发
    - [x] `v1.2` 版本开发
    - [ ] `v2.0` 版本开发
    - [x] bug 修复
-   
+
 5. `v1.2` 版本由 **JDK8** 升级至 **JDK17**
 
 6. `v2.0` 版本分支将作为 **mqttv5** 协议版本开始迭代
 
-7. 这段时间工作任务繁重，功能迭代暂时停止，当然 **bug** 我还是会优先处理🙂
+7. 考虑使用 *gossip* 协议实现集群功能，集群功能不再依赖 *redis or kafka*
 
 8. 请作者喝杯 **丝绒拿铁** 😊
 
    <img src="https://z3.ax1x.com/2021/07/15/Wm53vj.jpg" alt="coffee" height="300" />
-   
+
 9. 交流群
 
     <img src="https://s1.ax1x.com/2020/10/10/0ytoSx.jpg" alt="群二维码" height="300" />
@@ -577,184 +568,8 @@ Content-Length: 91
 | `mqttx.auth.url`                                         | `null`                          | mqtt conn username/password 认证服务接口地址                 |
 | `mqttx.auth.timeout`                                     | `3s`                            | readTimeout                                                  |
 | `mqttx.auth.is-mandatory`                                | `false`                         | 是否必须验证 `conn` 报文中的用户名与密码                     |
-| `mqttx.sharable-payload.payload-key-prefix`              | `mqttx:sharable-payload:`       |                                                              |
-| `mqttx.sharable-payload.unique-id-client-ids-set-prefix` | `mqttx:unique-id:client-ids:`   |                                                              |
+| `mqttx.sharable-payload.payload-key-prefix`              | `mqttx:sharable-payload:`       | 共享载荷存储 *redis key prefix*                              |
+| `mqttx.sharable-payload.unique-id-client-ids-set-prefix` | `mqttx:unique-id:client-ids:`   | 共享载荷关联的客户端 *id* 列表                               |
 | `mqttx.sharable-payload.clean-work-interval`             | `1m`                            | 清洗定时间隔。共享载荷清理任务之间的间隔                     |
 | `mqttx.sharable-payload.threshould-in-message`           | `128`                           | 共享载荷生效阈值；大于配置项阈值时，载荷共享。               |
-
-
-
-### 6.2 版本说明
-
-**prometheus** 分支为 ***MQTTX*** 整合监控系统 **[Prometheus](https://prometheus.io/)** 的代码，有需要的用户可参考该分支代码.
-
-#### 6.2.1 v1.0
-
-- **v1.0.8.RELEASE**
-    - [ ] 消息集中持久化到 `redis hmap` 数据结构中，`PubMsg` 仅保存 `hmap` 中的 `payloadId`, 该优化目的在于防止消息膨胀导致的 redis 内存耗用过大。（之前版本消息都是持久化到客户端各自的 `PubMsg`）
-- **v1.0.7.RELEASE**
-    - [x] 增加序列化框架 ***Kryo*** 的支持
-    - [x] 系统主题新增客户端上下线通知主题
-    - [x] 修复新增订阅触发 `retain` 消息后，消息分发给全部订阅者的 bug
-    - [x] 修复遗嘱消息 `isWillRetain:true` 持久化的bug
-    - [x] bug 修复及优化
-- **v1.0.6.RELEASE**
-    - [x] `netty 4.1.52.Final` 这个版本的 MqttEncoder.java 处理 UnsubAck 响应消息会导致 NPE，直接影响功能，不得不提前结束此版本的开发
-    - [x] bug 修复
-- **v1.0.5.RELEASE**
-    - [x] 测试模式支持
-    - [x] `epoll` 支持，见 [https://netty.io/wiki/native-transports.html](https://netty.io/wiki/native-transports.html)
-    - [x] 优化 `cleanSession` 消息处理机制
-    - [x] 消息桥接
-    - [x] bug 修复及优化
-- **v1.0.4.RELEASE**
-    - [x] websocket 支持
-    - [x] 集群状态自检
-    - [x] bug 修复及优化
-- **v1.0.3.RELEASE**
-    - [x] bug 修复
-- **v1.0.2.RELEASE**
-    - [x] 共享主题加入轮询策略
-    - [x] bug 修复及优化
-- **v1.0.1.RELEASE**
-    - [x] 基于 `redis` 的集群功能支持
-    - [x] 共享主题支持
-    - [x] 主题权限功能
-    - [x] bug 修复及优化
-- **v1.0.0.RELEASE**
-    - [x] `mqttv3.1.1` 完整协议实现
-
-#### 6.2.2 v1.1
-
-- **v1.1.0.RELEASE（开发中）**
-  - [ ] `redis` 同步转异步实现，提升性能
-
-#### 6.2.3 v2.0
-
-- **v2.0.0.RELEASE**
-  - [ ] [mqtt5](http://docs.oasis-open.org/mqtt/mqtt/v5.0/csprd02/mqtt-v5.0-csprd02.html) 支持
-
-#### 6.2.4 v1.2
-
-- **v1.2.0.RELEASE**
-  - [x] 项目依赖 JDK 升级，当前版本：***JDK8*** 目标版本：***JDK17***
-
-- **v1.2.1.ALPHA**
-  - [X] reactor 改造。
-
-### 6.3 Benchmark
-
-> 版本过低，此 Benchmark 已不可靠
-
-测试条件简陋，结果仅供参考。
-
-版本： ***MQTTX v1.0.5.BETA***
-
-工具： ***[mqtt-bench](https://github.com/takanorig/mqtt-bench)***
-
-机器：
-
-| 系统    | cpu       | 内存  |
-| ------- | --------- | ----- |
-| `win10` | `i5-4460` | `16G` |
-
-#### 6.3.1 CleanSessionTrue
-
-1. 启用 `redis`
-2. `cleanSession` : ***true***
-
-> **实际上 `pub` 消息存储并未走 redis， 原因见 [共享主题](#46-共享主题支持) 中关于 `cleanSession` 的介绍**
-
-执行 `java -jar -Xmx1g -Xms1g mqttx-1.0.5.BETA.jar`
-
-- ***qos0***
-
-```
-C:\Users\Jun\go\windows_amd64>mqtt-bench.exe -broker=tcp://localhost:1883 -action=pub -clients=1000 -qos=0 -count=1000
-2020-09-30 15:33:54.462089 +0800 CST Start benchmark
-2020-09-30 15:34:33.6010217 +0800 CST End benchmark
-
-Result : broker=tcp://localhost:1883, clients=1000, totalCount=1000000, duration=39134ms, throughput=25553.23messages/sec
-```
-
-- ***qos1***
-
-```
-C:\Users\Jun\go\windows_amd64>mqtt-bench.exe -broker=tcp://localhost:1883 -action=pub -clients=1000 -qos=1 -count=1000
-2020-09-30 15:29:17.9027515 +0800 CST Start benchmark
-2020-09-30 15:30:25.0316915 +0800 CST End benchmark
-
-Result : broker=tcp://localhost:1883, clients=1000, totalCount=1000000, duration=67124ms, throughput=14897.80messages/sec
-```
-
-- ***qos2***
-
-```
-C:\Users\Jun\go\windows_amd64>mqtt-bench.exe -broker=tcp://localhost:1883 -action=pub -clients=1000 -qos=2 -count=1000
-2020-09-30 15:37:00.0678207 +0800 CST Start benchmark
-2020-09-30 15:38:55.4419847 +0800 CST End benchmark
-
-Result : broker=tcp://localhost:1883, clients=1000, totalCount=1000000, duration=115369ms, throughput=8667.84messages/sec
-```
-
-| 并发连接数量 | 行为     | 单个消息大小 | 单连接消息数量 | 报文总数 | qos  | 耗时     | qps     |
-| ------------ | -------- | ------------ | -------------- | -------- | ---- | -------- | ------- |
-| `1000`       | 发布消息 | `1024byte`   | `1000`         | 一百万   | `0`  | `39.1s`  | `25553` |
-| `1000`       | 发布消息 | `1024byte`   | `1000`         | 一百万   | `1`  | `67.1s`  | `14897` |
-| `1000`       | 发布消息 | `1024byte`   | `1000`         | 一百万   | `2`  | `115.3s` | `8667`  |
-
-**资源消耗：`cpu: 25%`, `mem 440 MB`**
-
-#### 6.3.2 CleanSessionFalse
-
-1. 启用 `redis`
-2. `cleanSession`: ***false***
-
-执行 `java -jar -Xmx1g -Xms1g mqttx-1.0.5.BETA.jar`
-
-- **qos0**
-
-```
-C:\Users\Jun\go\windows_amd64>mqtt-bench.exe -broker=tcp://localhost:1883 -action=pub -clients=1000 -qos=0 -count=1000
-2020-09-30 17:03:55.7560928 +0800 CST Start benchmark
-2020-09-30 17:04:36.2080909 +0800 CST End benchmark
-
-Result : broker=tcp://localhost:1883, clients=1000, totalCount=1000000, duration=40447ms, throughput=24723.71messages/sec
-```
-
-- **qos1**
-
-```
-C:\Users\Jun\go\windows_amd64>mqtt-bench.exe -broker=tcp://localhost:1883 -action=pub -clients=1000 -qos=1 -count=1000
-2020-09-30 17:06:18.9136484 +0800 CST Start benchmark
-2020-09-30 17:08:20.9072865 +0800 CST End benchmark
-
-Result : broker=tcp://localhost:1883, clients=1000, totalCount=1000000, duration=121992ms, throughput=8197.26messages/sec
-```
-
-- **qos2**
-
-```
-C:\Users\Jun\go\windows_amd64>mqtt-bench.exe -broker=tcp://localhost:1883 -action=pub -clients=1000 -qos=2 -count=1000
-2020-09-30 17:09:35.1314262 +0800 CST Start benchmark
-2020-09-30 17:13:10.7914125 +0800 CST End benchmark
-
-Result : broker=tcp://localhost:1883, clients=1000, totalCount=1000000, duration=215656ms, throughput=4637.01messages/sec
-```
-
-| 并发连接数量 | 行为     | 单个消息大小 | 单连接消息数量 | 报文总数 | qos  | 耗时     | qps     |
-| ------------ | -------- | ------------ | -------------- | -------- | ---- | -------- | ------- |
-| `1000`       | 发布消息 | `1024byte`   | `1000`         | 一百万   | `0`  | `40.4s`  | `24723` |
-| `1000`       | 发布消息 | `1024byte`   | `1000`         | 一百万   | `1`  | `121.9s` | `8197`  |
-| `1000`       | 发布消息 | `1024byte`   | `1000`         | 一百万   | `2`  | `215.6s` | `4637`  |
-
-**资源消耗：`cpu: 45%`, `mem 440 MB`**
-
-### 6.4 代码质量分析
-
-结果取自 [mqttx:  (gitee.com)](https://gitee.com/amazingJun/mqttx) **sonarQube**
-
-[![sonar](https://s3.ax1x.com/2020/12/02/D57mlR.png)](https://imgchr.com/i/D57mlR)
-
-- 漏洞是我将 `keyStore` 密码硬编码写到了配置代码，方便用户测试 `TLS` ，用户可自行替换。
 

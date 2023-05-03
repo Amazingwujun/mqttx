@@ -94,19 +94,6 @@ public class PubMsg {
     }
 
     /**
-     * 检查 payload 是否超过指定阈值
-     *
-     * @param threshold 阈值
-     * @return true 如果载荷大小超过阈值
-     */
-    public boolean isPayloadSizeOverThreshold(int threshold) {
-        if (payload == null) {
-
-        }
-        return payload.length > threshold;
-    }
-
-    /**
      * 一个新的拷贝
      *
      * @return copy of this instance

@@ -5,16 +5,13 @@ spring:
     host: localhost
 
 mqttx:
-  web-socket:
-    enable: true
   sys-topic:
     enable: true
 
 logging:
   level:
     root: info
-  file:
-    path: d:/mqttx/logs
+    com.jun.mqttx.service.impl.DefaultPublishMessageServiceImpl: debug
 
 #mqttx 配置项说明见 readme.md #6.1 配置项
 #下方是配置示例，供参考

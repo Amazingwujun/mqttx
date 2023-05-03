@@ -66,9 +66,9 @@ public class DefaultPublishMessageServiceImpl implements IPublishMessageService,
     private final Map<String, String> clientIdMessageIdAndUniqueIdMap = new ConcurrentHashMap<>();
     /** 当 pub msg 阈值大于指定值时，报文采用二级寻址方式处理 */
     private final int thresholdInMessage;
-    /** 独立载荷存储 key prefix */
+    /** 共享载荷存储 key prefix */
     private final String sharablePayloadKeyPrefix;
-    /** 独立载荷关联的客户端 id 列表 */
+    /** 共享载荷关联的客户端 id 列表 */
     private final String uniqueIdClientIdsSetPrefix;
     private final Duration payloadCleanWorkInterval;
     private final String brokerId;
@@ -116,6 +116,7 @@ public class DefaultPublishMessageServiceImpl implements IPublishMessageService,
 
         var messageId = pubMsg.getMessageId();
         if (!isPayloadShouldShare(pubMsg)) {
+            pubMsg.setUuid(null); // 非共享载荷不需要 uuid, 减少字段值.
             return redisTemplate.opsForHash()
                     .put(key(clientId), String.valueOf(messageId), serializer.serialize(pubMsg))
                     .then();
@@ -278,7 +279,7 @@ public class DefaultPublishMessageServiceImpl implements IPublishMessageService,
                     continue;
                 }
 
-                log.debug("开始扫描并清理独立载荷...");
+                log.debug("开始扫描并清理共享载荷...");
                 var cdl = new CountDownLatch(1);
 
                 // scan

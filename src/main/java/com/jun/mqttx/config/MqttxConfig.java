@@ -302,10 +302,10 @@ public class MqttxConfig {
     @Data
     public static class SharablePayload {
 
-        /** 独立载荷存储 key prefix */
+        /** 共享载荷存储 key prefix */
         private String payloadKeyPrefix = "mqttx:sharable-payload:";
 
-        /** 独立载荷关联的客户端 id 列表 */
+        /** 共享载荷关联的客户端 id 列表 */
         private String uniqueIdClientIdsSetPrefix = "mqttx:unique-id:client-ids:";
 
         /** 清理定时间隔 */

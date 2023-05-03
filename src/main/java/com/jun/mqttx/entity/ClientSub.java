@@ -67,7 +67,8 @@ public class ClientSub implements Comparable<ClientSub> {
         return StringUtils.hasText(shareName);
     }
 
-    public Boolean notShareSub() {
+    @JsonIgnore
+    public boolean notShareSub() {
         return !isShareSub();
     }
 
