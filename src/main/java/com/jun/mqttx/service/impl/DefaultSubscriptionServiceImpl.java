@@ -345,7 +345,7 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
             v.remove(clientSub);
             v.add(clientSub);
             return v;
-        }).add(clientSub);
+        });
         if (TopicUtils.isTopicContainWildcard(topic)) {
             hasWildcardTopics.add(topic);
         } else {
