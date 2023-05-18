@@ -147,19 +147,13 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         // 1 含通配符主题集合
         for (var t : hasWildcardTopics) {
             if (TopicUtils.match(topic, t)) {
-                topicClientsMap.computeIfPresent(t, (k, v) -> {
-                    clientSubList.addAll(v);
-                    return v;
-                });
+                Optional.ofNullable(topicClientsMap.get(t)).ifPresent(clientSubList::addAll);
             }
         }
 
         // 2 不含通配符主题集合
         if (noneWildcardTopics.contains(topic)) {
-            topicClientsMap.computeIfPresent(topic, (k, v) -> {
-                clientSubList.addAll(v);
-                return v;
-            });
+            Optional.ofNullable(topicClientsMap.get(topic)).ifPresent(clientSubList::addAll);
         }
 
         return Flux.fromIterable(clientSubList);
