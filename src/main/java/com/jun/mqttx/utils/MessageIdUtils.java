@@ -49,4 +49,14 @@ public class MessageIdUtils {
     public static int trimMessageId(int messageId) {
         return messageId & 0xffff;
     }
+
+    /**
+     * 此方法用于处理大于 65536 的消息 id. (大于 65536 的消息 id 会导致该消息无法被正常移除的 bug)
+     *
+     * @param messageId 需要进行截取
+     * @return 截取后的消息 id
+     */
+    public static int trimMessageId(long messageId) {
+        return (int) (messageId & 0xffff);
+    }
 }

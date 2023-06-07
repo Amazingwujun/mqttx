@@ -90,6 +90,6 @@ public class DefaultSessionServiceImpl implements ISessionService {
                     }
                     return Mono.just(e);
                 })
-                .map(t -> MessageIdUtils.trimMessageId(Math.toIntExact(t)));
+                .map(MessageIdUtils::trimMessageId);
     }
 }
