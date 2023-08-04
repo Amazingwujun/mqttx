@@ -82,12 +82,6 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
                           MqttxConfig config,
                           @Nullable IInternalMessagePublishService internalMessagePublishService) {
         super(config.getCluster().getEnable());
-        Assert.notNull(authenticationService, "authentication can't be null");
-        Assert.notNull(sessionService, "sessionService can't be null");
-        Assert.notNull(subscriptionService, "subscriptionService can't be null");
-        Assert.notNull(publishMessageService, "publishMessageService can't be null");
-        Assert.notNull(pubRelMessageService, "pubRelMessageService can't be null");
-        Assert.notNull(config, "mqttxConfig can't be null");
 
         MqttxConfig.SysTopic sysTopic = config.getSysTopic();
         brokerId = config.getBrokerId();

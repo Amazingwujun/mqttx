@@ -125,11 +125,12 @@ docker 环境安装好后，执行 `docker-compose -f ./docker-compose.yml up` �
 
 ![y3R3tI.md.png](https://s3.ax1x.com/2021/02/04/y3R3tI.md.png)
 
-| Docker Pull Command                    | 说明                                   |
-| -------------------------------------- | -------------------------------------- |
+| Docker Pull Command                    | 说明                                |
+|----------------------------------------|-----------------------------------|
 | `docker pull fantasywujun/mqttx:1.2.0` | 基于 `jdk17.0.1` 的 `mqttx:1.2.0` 版本 |
 | `docker pull fantasywujun/mqttx:1.2.1` | 基于 `jdk17.0.1` 的 `mqttx:1.2.1` 版本 |
 | `docker pull fantasywujun/mqttx:1.2.2` | 基于 `jdk17.0.1` 的 `mqttx:1.2.2` 版本 |
+| `docker pull fantasywujun/mqttx:1.2.3` | 基于 `jdk17.0.1` 的 `mqttx:1.2.3` 版本 |
 
 **docker-compose** 文件内容：
 

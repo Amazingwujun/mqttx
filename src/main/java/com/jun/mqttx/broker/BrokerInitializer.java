@@ -52,6 +52,7 @@ import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
+import javax.annotation.PostConstruct;
 import javax.net.ssl.SSLException;
 import java.time.Duration;
 import java.util.Objects;
@@ -101,10 +102,6 @@ public class BrokerInitializer implements DisposableBean {
     //@formatter:on
 
     public BrokerInitializer(MqttxConfig mqttxConfig, BrokerHandler brokerHandler, SslUtils sslUtils, @Nullable ProbeHandler probeHandler) {
-        Assert.notNull(mqttxConfig, "mqttxConfig can't be null");
-        Assert.notNull(sslUtils, "sslUtils can't be null");
-        Assert.notNull(brokerHandler, "brokerHandler can't be null");
-
         MqttxConfig.Ssl ssl = mqttxConfig.getSsl();
         MqttxConfig.Socket socket = mqttxConfig.getSocket();
         MqttxConfig.WebSocket webSocket = mqttxConfig.getWebSocket();
@@ -157,6 +154,7 @@ public class BrokerInitializer implements DisposableBean {
      * </pre>
      * 普遍的服务器都是 x86 架构 64bit 的 linux 系统, 所以 pom 中引入 &lt;classifier&gt;linux-x86_64&lt;/classifier&gt; 的依赖
      */
+    @PostConstruct
     public void start() throws InterruptedException {
         if (boss == null || work == null) {
             int t = (enableSocket && enableWebsocket) ? 2 : 1;

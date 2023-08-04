@@ -99,9 +99,6 @@ public class DefaultSubscriptionServiceImpl implements ISubscriptionService, Wat
         this.enableCluster = cluster.getEnable();
         this.brokerId = mqttxConfig.getBrokerId();
 
-        Assert.hasText(this.topicPrefix, "topicPrefix can't be null");
-        Assert.hasText(this.topicSetKey, "topicSetKey can't be null");
-
         // 内部缓存初始化
         initInnerCache(stringRedisTemplate);
     }

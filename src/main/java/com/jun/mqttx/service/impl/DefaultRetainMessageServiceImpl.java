@@ -48,8 +48,6 @@ public class DefaultRetainMessageServiceImpl implements IRetainMessageService {
 
     public DefaultRetainMessageServiceImpl(ReactiveRedisTemplate<String, byte[]> redisTemplate, Serializer serializer,
                                            MqttxConfig mqttxConfig) {
-        Assert.notNull(redisTemplate, "stringRedisTemplate can't be null");
-
         this.redisTemplate = redisTemplate;
         this.serializer = serializer;
         this.retainMessageHashKey = mqttxConfig.getRedis().getRetainMessagePrefix();

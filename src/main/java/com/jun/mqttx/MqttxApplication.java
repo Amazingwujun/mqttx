@@ -16,20 +16,9 @@
 
 package com.jun.mqttx;
 
-import com.jun.mqttx.broker.BrokerInitializer;
-import com.jun.mqttx.config.MqttxConfig;
-import com.jun.mqttx.exception.GlobalException;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.util.ObjectUtils;
-
-import java.util.Objects;
 
 /**
  * 项目地址:
@@ -41,16 +30,11 @@ import java.util.Objects;
  *
  * @author Jun
  */
-@Slf4j
-@EnableScheduling
 @SpringBootApplication(exclude = RedisRepositoriesAutoConfiguration.class)
 public class MqttxApplication {
 
-    public static void main(String[] args) throws InterruptedException {
-        var ctx = SpringApplication.run(MqttxApplication.class, args);
-
-        // 启动 mqtt
-        ctx.getBean(BrokerInitializer.class).start();
+    public static void main(String[] args) {
+        SpringApplication.run(MqttxApplication.class, args);
     }
 
 }

@@ -50,9 +50,6 @@ public class DefaultSessionServiceImpl implements ISessionService {
         this.serializer = serializer;
         this.clusterSessionHashKey = redis.getClusterSessionHashKey();
         this.messageIdPrefix = redis.getMessageIdPrefix();
-
-        Assert.notNull(redisTemplate, "stringRedisTemplate can't be null");
-        Assert.hasText(clusterSessionHashKey, "clusterSessionHashKey can't be null");
     }
 
     @Override

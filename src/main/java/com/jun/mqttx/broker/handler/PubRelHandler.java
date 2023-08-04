@@ -36,8 +36,6 @@ public class PubRelHandler extends AbstractMqttSessionHandler {
     public PubRelHandler(IPubRelMessageService pubRelMessageService, MqttxConfig config) {
         super(config.getCluster().getEnable());
         this.pubRelMessageService = pubRelMessageService;
-
-        Assert.notNull(pubRelMessageService, "pubRelMessageService can't be null");
     }
 
     @Override

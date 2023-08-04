@@ -97,11 +97,6 @@ public class PublishHandler extends AbstractMqttTopicSecureHandler implements Wa
                           @Nullable KafkaTemplate<String, byte[]> kafkaTemplate,
                           Serializer serializer) {
         super(config.getCluster().getEnable());
-        Assert.notNull(publishMessageService, "publishMessageService can't be null");
-        Assert.notNull(retainMessageService, "retainMessageService can't be null");
-        Assert.notNull(subscriptionService, "publishMessageService can't be null");
-        Assert.notNull(pubRelMessageService, "publishMessageService can't be null");
-        Assert.notNull(config, "mqttxConfig can't be null");
 
         var shareTopic = config.getShareTopic();
         var messageBridge = config.getMessageBridge();
