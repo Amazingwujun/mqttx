@@ -38,7 +38,6 @@ import reactor.core.scheduler.Schedulers;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -202,9 +201,9 @@ public final class ConnectHandler extends AbstractMqttTopicSecureHandler {
         if (CLIENT_MAP.containsKey(clientId)) {
             Optional.ofNullable(CLIENT_MAP.get(clientId))
                     .map(BrokerHandler.CHANNELS::find)
-                    .filter(c -> !Objects.equals(c, channel))
                     .ifPresent(ChannelOutboundInvoker::close);
-        } else if (isClusterMode()) {
+        }
+        if (isClusterMode()) {
             internalMessagePublishService.publish(
                     new InternalMessage<>(clientId, System.currentTimeMillis(), brokerId),
                     InternalMessageEnum.DISCONNECT.getChannel()
