@@ -35,7 +35,6 @@ import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -199,7 +198,11 @@ public class DefaultPublishMessageServiceImpl implements IPublishMessageService,
                     if (pubMsg.isPayloadSharable()) {
                         byte[] bytes = uniqueIdAndPayloadMap.get(uniqueId);
                         if (bytes == null) {
-                            return redisTemplate.opsForValue().get(sharablePayloadKey(uniqueId)).map(pubMsg::setPayload);
+                            return redisTemplate.opsForValue()
+                                    .get(sharablePayloadKey(uniqueId))
+                                    .map(pubMsg::setPayload)
+                                    // 将载荷缓存到本地
+                                    .doOnNext(t -> uniqueIdAndPayloadMap.put(uniqueId, t.getPayload()));
                         }
                         pubMsg.setPayload(bytes);
                     }
@@ -280,7 +283,6 @@ public class DefaultPublishMessageServiceImpl implements IPublishMessageService,
                 }
 
                 log.debug("开始扫描并清理共享载荷...");
-                var cdl = new CountDownLatch(1);
 
                 // scan
                 var matchStr = String.format("%s%s:", sharablePayloadKeyPrefix, brokerId);
@@ -297,6 +299,10 @@ public class DefaultPublishMessageServiceImpl implements IPublishMessageService,
                                     .filter(l -> l <= 0)
                                     .flatMap(unused -> redisTemplate.delete(key)
                                             .doOnSuccess(l -> {
+                                                // 移除 payload 缓存
+                                                uniqueIdAndPayloadMap.remove(uniqueId);
+
+                                                // 打印日志
                                                 var ts = Uuids.unixTimestamp(uniqueId);
                                                 log.debug("创建于[{}]的共享载荷[{}]已删除", dateTimeFormat(ts), key);
                                             })
@@ -306,19 +312,13 @@ public class DefaultPublishMessageServiceImpl implements IPublishMessageService,
                         .doOnError(throwable -> {
                             log.error(String.format("共享载荷清理失败: %s", throwable.getMessage()), throwable);
                             latestProcessedTime.set(System.currentTimeMillis());
-
-                            cdl.countDown();
                         })
                         .doOnSuccess(unused -> {
                             var end = System.currentTimeMillis();
                             latestProcessedTime.set(end);
                             log.debug("共享载荷清理完成, 耗时: {}ms.", end - now);
-
-                            cdl.countDown();
                         })
-                        .subscribe();
-
-                cdl.await();
+                        .block();
             } catch (Throwable throwable) {
                 log.error(String.format("定时载荷清理任务异常: %s", throwable.getMessage()), throwable);
             }
