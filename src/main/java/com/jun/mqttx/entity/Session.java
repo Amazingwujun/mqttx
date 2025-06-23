@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * MQTT 会话
@@ -106,7 +107,7 @@ public class Session {
      *
      * @return {@link #messageId}
      */
-    public int increaseAndGetMessageId() {
+    public synchronized int increaseAndGetMessageId() {
         // SUBSCRIBE, UNSUBSCRIBE, and PUBLISH (in cases where QoS > 0) Control Packets MUST contain a
         // non-zero 16-bit Packet Identifier [MQTT-2.3.1-1].
         if ((++messageId & 0xffff) != 0) {
